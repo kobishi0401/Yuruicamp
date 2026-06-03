@@ -313,6 +313,8 @@ hr {
 .btn-primary:hover {
   background-color: #1a3838;
   border-color: #1a3838;
+  color: #ffffff;
+  text-decoration: none;
 }
 
 .btn-primary:active {
