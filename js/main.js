@@ -2,6 +2,9 @@
 // Yuruicamp 應用入口
 // ========================================
 // 此文件初始化應用並設置全局事件監聽器
+// ===================================================
+
+
 
 // 用來記錄「全局組件是否已被初始化」的旗標
 // Guard flag: prevent double-initialization when page JS already called init functions
@@ -12,15 +15,17 @@ window._appComponentsInitialized = false;
  * App init function - called by page JS or by main.js itself
  *
  * 若頁面 JS（如 home.js、product-list.js）已自行初始化過，
- * 這裡只補跑「全局事件監聽」，不重複跑 navbar/modal/cart。
+ * 這裡只補跑「全局事件監聽」，不重複跑 header/modal/cart。
  */
-window.initApp = () => {
+window.initApp = async () => {
   console.log('========================================');
-  console.log('🎪 Yuruicamp 應用初始化');
+  console.log('Yuruicamp 應用初始化');
   console.log('========================================');
 
   // 全局事件監聽（online/offline/beforeunload）始終需要設定
   window.initGlobalListeners();
+  // 先載入 header/footer HTML 與 header.js
+  await initGlobalLayout();
 
   // 若頁面 JS 尚未初始化全局組件，在此補上
   // If page JS hasn't initialized global components yet, do it now
@@ -32,33 +37,25 @@ window.initApp = () => {
     window._appComponentsInitialized = true;
   }
 
-  // 第 14 階段：初始化 Lazy Loading Fallback
-  // Stage 14: Initialize lazy loading fallback for older browsers
-  window.initLazyLoadingFallback();
+  initFloatingActions(); // 懸浮按鈕
+  window.initLazyLoadingFallback?.();
+
+
 
   // 第 13 階段：offcanvas 開啟時鎖住 body 捲動（iOS Safari 需要）
   // Stage 13: Lock body scroll when offcanvas is open (required for iOS Safari)
   window.initBodyScrollLock();
+  // 偵測目前頁面，呼叫對應的頁面初始化函式
+  if (typeof window.initHomePage === 'function') {
+    await window.initHomePage();
+  }
 
   console.log('✓ 應用初始化完成');
   console.log('AppState:', window.AppState);
 };
 
-/**
- * 初始化全局事件監聽器
- */
-window.initGlobalListeners = () => {
-  // 在線/離線狀態監測
-  window.addEventListener('online', () => {
-    console.log('應用已連接到網絡');
-    window.showToast('已連接到網絡', 'success');
-  });
-  
-  window.addEventListener('offline', () => {
-    console.log('應用已斷開網絡連接');
-    window.showToast('網絡已斷開', 'warning');
-  });
-  
+
+window.initGlobalListeners = () => { 
   // 記錄頁面卸載
   window.addEventListener('beforeunload', () => {
     window.saveAppState();
@@ -95,60 +92,6 @@ window.initGlobalListeners = () => {
   });
 };
 
-/**
- * 第 14 階段：Lazy Loading Fallback
- * 為不支援原生 loading="lazy" 的舊版瀏覽器提供後備方案
- * Lazy loading fallback for browsers that don't support native lazy loading
- *
- * 運作原理：
- * 1. 偵測瀏覽器是否支援原生 lazy loading
- * 2. 若不支援，使用 IntersectionObserver 模擬相同效果
- * 3. 圖片進入視窗時，才從 data-src 載入真實圖片
- */
-window.initLazyLoadingFallback = () => {
-  // 若瀏覽器原生支援 lazy loading，直接返回
-  // If native lazy loading is supported, no fallback needed
-  if ('loading' in HTMLImageElement.prototype) {
-    console.log('✓ 瀏覽器支援原生圖片 Lazy Loading');
-    return;
-  }
-
-  // 舊版瀏覽器：使用 IntersectionObserver 模擬 lazy loading
-  // Fallback: Use IntersectionObserver to simulate lazy loading
-  console.log('⚠️ 使用 IntersectionObserver Lazy Loading Fallback');
-
-  if (!('IntersectionObserver' in window)) {
-    // 更舊的瀏覽器：直接載入所有圖片
-    // Very old browsers: just load all images immediately
-    document.querySelectorAll('img[data-src]').forEach(img => {
-      img.src = img.dataset.src;
-    });
-    return;
-  }
-
-  const lazyObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-        if (img.dataset.src) {
-          img.src = img.dataset.src;
-          img.removeAttribute('data-src');
-          lazyObserver.unobserve(img); // 載入後停止觀察
-        }
-      }
-    });
-  }, {
-    // 提前 200px 開始載入，使用者滾動前圖片已就緒
-    // Start loading 200px before image enters viewport
-    rootMargin: '200px 0px',
-    threshold: 0,
-  });
-
-  // 觀察所有有 data-src 屬性的圖片
-  document.querySelectorAll('img[data-src]').forEach(img => {
-    lazyObserver.observe(img);
-  });
-};
 
 /**
  * 第 13 階段：Body Scroll Lock（鎖定 body 捲動）
@@ -185,6 +128,120 @@ window.initBodyScrollLock = () => {
   observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 };
 
+// 全局佈局動態載入 (Header & Footer)
+// ===================================================
+
+// 輔助函式：載入局部 HTML
+async function loadPartial(targetId, url) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`無法載入組件: ${url}`);
+    target.innerHTML = await response.text();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// 輔助函式：動態載入 JS 腳本
+function loadComponentScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+}
+
+// 主初始化流程
+async function initGlobalLayout() {
+  // 1. 根據目錄樹，從 pages/* 往上找頂層的 components/
+  await Promise.all([
+    loadPartial("header", "../components/header.html"),
+    loadPartial("footer", "../components/footer.html") 
+  ]);
+
+  // 2. 確定 HTML 結構長到網頁上後，才動態載入原本的互動 JS
+  try {
+    // 這樣可以確保手機版漢堡選單、登入彈出視窗的功能不會失效
+    await loadComponentScript("../js/components/header.js");
+    
+  } catch (error) {
+    console.error("組件腳本載入失敗:", error);
+  }
+}
+
+function initFloatingActions() {
+  if (document.querySelector(".floating-actions")) return;
+
+  const floatingActions = document.createElement("div");
+  floatingActions.className = "floating-actions";
+
+  floatingActions.innerHTML = `
+    <a
+      class="floating-line-btn"
+      href="#"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Line 客服"
+    >
+      
+      <span class="floating-line-icon" aria-hidden="true">
+        <i class="bi bi-chat-dots-fill"></i>
+      </span>
+    </a>
+
+    <button
+      class="floating-top-btn"
+      type="button"
+      aria-label="回到頁面頂部"
+      title="回到頂部"
+    >
+      <i class="bi bi-chevron-up"></i>
+    </button>
+  `;
+
+  document.body.appendChild(floatingActions);
+
+  const topButton = floatingActions.querySelector(".floating-top-btn");
+
+  function toggleTopButton() {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    const isNearBottom = scrollTop + windowHeight >= documentHeight - 280;
+
+    topButton.classList.toggle("is-visible", isNearBottom);
+  }
+
+  topButton.addEventListener("click", function () {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  });
+
+  window.addEventListener("scroll", toggleTopButton, { passive: true });
+  window.addEventListener("resize", toggleTopButton);
+
+  toggleTopButton();
+}
+async function initLayout() {
+  await Promise.all([
+    loadPartial("site-header", "./partials/header.html"),
+    loadPartial("site-footer", "./partials/footer.html")
+  ]);
+
+  setActiveNav();
+  initMenuToggle();
+  initHeaderScroll();
+  initFloatingActions();
+}
+
+document.addEventListener("DOMContentLoaded", initLayout);
 /**
  * 應用啟動入口
  * 等待 DOM 完全加載後執行

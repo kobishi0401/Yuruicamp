@@ -69,7 +69,7 @@ Yuruicamp/
 │   ├── api-mock.js               # Mock API 層（window.API，預留後端接入點）
 │   ├── main.js                   # 應用初始化、Lazy Loading Fallback、Scroll Lock
 │   ├── components/               # 可跨頁面複用的 UI 元件
-│   │   ├── navbar.js             # 導航欄（PC + Offcanvas 手機版）
+│   │   ├── header.js             # 導航欄（PC + Offcanvas 手機版）
 │   │   ├── modal.js              # Modal（登入 + 個人化問卷 Stepper）
 │   │   ├── cart.js               # 購物車邏輯（Badge + localStorage）
 │   │   ├── toast.js              # Toast 提示工廠函數
@@ -108,7 +108,7 @@ Yuruicamp/
 │   └── faq.html                  # 常見問題
 │
 ├── components/                   # 可重用 HTML 片段（靜態範本）
-│   ├── navbar.html
+│   ├── header.html
 │   └── footer.html
 │
 ├── color/

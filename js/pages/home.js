@@ -258,26 +258,12 @@ async function _handleAddToCart(productId) {
 window.initHomePage = async () => {
   console.log('📌 首頁初始化中...');
 
-  // 初始化所有全局組件，並設旗標告知 main.js 已完成
-  // Initialize global components, set flag so main.js won't run them again
-  window.initNavbar();
-  window.initModalListeners();
-  window.initPersonalizationModal();
-  window.initCartListeners();
-  window._appComponentsInitialized = true;
-
+  
   // 載入商品區塊
   await _initProductSections();
 
   console.log('✓ 首頁初始化完成');
 };
 
-// 等 DOM 完成後自動執行
-// Run after DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', window.initHomePage);
-} else {
-  window.initHomePage();
-}
 
 console.log('✓ home.js 已載入');
