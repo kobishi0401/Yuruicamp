@@ -1,4 +1,4 @@
-﻿/**
+/**
  * admin/js/products.js
  * 商品 & 庫存管理模組
  * 使用 jQuery Event Namespace (.products) 防止重複導覽時事件堆疊
@@ -936,6 +936,21 @@ function buildMovementGenerateRow() {
     '</button>' +
     '</td>' +
     '</tr>';
+}
+
+function renderRentalProductsTable(rentals) {
+  if (!rentals || rentals.length === 0) {
+    $('#rentalProductsTableBody').html(
+      '<tr><td colspan="6" class="text-center text-muted py-4">目前沒有租借商品</td></tr>'
+    );
+    return;
+  }
+
+  var html = rentals.map(function (item) {
+    return buildRentalRow(item);
+  }).join('');
+
+  $('#rentalProductsTableBody').html(html);
 }
 
 function renderRentalProductsTable(rentals) {
