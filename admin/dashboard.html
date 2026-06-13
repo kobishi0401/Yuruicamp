@@ -309,6 +309,15 @@
               <div class="invalid-feedback">請輸入商品名稱</div>
             </div>
 
+            <!-- 商品描述：只作為表單輸入欄位，不寫回 JSON、不渲染到商品列表 -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="newProductDescription">
+                商品描述
+              </label>
+              <textarea class="form-control" id="newProductDescription"
+                        rows="3" placeholder="請填入商品描述"></textarea>
+            </div>
+
             <!-- 商品圖片 -->
             <div class="row g-2 mb-3">
               <div class="col-6">
@@ -362,6 +371,21 @@
                 <label class="form-label fw-semibold" for="newProductStock">初始庫存</label>
                 <input type="number" class="form-control" id="newProductStock"
                        min="0" value="0">
+              </div>
+            </div>
+
+            <!-- 租借商品設定 -->
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="newProductIsRental">
+                <label class="form-check-label fw-semibold" for="newProductIsRental">
+                  是否為租借商品
+                </label>
+              </div>
+              <div class="mt-2 d-none" id="rentalCampField">
+                <label class="form-label fw-semibold" for="newRentalCamp">存放營地: </label>
+                <input type="text" class="form-control" id="newRentalCamp"
+                       placeholder="例：湖畔星空營地">
               </div>
             </div>
 

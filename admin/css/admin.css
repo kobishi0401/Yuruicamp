@@ -132,6 +132,46 @@ body {
   border-radius: 12px 12px 0 0 !important;
 }
 
+/* ===== 商品管理頁籤 ===== */
+.admin-product-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.admin-product-tabs .nav-link {
+  color: #6c757d;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.85rem;
+}
+
+.admin-product-tabs .nav-link.active {
+  background-color: var(--admin-brand-accent);
+  color: #ffffff;
+}
+
+/* ===== 商品庫存數量控制 ===== */
+.admin-stock-control {
+  width: 132px;
+  min-width: 132px;
+}
+
+.admin-stock-control .btn {
+  width: 32px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.admin-stock-control .stock-input {
+  min-width: 52px;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
 /* ===== 表格樣式 ===== */
 .table th {
   font-size: 0.82rem;

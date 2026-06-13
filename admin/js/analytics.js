@@ -35,9 +35,11 @@ window.initAnalytics = function () {
     $('#kpiPending').text('—');
   });
 
-  // === 2. KPI：低庫存商品數（stock < 5）從 products.json 讀取 ===
+  // === 2. KPI：低庫存商品數（分店庫存加總 < 5）從 products.json 讀取 ===
   $.getJSON('data/products.json', function (products) {
-    var lowStock = products.filter(function (p) { return p.stock < 5; }).length;
+    var lowStock = products.filter(function (p) {
+      return getAnalyticsProductTotalStock(p) < 5;
+    }).length;
     $('#kpiLowStock').text(lowStock);
   }).fail(function () {
     $('#kpiLowStock').text('—');
@@ -129,3 +131,20 @@ window.initAnalytics = function () {
     }
   });
 };
+
+function getAnalyticsProductTotalStock(product) {
+  var totalStock = parseInt(product && product['total-stock'], 10);
+  if (!isNaN(totalStock)) {
+    return totalStock;
+  }
+
+  if (product && product.branch && typeof product.branch === 'object') {
+    return Object.keys(product.branch).reduce(function (sum, branchId) {
+      var qty = parseInt(product.branch[branchId], 10);
+      return sum + (isNaN(qty) ? 0 : qty);
+    }, 0);
+  }
+
+  var stock = parseInt(product && product.stock, 10);
+  return isNaN(stock) ? 0 : stock;
+}
