@@ -57,7 +57,7 @@ function loadCampgrounds() {
   // Query params: { region, environment_tags[], facility_tags[], check_in, check_out, guests }
   // Response format: { success: true, data: [...campgrounds] }
   $.ajax({
-    url: './data/campgrounds.json',
+    url: '../data/campgrounds.json',
     method: 'GET',
     dataType: 'json'
   })

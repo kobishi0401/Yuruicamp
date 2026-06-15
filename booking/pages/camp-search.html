@@ -5,20 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#244d4d">
   <meta name="description" content="搜尋並篩選台灣最美露營區，選擇最適合你的營地。">
-  <link rel="icon" href="../assets/images/brand_icon.png" type="image/png">
+  <link rel="icon" href="../../assets/images/brand_icon.png" type="image/png">
   <title> 搜尋營區 | Yuruicamp 露營選物</title>
 
   <!-- 主樣式 / Main stylesheet -->
   <!-- <link rel="stylesheet" href="../css/main.css"> -->
   <!-- 預約模組專屬樣式 / Booking module stylesheet -->
-   <link rel="stylesheet" href="./css/layout.css">
-  <link rel="stylesheet" href="./css/booking.css">
-  <link rel="stylesheet" href="./css/base.css">
+   <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/booking.css">
+  <link rel="stylesheet" href="../css/base.css">
   
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
+    /* ── Hero 搜尋列：強制單行，擴大容器寬度 ── */
+    .hero-content {
+      max-width: 900px;   /* 原 layout.css 700px 不夠放 5 個欄位，加寬 */
+    }
+    .hero-banner .search-bar {
+      flex-wrap: nowrap;
+    }
+    .hero-banner .search-bar .search-bar__input,
+    .hero-banner .search-bar .search-bar__select {
+      flex: 1 1 0;
+      min-width: 0;       /* 允許縮到比 160px 更窄，維持單行 */
+    }
+
     /* ── Dual-Thumb Price Slider ── */
     .price-range-display {
       font-size: 0.875rem;
@@ -120,9 +133,25 @@
   <!-- 預約系統專屬 Header（由 jQuery 動態載入）/ Booking header loaded by jQuery -->
   <div id="booking-header"></div>
 
-  <main class="search-page">
+    <!-- ================================================
+         步驟 4.1：Hero Banner
+         - 全螢幕背景（漸層色，預留 video 位置）
+         - 中央標題 + CTA 按鈕
+         ================================================ -->
+    <section class="hero-banner" id="heroBanner">
 
-    <!-- =====================================================
+      <!-- 背景影片（檔案路徑：assets/videos/hero_video.mp4）
+           影片載入前或不支援時，會顯示 .hero-banner 的漸層背景色作為備援 -->
+      <video autoplay loop muted playsinline>
+        <source src="../../assets/videos/hero_video.mp4" type="video/mp4">
+      </video>
+
+      <div class="hero-content">
+        
+        <h1 class="hero-title">尋找你的山林棲所</h1>
+        <p class="hero-subtitle">在這裡，選擇屬於你的季節與寧靜</p>
+
+         <!-- =====================================================
          頂部搜尋列 / Top Search Bar
          ===================================================== -->
     <section class="search-bar-section">
@@ -148,6 +177,13 @@
         </button>
       </div>
     </section>
+      </div>
+
+    </section>
+
+  <main class="search-page">
+
+   
 
     <!-- =====================================================
          主內容：左側篩選 + 右側卡片
@@ -239,22 +275,22 @@
        依賴順序：jQuery → 共用 JS → 頁面邏輯
        Load order: jQuery → shared JS → page logic
        ===================================================== -->
-       <script src="./js/layout.js"></script>
+       <script src="../js/layout.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script>
     // 載入共用的 Header / Footer
     // Load shared header and footer components
     $(function () {
       // 載入預約系統專屬 Header / Footer（非買家端的 ../components/）
-      $('#booking-header').load('./components/booking-header.html', function () {
-        $.getScript('./js/booking-header.js');
+      $('#booking-header').load('../components/booking-header.html', function () {
+        $.getScript('../js/booking-header.js');
       });
-      $('#booking-footer').load('./components/booking-footer.html');
+      $('#booking-footer').load('../components/booking-footer.html');
     });
   </script>
   
   
-  <script src="./js/camp-search.js"></script>
+  <script src="../js/camp-search.js"></script>
 
 </body>
 </html>

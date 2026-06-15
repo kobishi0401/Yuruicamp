@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#244d4d">
   <meta name="description" content="Yuruicamp 會員中心 - 管理預約紀錄、商城購買紀錄、個人資料">
-  <link rel="icon" href="../assets/images/brand_icon.png" type="image/png">
+  <link rel="icon" href="../../assets/images/brand_icon.png" type="image/png">
   <title>會員中心 | Yuruicamp 營地預約</title>
 
-  <link rel="stylesheet" href="./css/base.css">
-  <link rel="stylesheet" href="./css/layout.css">
-  <link rel="stylesheet" href="./css/booking.css">
-  <link rel="stylesheet" href="./css/member-center.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/booking.css">
+  <link rel="stylesheet" href="../css/member-center.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
@@ -376,17 +376,17 @@
 
   <div id="booking-footer"></div>
 
-  <script src="./js/layout.js"></script>
+  <script src="../js/layout.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script>
     $(function () {
-      $('#booking-header').load('./components/booking-header.html', function () {
-        $.getScript('./js/booking-header.js');
+      $('#booking-header').load('../components/booking-header.html', function () {
+        $.getScript('../js/booking-header.js');
       });
-      $('#booking-footer').load('./components/booking-footer.html');
+      $('#booking-footer').load('../components/booking-footer.html');
     });
   </script>
-  <script src="./js/member-center.js"></script>
+  <script src="../js/member-center.js"></script>
 
 </body>
 </html>
