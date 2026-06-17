@@ -4,7 +4,7 @@
 
 ## 📋 專案概述
 
-Yuruicamp 是一個完整的露營選物電商網站前端實現，包含 12 個買家功能頁面、Mock API 層、完整 RWD 響應式設計，以及一套獨立的**賣家管理後台**（含登入驗證、六大管理模組、圖表儀表板）。
+Yuruicamp 是一個完整的露營選物電商網站前端實現，包含 `pages/` 下 **11 個**買家功能頁面、Mock API 層、完整 RWD 響應式設計，以及一套獨立的**賣家管理後台**（含員工 ID 登入、**九大管理模組**、逐頁 view/edit 權限、圖表儀表板）。
 
 **開發目標**：能跑 → 看懂 → 好改 → 效能，按此優先順序逐步實現。
 
@@ -19,7 +19,7 @@ Yuruicamp 是一個完整的露營選物電商網站前端實現，包含 12 個
 | Mock API（localStorage / sessionStorage + JSON） | 模擬前後台資料，預留真實 API 接入點 |
 | Git                                              | 版本控制                            |
 
-**建置狀態**：✅ 買家前台 14 階段完成 + 賣家後台 6 模組完成（2026/06/04）
+**建置狀態**：✅ 買家前台 14 階段完成 + 賣家後台 9 模組完成（2026/06/15，含租借多營地庫存與異動員工 ID）+ 預約子系統 6 頁面完成（2026/06/12）
 
 ---
 
@@ -30,31 +30,62 @@ Yuruicamp/
 ├── index.html                    # 品牌入口頁（重定向至 home）
 │
 ├── admin/                        # ⭐ 賣家管理後台（完全獨立模組）
-│   ├── login.html                # 後台登入頁（Mock 驗證 → sessionStorage）
-│   ├── dashboard.html            # 後台主框架（Sidebar + Topbar + 動態內容區）
+│   ├── login.html                # 後台登入頁（員工 ID 驗證 → sessionStorage）
+│   ├── dashboard.html            # 後台主框架（Sidebar + Topbar + 動態內容區 + 新增商品 Modal）
 │   ├── css/
 │   │   └── admin.css             # 後台專屬樣式（炭黑 Sidebar + 品牌深青綠 Accent）
 │   ├── js/
-│   │   ├── core.js               # Auth 守衛、loadSection()、showAdminToast()
+│   │   ├── permissions.js        # 權限管理：員工資料層（localStorage）+ ADMIN_SECTIONS 定義
+│   │   ├── core.js               # Auth 守衛、權限 helper、loadSection()、showAdminToast()
 │   │   ├── analytics.js          # 數據總覽：KPI 計算、Chart.js 折線圖 + 甜甜圈圖
 │   │   ├── orders.js             # 訂單管理：表格、篩選、出貨操作、詳情 Modal
-│   │   ├── products.js           # 商品管理：庫存行內編輯、上架切換、新增 Modal
+│   │   ├── movement.js           # 庫存異動紀錄：配送店 / 接收店 / 負責員工 ID 異動表格
+│   │   ├── products.js           # 商品管理：商店 / 租借頁籤、庫存編輯、多營地租借庫存、新增 Modal
 │   │   ├── customers.js          # 會員管理：Accordion、等級/點數/優惠券編輯
 │   │   ├── discounts.js          # 折扣管理：優惠券 CRUD、隨機碼產生
-│   │   └── reviews.js            # 評論管理：評論卡片、星等篩選、回覆功能
-│   ├── partials/                 # 六個功能模組的 HTML 片段（由 core.js 動態載入）
+│   │   ├── reviews.js            # 評論管理：評論卡片、星等篩選、回覆功能
+│   │   └── bookings.js           # 預約/租借管理：預約單表格、確認/取消/完成
+│   ├── partials/                 # 九個功能模組的 HTML 片段（由 core.js 動態載入）
 │   │   ├── analytics.html        # 數據總覽版面（KPI 卡 + 圖表 canvas）
 │   │   ├── orders.html           # 訂單管理版面
+│   │   ├── movement.html         # 庫存異動紀錄版面
 │   │   ├── products.html         # 商品管理版面
 │   │   ├── customers.html        # 會員管理版面
 │   │   ├── discounts.html        # 折扣管理版面
-│   │   └── reviews.html          # 評論管理版面
+│   │   ├── reviews.html          # 評論管理版面
+│   │   ├── bookings.html         # 預約/租借管理版面
+│   │   └── permissions.html      # 權限管理版面
 │   └── data/                     # 後台專用 Mock 靜態資料（與買家端 data/ 分離）
 │       ├── orders.json           # 6 筆訂單（含出貨狀態、付款狀態、品項明細）
-│       ├── products.json         # 10 筆商品（含庫存數量、上架狀態）
+│       ├── movement.json         # 20 筆庫存異動主檔（含負責員工 ID 與異動明細清單）
+│       ├── products.json         # 10 筆商品（含 total-stock 與 branch 分店庫存）
+│       ├── reantal.json          # 20 筆租借商品（camp 陣列保存 2~5 個營地與各自數量）
 │       ├── customers.json        # 6 位會員（含等級、點數、優惠券）
 │       ├── coupons.json          # 5 張優惠券（含啟用/停用狀態）
-│       └── reviews.json          # 5 則評論（含回覆狀態）
+│       ├── reviews.json          # 5 則評論（含回覆狀態）
+│       └── bookings.json         # 10 筆預約單（含付款/預約狀態、營位與租借明細）
+│
+├── booking/                      # ⭐ 營地預約子系統（完全獨立模組）
+│   ├── camp-search.html          # 營區搜尋與列表頁
+│   ├── camp-detail.html          # 營區詳情與預約頁
+│   ├── camp-rental.html          # 裝備租借頁
+│   ├── booking-cart.html         # 預約購物車與結帳頁
+│   ├── rental-guide.html         # 租借體驗說明頁
+│   ├── booking-faq.html          # 預約系統專屬 FAQ
+│   ├── components/
+│   │   ├── booking-header.html   # 預約系統專屬 Header（背景 #F2F0EB，禁止複用買家端）
+│   │   └── booking-footer.html   # 預約系統專屬 Footer
+│   ├── css/
+│   │   └── booking.css           # 預約系統專屬樣式
+│   ├── js/
+│   │   ├── booking-header.js     # Badge 動態更新、登入狀態判斷
+│   │   ├── booking-cart.js       # 結帳頁邏輯
+│   │   ├── camp-search.js        # 搜尋篩選邏輯
+│   │   ├── camp-detail.js        # 日期選擇 + 庫存連動
+│   │   └── camp-rental.js        # 裝備推薦 + 租借計費
+│   └── data/                     # 預約系統專用 Mock 靜態資料（與買家端 data/ 分離）
+│       ├── campgrounds.json      # 8 筆營區資料（含 zones 營位定價）
+│       └── rentals.json          # 8 筆租借裝備資料（依 campground_id 分組）
 │
 ├── css/
 │   ├── variables.scss            # 色彩、字體、間距變量系統
@@ -62,7 +93,7 @@ Yuruicamp/
 │   ├── components.scss           # 可重用元件樣式
 │   ├── layout.scss               # 佈局 + Grid 系統
 │   ├── main.scss                 # SCSS 入口（引入上述四個檔案）
-│   └── main.css                  # ⭐ 編譯後主樣式（4489 行，包含 RWD + 瀏覽器相容）
+│   └── main.css                  # ⭐ 編譯後主樣式（約 4900 行，包含 RWD + 瀏覽器相容）
 │
 ├── js/
 │   ├── config.js                 # 全局配置（AppConfig）與狀態（AppState）
@@ -94,7 +125,7 @@ Yuruicamp/
 │   ├── articles.json             # 部落格文章
 │   └── branches.json             # 分店 + 合作店家
 │
-├── pages/                        # 功能頁面（12 個）
+├── pages/                        # 買家前台功能頁面（11 個）
 │   ├── home.html                 # 首頁
 │   ├── products.html             # 商品列表
 │   ├── product-detail.html       # 商品詳情
@@ -111,14 +142,24 @@ Yuruicamp/
 │   ├── header.html
 │   └── footer.html
 │
+├── assets/
+│   └── images/                   # 靜態圖片資源（brand_icon.png 等）
+│
 ├── color/
 │   └── color.md                  # 品牌色彩規範文件
 │
 ├── plans/
-│   ├── pageForBuyer.md           # 買家前台規劃文件（14 階段 + 驗證紀錄）
-│   └── pageForSeller.md          # 賣家後台規劃文件（後台設計規格書，2781 行）
+│   ├── pageForBuyer.md              # 買家前台規劃文件（14 階段 + 驗證紀錄）
+│   ├── pageForSeller.md             # 賣家後台規劃文件（後台設計規格書）
+│   ├── pageForBooking.md            # 預約子系統規格書（SDD v1.0.0）
+│   ├── bookingHeaderFooterUpdate.md # 預約 Header/Footer 前端規格書
+│   ├── adminBooking.md              # 後台預約/租借管理模組任務清單
+│   └── adminPermissions.md          # 後台權限管理 SDD（員工 + 逐頁權限）
 │
-├── README.md                     # 此文件
+├── thoughts/                     # 開發思考筆記（buyer.md、seller.md）
+├── README.md                     # 此文件（專案說明，給外部人看）
+├── userguide.md                  # 開發者工作手冊（改檔案時查表用）
+├── changelog.md                  # 版本異動紀錄
 └── .gitignore
 ```
 
@@ -167,21 +208,37 @@ npx http-server -p 8000
 服務   → pages/faq.html
 ```
 
-**賣家後台（管理流程）**
+**賣家後台（管理流程）** — 詳見 [userguide.md 第 13 節](userguide.md#13-賣家後台--admin)
 
 ```
-登入   → admin/login.html（輸入任意非空帳密即可）
-後台   → admin/dashboard.html
-         ├── 數據總覽  ← 左側 Sidebar 點「Analytics」
-         ├── 訂單管理  ← 左側 Sidebar 點「Orders」
-         ├── 商品管理  ← 左側 Sidebar 點「Products」
-         ├── 會員管理  ← 左側 Sidebar 點「Customers」
-         ├── 折扣管理  ← 左側 Sidebar 點「Discounts」
-         └── 評論管理  ← 左側 Sidebar 點「Reviews」
-登出   → 右上角頭像下拉選單 → 登出（清除 sessionStorage，返回登入頁）
+登入   → admin/login.html（Demo 員工 ID：01 老闆 / 02 員工，密碼任意非空）
+後台   → admin/dashboard.html（預設載入第一個有 view 權限的模組）
+         ├── 分析報表      ← Sidebar「分析報表」
+         ├── 訂單管理      ← Sidebar「訂單管理」
+         ├── 庫存異動紀錄  ← Sidebar「庫存異動紀錄」
+         ├── 商品與庫存    ← Sidebar「商品與庫存」
+         ├── 客戶管理      ← Sidebar「客戶管理」
+         ├── 折扣管理      ← Sidebar「折扣管理」
+         ├── 評論管理      ← Sidebar「評論管理」
+         ├── 預約/租借管理 ← Sidebar「預約/租借管理」
+         └── 權限管理      ← Sidebar「權限管理」
+登出   → Sidebar 底部或 Topbar 頭像 → 登出（清除 5 個 sessionStorage key，返回登入頁）
 ```
 
-> 💡 後台使用 `sessionStorage` 儲存登入狀態，關閉分頁後自動登出，不影響買家前台的 `localStorage`。
+> 💡 後台登入狀態用 `sessionStorage`（5 個 key）；員工主檔用 `localStorage.adminEmployees`。關閉分頁後 session 自動清除，不影響買家前台的 `localStorage`。
+
+**預約系統（預約流程）**
+
+```
+搜尋   → booking/camp-search.html（篩選地區、環境、設施）
+詳情   → booking/camp-detail.html（選日期、選營位類型，寫入 localStorage.bookingCart）
+租借   → booking/camp-rental.html（加選裝備，更新 bookingCart）
+結帳   → booking/booking-cart.html（確認明細、填聯絡資訊、送出預約）
+說明   → booking/rental-guide.html（租借流程圖文說明）
+FAQ    → booking/booking-faq.html（預約與退款常見問題）
+```
+
+> 💡 預約系統使用獨立的 `localStorage.bookingCart` 儲存跨頁資料，與電商購物車的 `localStorage.cart` 完全分離，互不干擾。
 
 ---
 
@@ -199,6 +256,8 @@ npx http-server -p 8000
 | 深 Hover       | `#316868` | 按鈕懸停           |
 
 所有色彩定義於 `css/variables.scss`，並由 `main.css` 的 CSS Custom Properties 引入。
+
+> 💡 **預約子系統色彩差異**：預約端 Header 背景使用 `#F2F0EB`（淺大地米色），有別於買家端 `#f6fbf6`（淺綠白），讓使用者一眼辨識已切換至不同服務頻道。詳見 `booking/css/booking.css`。
 
 ### 響應式斷點（RWD）
 

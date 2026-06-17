@@ -6,7 +6,12 @@
     "category": "帳篷",
     "spec": "深橄欖綠",
     "price": 3200,
-    "stock": 3,
+    "total-stock": 3,
+    "branch": {
+      "branch-001": 1,
+      "branch-002": 1,
+      "branch-003": 1
+    },
     "status": "active"
   },
   {
@@ -16,7 +21,12 @@
     "category": "帳篷",
     "spec": "沙漠卡其",
     "price": 9800,
-    "stock": 4,
+    "total-stock": 4,
+    "branch": {
+      "branch-001": 2,
+      "branch-002": 1,
+      "branch-003": 1
+    },
     "status": "active"
   },
   {
@@ -26,7 +36,12 @@
     "category": "睡袋",
     "spec": "藍灰色",
     "price": 1200,
-    "stock": 15,
+    "total-stock": 15,
+    "branch": {
+      "branch-001": 5,
+      "branch-002": 5,
+      "branch-003": 5
+    },
     "status": "active"
   },
   {
@@ -36,7 +51,12 @@
     "category": "睡袋",
     "spec": "碳黑",
     "price": 2800,
-    "stock": 2,
+    "total-stock": 2,
+    "branch": {
+      "branch-001": 1,
+      "branch-002": 1,
+      "branch-003": 0
+    },
     "status": "active"
   },
   {
@@ -46,7 +66,12 @@
     "category": "炊具",
     "spec": "標準版",
     "price": 5000,
-    "stock": 12,
+    "total-stock": 12,
+    "branch": {
+      "branch-001": 4,
+      "branch-002": 4,
+      "branch-003": 4
+    },
     "status": "active"
   },
   {
@@ -56,7 +81,12 @@
     "category": "炊具",
     "spec": "鈦金屬原色",
     "price": 1800,
-    "stock": 20,
+    "total-stock": 20,
+    "branch": {
+      "branch-001": 7,
+      "branch-002": 7,
+      "branch-003": 6
+    },
     "status": "active"
   },
   {
@@ -66,7 +96,12 @@
     "category": "燈具",
     "spec": "暖白光",
     "price": 800,
-    "stock": 4,
+    "total-stock": 4,
+    "branch": {
+      "branch-001": 2,
+      "branch-002": 1,
+      "branch-003": 1
+    },
     "status": "active"
   },
   {
@@ -76,7 +111,12 @@
     "category": "背包",
     "spec": "森林綠",
     "price": 1600,
-    "stock": 7,
+    "total-stock": 7,
+    "branch": {
+      "branch-001": 3,
+      "branch-002": 2,
+      "branch-003": 2
+    },
     "status": "active"
   },
   {
@@ -86,7 +126,12 @@
     "category": "其他",
     "spec": "鋁合金輕量版",
     "price": 2800,
-    "stock": 5,
+    "total-stock": 5,
+    "branch": {
+      "branch-001": 2,
+      "branch-002": 2,
+      "branch-003": 1
+    },
     "status": "active"
   },
   {
@@ -96,7 +141,12 @@
     "category": "其他",
     "spec": "消光黑",
     "price": 880,
-    "stock": 0,
+    "total-stock": 0,
+    "branch": {
+      "branch-001": 0,
+      "branch-002": 0,
+      "branch-003": 0
+    },
     "status": "disabled"
   }
 ]

@@ -79,56 +79,13 @@ window.initModalListeners = () => {
 
 /**
  * 初始化登入/註冊 Modal 的所有互動
- * Initialize login/register modal interactions:
- * - 頁籤切換（登入 ↔ 註冊）
- * - 一般帳密登入
+ * Initialize login modal interactions:
  * - Google 社群登入（模擬）
  * - LINE 社群登入（模擬）
  */
 function _initLoginModal() {
   const loginModal = document.getElementById("loginModal");
   if (!loginModal) return;
-
-  // 頁籤切換：登入 / 註冊
-  const tabBtns = loginModal.querySelectorAll(".modal-tab-btn");
-  const tabPanels = loginModal.querySelectorAll(".modal-tab-panel");
-
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // 移除所有 active，再對點擊的 btn 加上 active
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      // 切換顯示對應的面板
-      const targetTab = btn.dataset.tab;
-      tabPanels.forEach((panel) => {
-        panel.classList.toggle("active", panel.dataset.panel === targetTab);
-      });
-    });
-  });
-
-  // 一般帳密登入表單
-  const loginForm = loginModal.querySelector("#loginEmailForm");
-  if (loginForm) {
-    loginForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const email = loginForm.querySelector('[name="email"]').value;
-      // 模擬登入：取 email @ 前面的部分當作用戶名稱
-      const name = email.split("@")[0] || "露友";
-      _handleLoginSuccess({ name, email, avatar: null, provider: "email" });
-    });
-  }
-
-  // 一般帳密註冊表單
-  const registerForm = loginModal.querySelector("#registerForm");
-  if (registerForm) {
-    registerForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = registerForm.querySelector('[name="name"]').value;
-      const email = registerForm.querySelector('[name="email"]').value;
-      _handleLoginSuccess({ name, email, avatar: null, provider: "email" });
-    });
-  }
 
   // Google 登入按鈕（模擬）
   const googleBtns = loginModal.querySelectorAll(".btn-google-login");

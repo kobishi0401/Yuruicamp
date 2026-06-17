@@ -92,7 +92,7 @@ function _buildProductCard(product, badgeType = "") {
           <span>(${product.reviews})</span>
         </div>
 
-        <!-- 價格：現價 + 原價刪除線 + 折扣百分比 -->
+        <!-- 價格：現價 + 原價刪除線 -->
         <div class="product-card-price">
           <span class="price-current">NT$ ${priceFormatted}</span>
           ${
@@ -102,6 +102,11 @@ function _buildProductCard(product, badgeType = "") {
           }
           ${discount ? `<span class="price-discount">${discount}</span>` : ""}
         </div>
+        
+        <!-- 折扣百分比（獨立換行顯示） -->
+        ${discount
+          ? `<span class="price-discount">${discount}</span>`
+          : ''}
 
         <!-- 加入購物車按鈕 -->
         <button
