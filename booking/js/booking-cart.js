@@ -21,7 +21,7 @@ $(document).ready(function () {
 
   // 防呆：無資料時引導回搜尋頁 / Guard: redirect if no data
   if (!stored) {
-    alert('購物車資料為空，請重新搜尋並選擇營區。');
+    showToast('購物車資料為空，請重新搜尋並選擇營區。', 'warning');
     window.location.href = './camp-search.html';
     return;
   }
@@ -403,5 +403,5 @@ function highlightError(selector, message) {
   $input.focus();
   // 2 秒後恢復 / Restore after 2s
   setTimeout(() => $input.css('border-color', ''), 2000);
-  alert(message);
+  showToast(message, 'warning');
 }

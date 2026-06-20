@@ -32,7 +32,7 @@ $(document).ready(function () {
 
   // 防呆：缺少 id 時返回搜尋頁 / Guard: redirect if id missing
   if (!campId) {
-    alert('找不到營區資訊，即將返回搜尋頁。');
+    showToast('找不到營區資訊，即將返回搜尋頁。', 'warning');
     window.location.href = './camp-search.html';
     return;
   }
@@ -70,7 +70,7 @@ function loadCampDetail(campId) {
     currentCamp = data.find(c => c.campground_id === campId);
 
     if (!currentCamp) {
-      alert('找不到此營區（ID: ' + campId + '），即將返回搜尋頁。');
+      showToast('找不到此營區（ID: ' + campId + '），即將返回搜尋頁。', 'error');
       window.location.href = './camp-search.html';
       return;
     }
@@ -334,13 +334,13 @@ function saveToLocalStorageAndNext() {
 
   // 驗證：日期是否已選 / Validate: dates selected?
   if (!checkInDate || !checkOutDate) {
-    alert('請先選擇入住和退房日期。');
+    showToast('請先選擇入住和退房日期。', 'warning');
     return;
   }
 
   // 驗證：營位是否已選 / Validate: zone selected?
   if (!selectedZoneId) {
-    alert('請選擇一種營位類型。');
+    showToast('請選擇一種營位類型。', 'warning');
     return;
   }
 

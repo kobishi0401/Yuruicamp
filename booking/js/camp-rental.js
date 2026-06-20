@@ -29,7 +29,7 @@ $(document).ready(function () {
   // 防呆：若 LocalStorage 無資料，代表使用者跳過了前面的流程
   // Guard: if no booking data in storage, user skipped the flow
   if (!stored) {
-    alert('預約資訊已遺失，請重新搜尋營區。');
+    showToast('預約資訊已遺失，請重新搜尋營區。', 'warning');
     window.location.href = './camp-search.html';
     return;
   }
@@ -281,7 +281,7 @@ function addRentalItem(equipmentId) {
     if (selectedRentals[equipmentId].quantity < item.stock) {
       selectedRentals[equipmentId].quantity++;
     } else {
-      alert(`庫存不足，最多可租借 ${item.stock} 件。`);
+      showToast(`庫存不足，最多可租借 ${item.stock} 件。`, 'warning');
       return;
     }
   } else {

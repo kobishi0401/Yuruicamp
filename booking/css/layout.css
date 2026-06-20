@@ -165,7 +165,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a3838 0%, #244d4d 40%, #316868 70%, #4a7777 100%);
+  background: linear-gradient(135deg, #2E3F2C 0%, #5A6D56 42%, #6B8F71 70%, #7B9E82 100%);
 }
 
 /* 背景影片：inset:0 = top/right/bottom/left 全部設為 0，讓影片撐滿整個 section */
@@ -233,9 +233,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 2.25rem;
-  background-color: #ffffff;
-  color: #244d4d;
-  border: 2px solid #ffffff;
+  background-color: #FDF1DB;
+  color: #5A6D56;
+  border: 2px solid #FDF1DB;
   border-radius: 50px;
   font-size: 1rem;
   font-weight: 700;
@@ -297,4 +297,17 @@
   .hero-title  { font-size: clamp(1.75rem, 8vw, 2.5rem); }
   .hero-subtitle { font-size: 0.95rem; }
   .btn-hero-primary, .btn-hero-outline { padding: 0.75rem 1.5rem; font-size: 0.9rem; }
+}
+
+.logo {
+  height: 64px;       /* 請依照你 Header 的高度調整數字（例如 40px ~ 60px） */
+  width: auto;        /* 讓寬度隨著高度自動等比例縮放 */
+  display: block;     /* 消除圖片下方預設的微小空白間隙 */
+  object-fit: contain;
+}
+.brand {
+  display: flex;          /* 讓裡面的元素變成橫向排版 */
+  align-items: center;    /* 關鍵！讓裡面的 Logo 和文字「垂直置中」對齊 */
+  gap: 12px;              /* (選用) 用來調整 Logo 和文字之間的左右間距 */
+  text-decoration: none;  /* 如果是用 <a> 標籤，這行可以去掉底線 */
 }

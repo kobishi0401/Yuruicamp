@@ -15,6 +15,40 @@
 (function () {
   'use strict';
 
+  /* 若頁面未載入 booking-utils.js（如 camp-search、faq、rental-guide），
+     在此定義 showToast，確保 OAuth 按鈕仍可正常顯示提示。 */
+  if (typeof window.showToast !== 'function') {
+    window.showToast = (function () {
+      var ICONS = {
+        info: 'bi bi-info-circle-fill', warning: 'bi bi-exclamation-triangle-fill',
+        error: 'bi bi-x-octagon-fill',  success: 'bi bi-check-circle-fill'
+      };
+      function getContainer() {
+        var el = document.getElementById('bk-toast-container');
+        if (!el) { el = document.createElement('div'); el.id = 'bk-toast-container'; document.body.appendChild(el); }
+        return el;
+      }
+      function dismiss(t) {
+        t.classList.add('bk-toast--hiding');
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+      }
+      return function showToast(message, type) {
+        type = (type && ICONS[type]) ? type : 'info';
+        var c = getContainer();
+        var toast = document.createElement('div');
+        toast.className = 'bk-toast bk-toast--' + type;
+        var icon = document.createElement('i'); icon.className = ICONS[type]; icon.setAttribute('aria-hidden','true');
+        var text = document.createElement('span'); text.className = 'bk-toast__text'; text.textContent = message;
+        var btn = document.createElement('button'); btn.className = 'bk-toast__close'; btn.setAttribute('aria-label','關閉'); btn.innerHTML = '&times;';
+        btn.addEventListener('click', function () { dismiss(toast); });
+        toast.appendChild(icon); toast.appendChild(text); toast.appendChild(btn); c.appendChild(toast);
+        var timer = setTimeout(function () { dismiss(toast); }, 3500);
+        toast.addEventListener('mouseenter', function () { clearTimeout(timer); });
+        toast.addEventListener('mouseleave', function () { timer = setTimeout(function () { dismiss(toast); }, 2000); });
+      };
+    }());
+  }
+
   /* ============================================================
      1. Badge 更新
      ============================================================ */
@@ -181,7 +215,7 @@
     // OAuth 佔位邏輯（未來替換為真實 OAuth redirect）
     function handleOAuth(provider) {
       console.log('[OAuth] 準備使用', provider, '登入');
-      alert('【開發中】即將導向 ' + provider + ' 授權頁面');
+      window.showToast('【開發中】即將導向 ' + provider + ' 授權頁面', 'info');
     }
 
     var btnGoogle   = document.getElementById('oauthGoogle');

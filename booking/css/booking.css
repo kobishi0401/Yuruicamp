@@ -8,23 +8,41 @@
       沿用 color.md 品牌配色
    ============================================================ */
 :root {
-  --bk-primary:         #244d4d;   /* 深青綠：主色、按鈕 */
-  --bk-primary-hover:   #316868;   /* 深青綠懸停色 */
-  --bk-primary-light:   #e8f4f4;   /* 極淺青綠：選中背景 */
+  /* 品牌色（導覽列、頁尾、大面積區塊） */
+  --bk-primary:         #5A6D56;   /* 深青苔綠：品牌主色 */
+  --bk-primary-hover:   #6B8F71;   /* 石生苔綠 */
+  --bk-primary-light:   #E6EDE4;   /* 極淺苔綠：選中背景 */
+  --bk-on-dark:         #FDF1DB;   /* 深色背景反白字 */
+
+  /* 行動按鈕（CTA） */
+  --bk-cta:             #9D5F1B;   /* 溫暖陶土橘：主行動按鈕 */
+  --bk-cta-hover:       #7B4515;   /* 深陶土：懸停 */
+
+  /* 介面層次 */
   --bk-white:           #ffffff;
-  --bk-accent:          #779999;   /* 淺青灰綠：副標題、標籤 */
-  --bk-bg:              #f6fbf6;   /* 頁面底色 */
-  --bk-card-bg:         #f2f2f2;   /* 卡片背景 */
-  --bk-border:          #d4e6e6;   /* 邊框色 */
-  --bk-border-strong:   #244d4d;
-  --bk-gold:            #d4a017;   /* 金色：推薦標籤 */
-  --bk-orange:          #e07b39;   /* 橘色：警示、折扣 */
-  --bk-success:         #2d7a4f;   /* 深綠：成功狀態 */
-  --bk-danger:          #c0392b;   /* 紅色：錯誤狀態 */
-  --bk-text:            #333333;
-  --bk-text-muted:      #666666;
-  --bk-shadow:          0 2px 12px rgba(36, 77, 77, 0.12);
-  --bk-shadow-hover:    0 6px 24px rgba(36, 77, 77, 0.2);
+  --bk-bg:              #FDF1DB;   /* 晨光奶油黃：頁面底色 */
+  --bk-card-bg:         #ffffff;   /* 純白：卡片 */
+  --bk-border:          #D7C0A4;   /* 暖沙色：分隔線 */
+  --bk-border-strong:   #5A6D56;
+
+  /* 文字層次 */
+  --bk-text:            #4A3B32;   /* 深炭褐木：主要文字 */
+  --bk-text-muted:      #96AB88;   /* 尤加利綠：次要文字 */
+  --bk-accent:          #7B8563;   /* 橄欖綠：強調 */
+
+  /* 標籤 */
+  --bk-gold:            #9D5F1B;   /* 陶土橘：推薦標籤 */
+  --bk-sage:            #A4BD9B;   /* 淺鼠尾草綠：環保標籤 */
+  --bk-orange:          #C4792A;   /* 暖橘：警示 */
+
+  /* 狀態 */
+  --bk-success:         #4A7A5A;   /* 深綠：成功 */
+  --bk-danger:          #c0392b;   /* 紅色：錯誤 */
+
+  /* 陰影（暖褐色調） */
+  --bk-shadow:          0 2px 12px rgba(74, 59, 50, 0.09);
+  --bk-shadow-hover:    0 6px 24px rgba(74, 59, 50, 0.15);
+
   --bk-radius:          10px;
   --bk-radius-sm:       6px;
   --bk-transition:      all 0.25s ease;
@@ -237,7 +255,7 @@
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  background: var(--bk-primary);
+  background: var(--bk-cta);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 600;
@@ -253,7 +271,7 @@
 .camp-card__name {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--bk-primary);
+  color: var(--bk-text);
   margin-bottom: 0.4rem;
 }
 
@@ -263,7 +281,7 @@
   margin-bottom: 0.75rem;
 }
 
-.camp-card__price strong { color: var(--bk-primary); }
+.camp-card__price strong { color: var(--bk-cta); }
 
 .camp-card__tags {
   display: flex;
@@ -291,19 +309,19 @@
 }
 
 .tag--env {
-  background: #e3f2e3;
-  color: #2d6e2d;
+  background: #E6EDE4;
+  color: #5A6D56;
 }
 
 .tag--facility {
-  background: #e8f0fb;
-  color: #1a4a9a;
+  background: rgba(123, 133, 99, 0.12);
+  color: #7B8563;
 }
 
 .tag--recommend {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffc107;
+  background: rgba(157, 95, 27, 0.1);
+  color: #9D5F1B;
+  border: 1px solid rgba(157, 95, 27, 0.32);
 }
 
 /* ============================================================
@@ -327,25 +345,25 @@
 }
 
 .btn--primary {
-  background: var(--bk-primary);
+  background: var(--bk-cta);
   color: #fff;
-  border-color: var(--bk-primary);
+  border-color: var(--bk-cta);
 }
 
 .btn--primary:hover {
-  background: var(--bk-primary-hover);
-  border-color: var(--bk-primary-hover);
+  background: var(--bk-cta-hover);
+  border-color: var(--bk-cta-hover);
   color: #fff;
 }
 
 .btn--outline {
   background: transparent;
-  color: var(--bk-primary);
-  border-color: var(--bk-primary);
+  color: var(--bk-cta);
+  border-color: var(--bk-cta);
 }
 
 .btn--outline:hover {
-  background: var(--bk-primary);
+  background: var(--bk-cta);
   color: #fff;
 }
 
@@ -1208,16 +1226,16 @@
 
 /* ============================================================
    22. Booking Header（預約系統專屬）
-   背景色 #F2F0EB（大地米色），與買家端 #f6fbf6 做視覺區分
+   背景色 #5A6D56（深青苔綠），與頁面底色 #FDF1DB 形成深-淺層次
    ============================================================ */
 
 /* Header 外層容器 */
 .booking-header {
-  background: #F2F0EB;
+  background: #5A6D56;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(36, 77, 77, 0.1);
+  box-shadow: 0 2px 10px rgba(74, 59, 50, 0.22);
 }
 
 /* Navbar 內層：三欄水平排列（品牌 | 導覽 | 操作） */
@@ -1237,7 +1255,7 @@
 .bk-brand-link {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #244d4d;
+  color: #FDF1DB;
   text-decoration: none;
   display: flex;
   align-items: baseline;
@@ -1245,13 +1263,13 @@
   transition: color 0.2s;
 }
 
-.bk-brand-link:hover { color: #316868; }
+.bk-brand-link:hover { color: #fff; }
 
 /* Logo 副標題：低彩度縮小字體 */
 .brand-sub {
   font-size: 0.75rem;
   font-weight: 400;
-  color: #7a8a82;
+  color: rgba(253, 241, 219, 0.6);
   letter-spacing: 0.02em;
 }
 
@@ -1269,7 +1287,7 @@
   display: block;
   padding: 0.45rem 0.9rem;
   font-size: 0.95rem;
-  color: #333;
+  color: rgba(253, 241, 219, 0.82);
   text-decoration: none;
   border-radius: 6px;
   transition: background 0.2s, color 0.2s;
@@ -1277,15 +1295,15 @@
 }
 
 .bk-nav-link:hover {
-  background: rgba(36, 77, 77, 0.08);
-  color: #244d4d;
+  background: rgba(253, 241, 219, 0.12);
+  color: #FDF1DB;
 }
 
-/* 目前頁面對應連結加底線加深色 */
+/* 目前頁面對應連結加底線 */
 .bk-nav-link.active {
-  color: #244d4d;
+  color: #FDF1DB;
   font-weight: 600;
-  border-bottom: 2px solid #244d4d;
+  border-bottom: 2px solid rgba(253, 241, 219, 0.75);
   border-radius: 0;
 }
 
@@ -1297,11 +1315,20 @@
   flex-shrink: 0;
 }
 
-/* 系統切換鈕：前往裝備商城 */
+/* 系統切換鈕：前往裝備商城（在深色 header 上用透明鏤空樣式） */
 .bk-switch-btn {
   padding: 0.45rem 1rem;
   font-size: 0.875rem;
   white-space: nowrap;
+  background: rgba(253, 241, 219, 0.1);
+  color: #FDF1DB;
+  border-color: rgba(253, 241, 219, 0.42);
+}
+
+.bk-switch-btn:hover {
+  background: rgba(253, 241, 219, 0.2);
+  color: #fff;
+  border-color: rgba(253, 241, 219, 0.75);
 }
 
 /* 手機版縮短文字（只顯示「商城」） */
@@ -1319,15 +1346,18 @@
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  color: #244d4d;
+  color: #FDF1DB;
   font-size: 1.35rem;
   text-decoration: none;
   transition: background 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
-.bk-cart-btn:hover { background: rgba(36, 77, 77, 0.1); }
+.bk-cart-btn:hover { background: rgba(253, 241, 219, 0.14); }
 
-/* Badge：浮動在右上角的紅色計數圓點 */
+/* Badge：浮動在右上角的計數圓點 */
 .bk-badge {
   position: absolute;
   top: 2px;
@@ -1335,7 +1365,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  background: #e07b39;     /* 橘色，視覺醒目 */
+  background: #9D5F1B;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1353,10 +1383,19 @@
   vertical-align: middle;
 }
 
-/* 登入按鈕 */
+/* 登入按鈕（在深色 header 上用反白樣式） */
 .bk-login-btn {
   padding: 0.4rem 0.9rem;
   font-size: 0.875rem;
+  color: #FDF1DB;
+  border-color: rgba(253, 241, 219, 0.5);
+  background: transparent;
+}
+
+.bk-login-btn:hover {
+  background: rgba(253, 241, 219, 0.14);
+  color: #fff;
+  border-color: rgba(253, 241, 219, 0.85);
 }
 
 /* 已登入：頭像區塊 */
@@ -1365,15 +1404,15 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #333;
+  color: #FDF1DB;
 }
 
 .bk-user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #244d4d;
-  color: #fff;
+  background: rgba(253, 241, 219, 0.2);
+  color: #FDF1DB;
   font-weight: 700;
   font-size: 0.9rem;
   display: flex;
@@ -1389,20 +1428,20 @@
 }
 
 .bk-settings-btn {
-  color: #555;
+  color: rgba(253, 241, 219, 0.72);
   font-size: 1.1rem;
   text-decoration: none;
   transition: color 0.2s;
 }
 
-.bk-settings-btn:hover { color: #244d4d; }
+.bk-settings-btn:hover { color: #FDF1DB; }
 
 /* 漢堡按鈕（手機版） */
 .bk-hamburger {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #244d4d;
+  color: #FDF1DB;
   cursor: pointer;
   padding: 0.3rem;
   border-radius: 6px;
@@ -1410,7 +1449,7 @@
   transition: background 0.2s;
 }
 
-.bk-hamburger:hover { background: rgba(36, 77, 77, 0.1); }
+.bk-hamburger:hover { background: rgba(253, 241, 219, 0.14); }
 
 /* 桌機版隱藏 / 手機版隱藏輔助 class */
 .bk-hidden-mobile  { display: flex; }   /* 桌機顯示 */
@@ -1422,12 +1461,12 @@
 .bk-offcanvas {
   position: fixed;
   top: 0;
-  right: -320px;   /* 預設隱藏在右側外 */
+  right: -320px;
   width: 300px;
   max-width: 85vw;
   height: 100vh;
-  background: #F2F0EB;
-  box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+  background: #FDF1DB;
+  box-shadow: -4px 0 20px rgba(74, 59, 50, 0.18);
   z-index: 2000;
   transition: right 0.3s ease;
   display: flex;
@@ -1441,27 +1480,27 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(36,77,77,0.15);
+  border-bottom: 1px solid #D7C0A4;
 }
 
 .bk-offcanvas__title {
   font-size: 1rem;
   font-weight: 700;
-  color: #244d4d;
+  color: #5A6D56;
 }
 
 .bk-offcanvas__close {
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #555;
+  color: #7B8563;
   cursor: pointer;
   padding: 0.2rem;
   border-radius: 4px;
   transition: background 0.2s;
 }
 
-.bk-offcanvas__close:hover { background: rgba(36,77,77,0.1); }
+.bk-offcanvas__close:hover { background: rgba(90, 109, 86, 0.1); }
 
 .bk-offcanvas__body { padding: 1rem 0; flex: 1; overflow-y: auto; }
 
@@ -1475,23 +1514,23 @@
   display: block;
   padding: 0.85rem 1.5rem;
   font-size: 0.95rem;
-  color: #333;
+  color: #4A3B32;
   text-decoration: none;
   transition: background 0.15s;
 }
 
-.bk-offcanvas__list li a:hover { background: rgba(36,77,77,0.07); color: #244d4d; }
+.bk-offcanvas__list li a:hover { background: rgba(90, 109, 86, 0.08); color: #5A6D56; }
 
 /* Offcanvas 分隔線 */
 .bk-offcanvas__divider {
   height: 1px;
-  background: rgba(36,77,77,0.15);
+  background: #D7C0A4;
   margin: 0.5rem 1.5rem;
 }
 
-/* 系統切換連結（橘色強調） */
+/* 系統切換連結（陶土橘強調） */
 .bk-offcanvas__switch {
-  color: #244d4d !important;
+  color: #9D5F1B !important;
   font-weight: 600 !important;
 }
 
@@ -1704,8 +1743,8 @@
 }
 
 .bk-offcanvas__cart-btn:hover {
-  background: rgba(36, 77, 77, 0.07);
-  color: #244d4d;
+  background: rgba(90, 109, 86, 0.08);
+  color: #5A6D56;
 }
 
 /* OAuth 登入按鈕 */
@@ -1770,8 +1809,8 @@
    沿用買家端 4 欄式排版，確保視覺一致
    ============================================================ */
 .booking-footer {
-  background: #244d4d;   /* 深青綠，與買家端 footer 相同，維持品牌一致 */
-  color: #ccc;
+  background: #5A6D56;
+  color: rgba(253, 241, 219, 0.82);
   padding: 3rem 0 1.5rem;
   margin-top: 4rem;
 }
@@ -1801,14 +1840,14 @@
 .bk-footer__subheading {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #aac8c8;
+  color: #A4BD9B;
   margin-bottom: 0.75rem;
 }
 
 /* 標語文字 */
 .bk-footer__tagline {
   font-size: 0.875rem;
-  color: #aac8c8;
+  color: rgba(253, 241, 219, 0.7);
   line-height: 1.7;
   margin-bottom: 0.5rem;
 }
@@ -1824,26 +1863,26 @@
 
 .bk-footer__links a {
   font-size: 0.875rem;
-  color: #aac8c8;
+  color: rgba(253, 241, 219, 0.72);
   text-decoration: none;
   transition: color 0.2s;
 }
 
-.bk-footer__links a:hover { color: #fff; }
+.bk-footer__links a:hover { color: #FDF1DB; }
 
-/* 重要連結（ 取消退款等）加強調 */
-.bk-footer__links a.important { color: #ffd580; }
+/* 重要連結（取消退款等）加強調 */
+.bk-footer__links a.important { color: #FDF1DB; font-weight: 600; }
 .bk-footer__links a.important:hover { color: #fff; }
 
 /* 聯絡資訊 */
 .bk-footer__contact-item {
   font-size: 0.875rem;
-  color: #aac8c8;
+  color: rgba(253, 241, 219, 0.7);
   margin-bottom: 0.5rem;
   line-height: 1.6;
 }
 
-.bk-footer__contact-item strong { color: #cde0e0; }
+.bk-footer__contact-item strong { color: #FDF1DB; }
 
 /* 社群連結 */
 .social {
@@ -1870,7 +1909,7 @@
 /* 分隔線 */
 .bk-footer__divider {
   border: none;
-  border-top: 1px solid rgba(255,255,255,0.15);
+  border-top: 1px solid rgba(253, 241, 219, 0.15);
   margin: 0 0 1.5rem;
 }
 
@@ -1879,7 +1918,7 @@
 
 .bk-footer__copyright {
   font-size: 0.8rem;
-  color: #7a9494;
+  color: rgba(253, 241, 219, 0.5);
   margin-bottom: 0.75rem;
 }
 
@@ -1888,18 +1927,18 @@
 
 .bk-footer__policy a {
   font-size: 0.8rem;
-  color: #7a9494;
+  color: rgba(253, 241, 219, 0.52);
   text-decoration: none;
   margin: 0 0.75rem;
   transition: color 0.2s;
 }
 
-.bk-footer__policy a:hover { color: #ccc; }
+.bk-footer__policy a:hover { color: rgba(253, 241, 219, 0.85); }
 
 /* 付款圖示列 */
 .bk-footer__payment {
   font-size: 0.8rem;
-  color: #7a9494;
+  color: rgba(253, 241, 219, 0.52);
   margin-bottom: 0.5rem;
 }
 
@@ -1919,4 +1958,66 @@
 
 @media (max-width: 480px) {
   .bk-footer__grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   24. Toast 訊息提示框
+   ============================================================ */
+#bk-toast-container {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: 340px;
+  width: calc(100% - 2.5rem);
+}
+
+.bk-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--bk-radius-sm);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  pointer-events: all;
+  animation: bk-toast-in 0.28s ease;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.bk-toast--hiding {
+  opacity: 0;
+  transform: translateX(110%);
+}
+
+.bk-toast--info    { background: var(--bk-primary); }
+.bk-toast--warning { background: var(--bk-orange); }
+.bk-toast--error   { background: var(--bk-danger); }
+.bk-toast--success { background: var(--bk-success); }
+
+.bk-toast__text  { flex: 1; }
+
+.bk-toast__close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.bk-toast__close:hover { color: #fff; }
+
+@keyframes bk-toast-in {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
 }

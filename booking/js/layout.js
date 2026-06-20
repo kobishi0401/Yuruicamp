@@ -7,7 +7,7 @@ function initFloatingActions() {
   floatingActions.innerHTML = `
     <a
       class="floating-line-btn"
-      href="https://line.me/R/ti/p/%40866acglg"
+      href="https://line.me"
       target="_blank"
       rel="noopener noreferrer"
       aria-label=" Line 客服"

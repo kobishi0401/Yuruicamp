@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
     profileForm.addEventListener('submit', function (e) {
       e.preventDefault();
       // 實際專案應呼叫 API；此處以 alert 示意
-      alert('個人資料已儲存！');
+      showToast('個人資料已儲存！', 'success');
     });
   }
 
