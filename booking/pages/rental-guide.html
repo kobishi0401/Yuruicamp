@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#244d4d">
+  <meta name="theme-color" content="#73816E">
   <meta name="description" content="Yuruicamp 裝備租借體驗說明：無需自備裝備，選好營區後直接租借，送達營地。">
   <link rel="icon" href="../../assets/icons/camping_icon.png" type="image/png">
   <title>租借體驗說明 | Yuruicamp 營地預約</title>
@@ -15,19 +15,19 @@
 
   <style>
     /* ======================================================
-       rental-guide.html 頁面專屬樣式
+       rental-guide.html 頁面專屬樣式 — Yuruicamp v3
        ====================================================== */
 
     /* 整體頁面背景 */
     .rental-guide-page {
-      background: #f6fbf6;
+      background: var(--yc-bg, #F8F5EE);
       min-height: 100vh;
       padding-bottom: 4rem;
     }
 
     /* ── Hero Banner ── */
     .rg-hero {
-      background: linear-gradient(135deg, #244d4d 0%, #316868 100%);
+      background: linear-gradient(135deg, var(--yc-sage-dark, #62705D) 0%, var(--yc-sage-action, #73816E) 100%);
       color: #fff;
       padding: 5rem 1.5rem 4rem;
       text-align: center;
@@ -42,7 +42,7 @@
 
     .rg-hero__subtitle {
       font-size: 1.15rem;
-      color: rgba(255,255,255,0.85);
+      color: rgba(255,253,249,0.85);
       max-width: 520px;
       margin: 0 auto 2rem;
       line-height: 1.7;
@@ -53,16 +53,17 @@
       align-items: center;
       gap: .5rem;
       padding: .85rem 2rem;
-      background: #fff;
-      color: #244d4d;
+      background: var(--yc-cta, #A96352);
+      color: #fff;
       font-weight: 700;
       font-size: 1rem;
       border-radius: 8px;
       text-decoration: none;
-      transition: transform .2s, box-shadow .2s;
+      transition: background .2s, transform .2s, box-shadow .2s;
     }
 
     .rg-hero__cta:hover {
+      background: var(--yc-cta-hover, #925342);
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,.2);
     }
@@ -77,14 +78,14 @@
     .rg-section__title {
       font-size: 1.6rem;
       font-weight: 700;
-      color: #244d4d;
+      color: var(--yc-text, #3E473D);
       text-align: center;
       margin-bottom: 0.5rem;
     }
 
     .rg-section__desc {
       text-align: center;
-      color: #666;
+      color: var(--yc-text-muted, #7B756D);
       font-size: .95rem;
       margin-bottom: 2.5rem;
     }
@@ -97,9 +98,9 @@
     }
 
     .rg-step-card {
-      background: #fff;
+      background: var(--yc-surface, #FFFDF9);
       border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(36,77,77,.1);
+      box-shadow: 0 2px 12px rgba(60,70,59,.1);
       padding: 2rem 1.25rem;
       text-align: center;
       position: relative;
@@ -110,7 +111,7 @@
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: #244d4d;
+      background: var(--yc-sage-action, #73816E);
       color: #fff;
       font-size: 1.25rem;
       font-weight: 800;
@@ -128,13 +129,13 @@
     .rg-step-card__title {
       font-size: 1rem;
       font-weight: 700;
-      color: #244d4d;
+      color: var(--yc-text, #3E473D);
       margin-bottom: .5rem;
     }
 
     .rg-step-card__desc {
       font-size: .875rem;
-      color: #666;
+      color: var(--yc-text-muted, #7B756D);
       line-height: 1.6;
     }
 
@@ -146,7 +147,7 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 1.5rem;
-      color: #aac8c8;
+      color: var(--yc-border, #D8CFC3);
       z-index: 1;
     }
 
@@ -158,9 +159,9 @@
     }
 
     .rg-equip-card {
-      background: #fff;
+      background: var(--yc-surface, #FFFDF9);
       border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(36,77,77,.1);
+      box-shadow: 0 2px 12px rgba(60,70,59,.1);
       padding: 1.75rem 1.25rem;
       text-align: center;
       transition: transform .2s, box-shadow .2s;
@@ -168,7 +169,7 @@
 
     .rg-equip-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 6px 24px rgba(36,77,77,.18);
+      box-shadow: 0 6px 24px rgba(60,70,59,.18);
     }
 
     .rg-equip-card__icon { font-size: 2.5rem; margin-bottom: .75rem; }
@@ -176,20 +177,20 @@
     .rg-equip-card__name {
       font-size: 1rem;
       font-weight: 700;
-      color: #244d4d;
+      color: var(--yc-text, #3E473D);
       margin-bottom: .4rem;
     }
 
     .rg-equip-card__desc {
       font-size: .8rem;
-      color: #888;
+      color: var(--yc-text-muted, #7B756D);
       line-height: 1.5;
     }
 
-    /* ── 押金說明區塊（特別強調） ── */
+    /* ── 押金說明區塊（警示強調） ── */
     .rg-deposit-box {
-      background: #fffbec;
-      border: 2px solid #ffc107;
+      background: var(--yc-warning-soft, #F4ECE2);
+      border: 2px solid var(--yc-warning, #9A7455);
       border-radius: 12px;
       padding: 2rem;
       max-width: 760px;
@@ -199,7 +200,7 @@
     .rg-deposit-box__title {
       font-size: 1.15rem;
       font-weight: 700;
-      color: #856404;
+      color: var(--yc-warning-dark, #6B4D32);
       margin-bottom: 1rem;
       display: flex;
       align-items: center;
@@ -212,7 +213,7 @@
     }
 
     .rg-deposit-box li {
-      color: #555;
+      color: var(--yc-text-secondary, #625E56);
       font-size: .925rem;
       line-height: 1.8;
       margin-bottom: .25rem;
@@ -221,16 +222,16 @@
     .rg-deposit-box__link {
       display: inline-block;
       margin-top: 1rem;
-      color: #244d4d;
+      color: var(--yc-sage-action, #73816E);
       font-size: .875rem;
       text-decoration: underline;
     }
 
-    .rg-deposit-box__link:hover { color: #316868; }
+    .rg-deposit-box__link:hover { color: var(--yc-sage-dark, #62705D); }
 
     /* ── 底部 CTA ── */
     .rg-cta-section {
-      background: linear-gradient(135deg, #244d4d 0%, #316868 100%);
+      background: linear-gradient(135deg, var(--yc-sage-dark, #62705D) 0%, var(--yc-sage-action, #73816E) 100%);
       padding: 4rem 1.5rem;
       text-align: center;
       margin-top: 4rem;
@@ -244,7 +245,7 @@
     }
 
     .rg-cta-section p {
-      color: rgba(255,255,255,.85);
+      color: rgba(255,253,249,.85);
       font-size: .95rem;
       margin-bottom: 1.75rem;
     }

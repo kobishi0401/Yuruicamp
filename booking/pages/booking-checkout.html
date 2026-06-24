@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#244d4d">
+  <meta name="theme-color" content="#73816E">
   <link rel="icon" href="../../assets/icons/camping_icon.png" type="image/png">
   <title>確認結帳 | Yuruicamp 露營選物</title>
 
@@ -211,11 +211,11 @@
       gap: 0.75rem;
       flex-wrap: wrap;
       padding: 0.875rem 1rem;
-      background: #fff8e1;
-      border: 1.5px solid #ffc107;
+      background: var(--yc-warning-soft, #F4ECE2);
+      border: 1.5px solid var(--yc-warning, #9A7455);
       border-radius: var(--bk-radius);
       font-size: 0.875rem;
-      color: #856404;
+      color: var(--yc-warning-dark, #6B4D32);
       margin-bottom: 1rem;
     }
 
@@ -319,7 +319,7 @@
               <h3 class="cart-section__title" style="color:var(--bk-gold);">
                 <i class="bi bi-star"></i> 喜歡這些裝備嗎？
               </h3>
-              <p style="font-size:.9rem;color:#555;margin-bottom:1rem;">
+              <p style="font-size:.9rem;color:var(--yc-text-secondary,#625E56);margin-bottom:1rem;">
                 租借體驗後，若想擁有自己的裝備，可至選物商店選購全新商品。
               </p>
               <a href="../../pages/products.html" class="btn btn--outline">
@@ -347,7 +347,7 @@
                      placeholder="手機號碼 *" required>
               <input type="email" id="contactEmail" class="form-control"
                      placeholder="電子信箱 *" required>
-              <p style="font-size:.78rem;color:#999;margin-top:.25rem;margin-bottom:0;">
+              <p style="font-size:.78rem;color:var(--yc-text-muted,#7B756D);margin-top:.25rem;margin-bottom:0;">
                 * 確認信將寄送至此信箱
               </p>
             </div>

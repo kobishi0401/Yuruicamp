@@ -4,21 +4,27 @@
   box-sizing: border-box;
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 :root {
-  --color-text: #222;
-  --color-muted: #666;
-  --color-light-muted: #8a8a8a;
-  --color-primary: #9a6a31;
-  --color-primary-dark: #5d3603;
-  --color-bg: #fff;
-  --color-bg-soft: #faf7f1;
-  --color-cta: #d8b98f;
-  --color-black: #000;
-  --font-main: "Noto Serif TC", serif;
-  --header-height: 70px;
-  --container-wide: min(1180px, 90%);
-  --transition-slow: 1.7s ease;
-  --transition-normal: 0.45s ease;
+  /* 映射至 Yuruicamp v3 tokens（由 booking.css 定義） */
+  --color-text:         var(--yc-text, #3E473D);
+  --color-muted:        var(--yc-text-muted, #7B756D);
+  --color-light-muted:  var(--yc-text-muted, #7B756D);
+  --color-primary:      var(--yc-sage-action, #73816E);
+  --color-primary-dark: var(--yc-sage-dark, #62705D);
+  --color-bg:           var(--yc-bg, #F8F5EE);
+  --color-bg-soft:      var(--yc-surface-soft, #F0ECE3);
+  --color-cta:          var(--yc-cta, #A96352);
+  --color-black:        #000;
+  --font-main:          var(--yc-font-heading, "Noto Serif TC", serif);
+  --header-height:      70px;
+  --container-wide:     min(1180px, 90%);
+  --transition-slow:    1.7s ease;
+  --transition-normal:  0.45s ease;
 }
 
 html {
@@ -26,10 +32,14 @@ html {
 }
 
 body {
-  font-family: var(--font-main);
+  font-family: var(--yc-font-body, var(--font-main));
   background-color: var(--color-bg);
   color: var(--color-text);
   line-height: 1.8;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--yc-font-heading, "Noto Serif TC", serif);
 }
 
 body.menu-open {
@@ -56,7 +66,7 @@ main {
 }
 
 .section-subtitle {
-  color: var(--color-primary);
+  color: var(--yc-sage-action, var(--color-primary));
   letter-spacing: 4px;
   font-size: 0.82rem;
   margin-bottom: 16px;

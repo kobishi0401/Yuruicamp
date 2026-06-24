@@ -163,7 +163,7 @@
    數位會員卡
 ============================================================ */
 .mc-membership-card {
-  background: linear-gradient(135deg, #5A6D56 0%, #6B8F71 55%, #7B9E82 100%);
+  background: linear-gradient(135deg, var(--yc-sage-dark, #62705D) 0%, var(--yc-sage-action, #73816E) 55%, var(--yc-sage, #8F9D8B) 100%);
   border-radius: 14px;
   padding: 1.5rem;
   color: #fff;
@@ -489,9 +489,9 @@
   margin-top: 0.25rem;
 }
 
-.status--done     { background: #e3f2e3; color: #2d6e2d; }
-.status--pending  { background: #fff3cd; color: #856404; }
-.status--cancelled{ background: #fdeaea; color: #c0392b; }
+.status--done     { background: var(--yc-success-soft, #EEF2EC); color: var(--yc-success, #73816E); }
+.status--pending  { background: var(--yc-warning-soft, #F4ECE2); color: var(--yc-warning, #9A7455); }
+.status--cancelled{ background: var(--yc-error-soft, #F4E7E4); color: var(--yc-error, #A65F58); }
 .status--upcoming { background: var(--bk-primary-light); color: var(--bk-primary); }
 
 .rec-empty {
@@ -907,10 +907,10 @@
   border-radius: 20px;
 }
 
-.bk-status-processing { background: #fff3cd; color: #856404; }
+.bk-status-processing { background: var(--yc-warning-soft, #F4ECE2); color: var(--yc-warning, #9A7455); }
 .bk-status-shipped    { background: #dbeafe; color: #1d4ed8; }
-.bk-status-delivered  { background: #e3f2e3; color: #2d6e2d; }
-.bk-status-cancelled  { background: #fdeaea; color: #c0392b; }
+.bk-status-delivered  { background: var(--yc-success-soft, #EEF2EC); color: var(--yc-success, #73816E); }
+.bk-status-cancelled  { background: var(--yc-error-soft, #F4E7E4); color: var(--yc-error, #A65F58); }
 
 /* 重點：購買與預約租借明細共用同一組金額列，避免在 JS 內重複 inline 樣式。 */
 .bk-detail-head {

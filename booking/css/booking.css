@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
 /* ============================================================
    booking.css — 露營預約系統專屬樣式
    Booking module dedicated stylesheet
@@ -7,45 +9,100 @@
    1. CSS 自訂屬性（色彩變數）
       沿用 color.md 品牌配色
    ============================================================ */
+/* ============================================================
+   Yuruicamp v3 — Design Tokens
+   奶油暖白 × 奶油鼠尾草綠 × 柔霧赤陶
+============================================================ */
 :root {
-  /* 品牌色（導覽列、頁尾、大面積區塊） */
-  --bk-primary:         #5A6D56;   /* 深青苔綠：品牌主色 */
-  --bk-primary-hover:   #6B8F71;   /* 石生苔綠 */
-  --bk-primary-light:   #E6EDE4;   /* 極淺苔綠：選中背景 */
-  --bk-on-dark:         #FDF1DB;   /* 深色背景反白字 */
+  /* Base / Cream */
+  --yc-bg:              #F8F5EE;
+  --yc-surface:         #FFFDF9;
+  --yc-surface-soft:    #F0ECE3;
+  --yc-oat:             #E8E0D5;
+  --yc-border:          #D8CFC3;
 
-  /* 行動按鈕（CTA） */
-  --bk-cta:             #9D5F1B;   /* 溫暖陶土橘：主行動按鈕 */
-  --bk-cta-hover:       #7B4515;   /* 深陶土：懸停 */
+  /* Sage Brand */
+  --yc-sage-mist:       #EEF2EC;
+  --yc-sage-soft:       #DCE5DA;
+  --yc-sage-light:      #B7C3B3;
+  --yc-sage:            #8F9D8B;
+  --yc-sage-action:     #73816E;
+  --yc-sage-dark:       #62705D;
 
-  /* 介面層次 */
-  --bk-white:           #ffffff;
-  --bk-bg:              #FDF1DB;   /* 晨光奶油黃：頁面底色 */
-  --bk-card-bg:         #ffffff;   /* 純白：卡片 */
-  --bk-border:          #D7C0A4;   /* 暖沙色：分隔線 */
-  --bk-border-strong:   #5A6D56;
+  /* Conversion CTA — 柔霧赤陶 */
+  --yc-cta:             #A96352;
+  --yc-cta-hover:       #925342;
+  --yc-cta-active:      #7E4638;
+  --yc-cta-soft:        #F3E5DE;
+  --yc-cta-line:        #C38E7C;
 
-  /* 文字層次 */
-  --bk-text:            #4A3B32;   /* 深炭褐木：主要文字 */
-  --bk-text-muted:      #96AB88;   /* 尤加利綠：次要文字 */
-  --bk-accent:          #7B8563;   /* 橄欖綠：強調 */
+  /* Text */
+  --yc-text:            #3E473D;
+  --yc-text-secondary:  #625E56;
+  --yc-text-muted:      #7B756D;
 
-  /* 標籤 */
-  --bk-gold:            #9D5F1B;   /* 陶土橘：推薦標籤 */
-  --bk-sage:            #A4BD9B;   /* 淺鼠尾草綠：環保標籤 */
-  --bk-orange:          #C4792A;   /* 暖橘：警示 */
+  /* Status */
+  --yc-success:         #73816E;
+  --yc-success-soft:    #EEF2EC;
+  --yc-warning:         #9A7455;
+  --yc-warning-soft:    #F4ECE2;
+  --yc-warning-dark:    #6B4D32;
+  --yc-error:           #A65F58;
+  --yc-error-soft:      #F4E7E4;
 
-  /* 狀態 */
-  --bk-success:         #4A7A5A;   /* 深綠：成功 */
-  --bk-danger:          #c0392b;   /* 紅色：錯誤 */
+  /* Header / Footer */
+  --yc-header-bg:       #73816E;
+  --yc-footer-bg:       #71806D;
+  --yc-footer-bottom:   #62705D;
+  --yc-on-dark:         #FFFDF9;
+  --yc-on-dark-muted:   rgba(255, 253, 249, 0.76);
 
-  /* 陰影（暖褐色調） */
-  --bk-shadow:          0 2px 12px rgba(74, 59, 50, 0.09);
-  --bk-shadow-hover:    0 6px 24px rgba(74, 59, 50, 0.15);
+  /* Shadow */
+  --yc-shadow-soft:     0 5px 20px rgba(60, 70, 59, 0.065);
+  --yc-shadow-hover:    0 16px 38px rgba(60, 70, 59, 0.13);
+  --yc-shadow-cta:      0 9px 24px rgba(126, 70, 56, 0.17);
 
-  --bk-radius:          10px;
-  --bk-radius-sm:       6px;
-  --bk-transition:      all 0.25s ease;
+  /* Radius */
+  --yc-radius-sm:       10px;
+  --yc-radius-control:  12px;
+  --yc-radius-button:   12px;
+  --yc-radius-card:     19px;
+  --yc-radius-pill:     999px;
+
+  /* Typography */
+  --yc-font-heading:    "Noto Serif TC", "Source Han Serif TC", serif;
+  --yc-font-body:       "Noto Sans TC", "Source Han Sans TC", sans-serif;
+
+  /* Motion */
+  --yc-duration-fast:   180ms;
+  --yc-duration-normal: 220ms;
+  --yc-ease-soft:       cubic-bezier(.2, .7, .2, 1);
+
+  /* ── bk-* 映射至 yc-* tokens ── */
+  --bk-primary:         var(--yc-sage-action);
+  --bk-primary-hover:   var(--yc-sage);
+  --bk-primary-light:   var(--yc-sage-mist);
+  --bk-on-dark:         var(--yc-on-dark);
+  --bk-cta:             var(--yc-cta);
+  --bk-cta-hover:       var(--yc-cta-hover);
+  --bk-white:           var(--yc-surface);
+  --bk-bg:              var(--yc-bg);
+  --bk-card-bg:         var(--yc-surface);
+  --bk-border:          var(--yc-border);
+  --bk-border-strong:   var(--yc-sage-action);
+  --bk-text:            var(--yc-text);
+  --bk-text-muted:      var(--yc-text-muted);
+  --bk-accent:          var(--yc-sage);
+  --bk-gold:            var(--yc-cta);
+  --bk-sage:            var(--yc-sage-light);
+  --bk-orange:          var(--yc-warning);
+  --bk-success:         var(--yc-success);
+  --bk-danger:          var(--yc-error);
+  --bk-shadow:          var(--yc-shadow-soft);
+  --bk-shadow-hover:    var(--yc-shadow-hover);
+  --bk-radius:          var(--yc-radius-card);
+  --bk-radius-sm:       var(--yc-radius-control);
+  --bk-transition:      all var(--yc-duration-normal) var(--yc-ease-soft);
 }
 
 /* ============================================================
@@ -79,6 +136,8 @@
   background: var(--bk-primary);
   padding: 2rem 0;
   margin-bottom: 2rem;
+  border-radius: var(--yc-radius-card, 19px);
+  overflow: hidden;
 }
 
 .search-bar {
@@ -112,7 +171,7 @@
 }
 
 /* select option text 需深色（無法繼承白色） */
-.search-bar__select option { color: var(--bk-text); background: #fff; }
+.search-bar__select option { color: var(--bk-text); background: var(--yc-surface); }
 
 /* ============================================================
    5. 主內容佈局 — 雙欄 (sidebar + content)
@@ -309,19 +368,19 @@
 }
 
 .tag--env {
-  background: #E6EDE4;
-  color: #5A6D56;
+  background: var(--yc-sage-mist);
+  color: var(--yc-sage-dark);
 }
 
 .tag--facility {
-  background: rgba(123, 133, 99, 0.12);
-  color: #7B8563;
+  background: rgba(143, 157, 139, 0.12);
+  color: var(--yc-sage);
 }
 
 .tag--recommend {
-  background: rgba(157, 95, 27, 0.1);
-  color: #9D5F1B;
-  border: 1px solid rgba(157, 95, 27, 0.32);
+  background: var(--yc-cta-soft);
+  color: var(--yc-cta);
+  border: 1px solid rgba(169, 99, 82, 0.32);
 }
 
 /* ============================================================
@@ -687,8 +746,8 @@
 }
 
 .recommendation-banner__content {
-  background: linear-gradient(135deg, #fffbec 0%, #fff8e1 100%);
-  border: 1px solid #ffc107;
+  background: var(--yc-sage-mist);
+  border: 1px solid var(--yc-sage-soft);
   border-radius: var(--bk-radius);
   padding: 1rem 1.25rem;
   font-size: 0.9rem;
@@ -708,9 +767,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffc107;
+  background: var(--yc-sage-soft);
+  color: var(--yc-sage-dark);
+  border: 1px solid var(--yc-sage-light);
   border-radius: 20px;
   padding: 0.2rem 0.7rem;
   font-size: 0.82rem;
@@ -855,7 +914,7 @@
   transition: background 0.15s;
 }
 
-.rental-remove-btn:hover { background: #fdeaea; }
+.rental-remove-btn:hover { background: var(--yc-error-soft); }
 
 .rental-cost-summary {
   padding: 0.75rem;
@@ -1081,8 +1140,8 @@
 /* 結帳成功後導購橫幅 */
 .upsell-banner {
   margin-top: 1rem;
-  background: linear-gradient(135deg, var(--bk-primary-light), #e8f8f0);
-  border: 1px solid var(--bk-border);
+  background: linear-gradient(135deg, var(--yc-sage-mist), var(--yc-sage-soft));
+  border: 1px solid var(--yc-sage-soft);
   border-radius: var(--bk-radius);
   padding: 1rem;
   text-align: center;
@@ -1157,15 +1216,15 @@
 .booking-header .navbar-login-btn {
   padding: 0.4rem 0.9rem;
   font-size: 0.875rem;
-  color: #FDF1DB;
-  border-color: rgba(253, 241, 219, 0.5);
+  color: var(--yc-on-dark);
+  border-color: rgba(255, 253, 249, 0.5);
   background: transparent;
 }
 
 .booking-header .navbar-login-btn:hover {
-  background: rgba(253, 241, 219, 0.14);
+  background: rgba(255, 253, 249, 0.14);
   color: #fff;
-  border-color: rgba(253, 241, 219, 0.85);
+  border-color: rgba(255, 253, 249, 0.85);
 }
 
 .booking-header .navbar-user-menu {
@@ -1173,19 +1232,19 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
 }
 
 .booking-header .user-info {
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
 }
 
 .booking-header .user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(253, 241, 219, 0.2);
-  color: #FDF1DB;
+  background: rgba(255, 253, 249, 0.2);
+  color: var(--yc-on-dark);
   font-weight: 700;
   font-size: 0.9rem;
   display: flex;
@@ -1198,7 +1257,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
 }
 
 .booking-header .navbar-user-dropdown {
@@ -1206,7 +1265,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 168px;
-  background: #fff;
+  background: var(--yc-surface);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
@@ -1222,7 +1281,7 @@
   width: 100%;
   padding: 0.65rem 1rem !important;
   font-size: 0.9rem !important;
-  color: #2d3a2e !important;
+  color: var(--yc-text) !important;
   text-decoration: none !important;
   background: none !important;
   border: none !important;
@@ -1234,11 +1293,11 @@
 
 .booking-header .navbar-user-dropdown .dropdown-item:hover,
 .booking-header .navbar-user-dropdown .navbar-logout-btn:hover {
-  background: #f5f5f3 !important;
+  background: var(--yc-surface-soft) !important;
 }
 
 .booking-header .navbar-user-dropdown .navbar-logout-btn {
-  color: #c0392b !important;
+  color: var(--yc-error) !important;
 }
 
 #booking-header #loginModal.modal,
@@ -1258,7 +1317,7 @@
 }
 
 #booking-header .modal-content {
-  background: #fff;
+  background: var(--yc-surface);
   border-radius: 8px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
   width: min(480px, calc(100vw - 2rem));
@@ -1313,7 +1372,7 @@
 }
 
 #booking-header .modal-close:hover {
-  background: rgba(36, 77, 77, 0.08);
+  background: rgba(115, 129, 110, 0.1);
   color: var(--bk-primary);
 }
 
@@ -1399,7 +1458,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #FDF1DB;
+  background: var(--yc-surface-soft);
   color: var(--bk-text-muted);
   border: 1px solid var(--bk-border);
   display: flex;
@@ -1558,16 +1617,16 @@
 
 /* ============================================================
    22. Booking Header（預約系統專屬）
-   背景色 #5A6D56（深青苔綠），與頁面底色 #FDF1DB 形成深-淺層次
+   背景色 var(--yc-header-bg) #73816E（奶油鼠尾草），與頁面底色 var(--yc-bg) #F8F5EE 形成深-淺層次
    ============================================================ */
 
 /* Header 外層容器 */
 .booking-header {
-  background: #5A6D56;
+  background: var(--yc-header-bg);
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 10px rgba(74, 59, 50, 0.22);
+  box-shadow: 0 2px 10px rgba(60, 70, 59, 0.22);
 }
 
 /* Navbar 內層：三欄水平排列（品牌 | 導覽 | 操作） */
@@ -1610,7 +1669,7 @@
 .bk-brand-link {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
   text-decoration: none;
   display: flex;
   align-items: baseline;
@@ -1624,7 +1683,7 @@
 .brand-sub {
   font-size: 0.75rem;
   font-weight: 400;
-  color: rgba(253, 241, 219, 0.6);
+  color: rgba(255, 253, 249, 0.6);
   letter-spacing: 0.02em;
 }
 
@@ -1642,7 +1701,7 @@
   display: block;
   padding: 0.45rem 0.9rem;
   font-size: 0.95rem;
-  color: rgba(253, 241, 219, 0.82);
+  color: rgba(255, 253, 249, 0.82);
   text-decoration: none;
   border-radius: 6px;
   transition: background 0.2s, color 0.2s;
@@ -1650,15 +1709,15 @@
 }
 
 .bk-nav-link:hover {
-  background: rgba(253, 241, 219, 0.12);
-  color: #FDF1DB;
+  background: rgba(255, 253, 249, 0.12);
+  color: var(--yc-on-dark);
 }
 
 /* 目前頁面對應連結加底線 */
 .bk-nav-link.active {
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
   font-weight: 600;
-  border-bottom: 2px solid rgba(253, 241, 219, 0.75);
+  border-bottom: 2px solid rgba(255, 253, 249, 0.75);
   border-radius: 0;
 }
 
@@ -1677,15 +1736,15 @@
   padding: 0.45rem 1rem;
   font-size: 0.875rem;
   white-space: nowrap;
-  background: rgba(253, 241, 219, 0.1);
-  color: #FDF1DB;
-  border-color: rgba(253, 241, 219, 0.42);
+  background: rgba(255, 253, 249, 0.1);
+  color: var(--yc-on-dark);
+  border-color: rgba(255, 253, 249, 0.42);
 }
 
 .bk-switch-btn:hover {
-  background: rgba(253, 241, 219, 0.2);
+  background: rgba(255, 253, 249, 0.2);
   color: #fff;
-  border-color: rgba(253, 241, 219, 0.75);
+  border-color: rgba(255, 253, 249, 0.75);
 }
 
 /* 手機版縮短文字（只顯示「商城」） */
@@ -1703,7 +1762,7 @@
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
   font-size: 1.35rem;
   text-decoration: none;
   transition: background 0.2s;
@@ -1712,7 +1771,7 @@
   cursor: pointer;
 }
 
-.bk-cart-btn:hover { background: rgba(253, 241, 219, 0.14); }
+.bk-cart-btn:hover { background: rgba(255, 253, 249, 0.14); }
 
 /* Badge：浮動在右上角的計數圓點 */
 .bk-badge {
@@ -1722,7 +1781,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  background: #9D5F1B;
+  background: var(--yc-cta);
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1744,15 +1803,15 @@
 .bk-login-btn {
   padding: 0.4rem 0.9rem;
   font-size: 0.875rem;
-  color: #FDF1DB;
-  border-color: rgba(253, 241, 219, 0.5);
+  color: var(--yc-on-dark);
+  border-color: rgba(255, 253, 249, 0.5);
   background: transparent;
 }
 
 .bk-login-btn:hover {
-  background: rgba(253, 241, 219, 0.14);
+  background: rgba(255, 253, 249, 0.14);
   color: #fff;
-  border-color: rgba(253, 241, 219, 0.85);
+  border-color: rgba(255, 253, 249, 0.85);
 }
 
 /* 已登入：頭像區塊 */
@@ -1761,15 +1820,15 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
 }
 
 .bk-user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(253, 241, 219, 0.2);
-  color: #FDF1DB;
+  background: rgba(255, 253, 249, 0.2);
+  color: var(--yc-on-dark);
   font-weight: 700;
   font-size: 0.9rem;
   display: flex;
@@ -1791,7 +1850,7 @@
   gap: 0.45rem;
   background: none;
   border: none;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
   cursor: pointer;
   padding: 0;
   font-size: 0.875rem;
@@ -1814,7 +1873,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 148px;
-  background: #fff;
+  background: var(--yc-surface);
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.12);
@@ -1840,7 +1899,7 @@
   width: 100%;
   padding: 0.65rem 1.1rem;
   font-size: 0.9rem;
-  color: #2d3a2e;
+  color: var(--yc-text);
   text-decoration: none;
   background: none;
   border: none;
@@ -1851,16 +1910,16 @@
 }
 
 .bk-user-dropdown__item:hover {
-  background: #f5f5f3;
+  background: var(--yc-surface-soft);
 }
 
 /* 登出項目：紅色強調 */
 .bk-user-dropdown__item--danger {
-  color: #c0392b;
+  color: var(--yc-error);
 }
 
 .bk-user-dropdown__item--danger:hover {
-  background: #fdf1ef;
+  background: var(--yc-error-soft);
 }
 
 /* 讓 bk-user-menu 成為下拉定位基準 */
@@ -1873,7 +1932,7 @@
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #FDF1DB;
+  color: var(--yc-on-dark);
   cursor: pointer;
   padding: 0.3rem;
   border-radius: 6px;
@@ -1885,7 +1944,7 @@
   z-index: 2;
 }
 
-.bk-hamburger:hover { background: rgba(253, 241, 219, 0.14); }
+.bk-hamburger:hover { background: rgba(255, 253, 249, 0.14); }
 
 /* 桌機版隱藏 / 手機版隱藏輔助 class */
 .bk-hidden-mobile  { display: flex; }   /* 桌機顯示 */
@@ -1901,8 +1960,8 @@
   width: 300px;
   max-width: 85vw;
   height: 100vh;
-  background: #FDF1DB;
-  box-shadow: 4px 0 20px rgba(74, 59, 50, 0.18);
+  background: var(--yc-bg);
+  box-shadow: -4px 0 20px rgba(60, 70, 59, 0.18);
   z-index: 2000;
   transition: left 0.3s ease;
   display: flex;
@@ -1916,27 +1975,27 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #D7C0A4;
+  border-bottom: 1px solid var(--yc-border);
 }
 
 .bk-offcanvas__title {
   font-size: 1rem;
   font-weight: 700;
-  color: #5A6D56;
+  color: var(--yc-sage-action);
 }
 
 .bk-offcanvas__close {
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #7B8563;
+  color: var(--yc-sage);
   cursor: pointer;
   padding: 0.2rem;
   border-radius: 4px;
   transition: background 0.2s;
 }
 
-.bk-offcanvas__close:hover { background: rgba(90, 109, 86, 0.1); }
+.bk-offcanvas__close:hover { background: rgba(115, 129, 110, 0.1); }
 
 .bk-offcanvas__body { padding: 1rem 0; flex: 1; overflow-y: auto; }
 
@@ -1950,23 +2009,23 @@
   display: block;
   padding: 0.85rem 1.5rem;
   font-size: 0.95rem;
-  color: #4A3B32;
+  color: var(--yc-text);
   text-decoration: none;
   transition: background 0.15s;
 }
 
-.bk-offcanvas__list li a:hover { background: rgba(90, 109, 86, 0.08); color: #5A6D56; }
+.bk-offcanvas__list li a:hover { background: rgba(115, 129, 110, 0.08); color: var(--yc-sage-action); }
 
 /* Offcanvas 分隔線 */
 .bk-offcanvas__divider {
   height: 1px;
-  background: #D7C0A4;
+  background: var(--yc-border);
   margin: 0.5rem 1.5rem;
 }
 
-/* 系統切換連結（陶土橘強調） */
+/* 系統切換連結（赤陶 CTA 強調） */
 .bk-offcanvas__switch {
-  color: #9D5F1B !important;
+  color: var(--yc-cta) !important;
   font-weight: 600 !important;
 }
 
@@ -2000,7 +2059,7 @@
   width: 420px;
   max-width: 92vw;
   height: 100vh;
-  background: #fff;
+  background: var(--yc-surface);
   z-index: 3000;
   display: flex;
   flex-direction: column;
@@ -2044,7 +2103,7 @@
 }
 
 .bk-slide-panel__close:hover {
-  background: rgba(36, 77, 77, 0.08);
+  background: rgba(115, 129, 110, 0.1);
   color: var(--bk-primary);
 }
 
@@ -2169,7 +2228,7 @@
   width: 100%;
   padding: 0.85rem 1.5rem;
   font-size: 0.95rem;
-  color: #333;
+  color: var(--yc-text);
   background: none;
   border: none;
   cursor: pointer;
@@ -2179,8 +2238,8 @@
 }
 
 .bk-offcanvas__cart-btn:hover {
-  background: rgba(90, 109, 86, 0.08);
-  color: #5A6D56;
+  background: rgba(115, 129, 110, 0.08);
+  color: var(--yc-sage-action);
 }
 
 /* 手機版 offcanvas 登出按鈕 */
@@ -2193,7 +2252,7 @@
   border: none;
   padding: 0.85rem 1.5rem;
   font-size: 1rem;
-  color: #b94a3a;
+  color: var(--yc-error);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -2201,7 +2260,7 @@
 }
 
 .bk-offcanvas__logout-btn:hover {
-  background: rgba(185, 74, 58, 0.08);
+  background: var(--yc-error-soft);
 }
 
 /* OAuth 登入按鈕 */
@@ -2265,7 +2324,7 @@
 .bk-personalization-modal__box {
   width: min(480px, 100%);
   max-height: calc(100vh - 2rem);
-  background: #fff;
+  background: var(--yc-surface);
   border-radius: 8px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
   display: flex;
@@ -2300,7 +2359,7 @@
 }
 
 .bk-personalization-modal__close:hover {
-  background: rgba(36, 77, 77, 0.08);
+  background: rgba(115, 129, 110, 0.1);
   color: var(--bk-primary);
 }
 
@@ -2321,7 +2380,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--bk-surface);
+  background: var(--yc-surface-soft);
   color: var(--bk-text-muted);
   border: 1px solid var(--bk-border);
   display: flex;
@@ -2418,8 +2477,8 @@
    沿用買家端 4 欄式排版，確保視覺一致
    ============================================================ */
 .booking-footer {
-  background: #5A6D56;
-  color: rgba(253, 241, 219, 0.82);
+  background: var(--yc-footer-bg);
+  color: var(--yc-on-dark-muted);
   padding: 3rem 0 1.5rem;
   margin-top: 4rem;
 }
@@ -2449,14 +2508,14 @@
 .bk-footer__subheading {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #A4BD9B;
+  color: var(--yc-sage-light);
   margin-bottom: 0.75rem;
 }
 
 /* 標語文字 */
 .bk-footer__tagline {
   font-size: 0.875rem;
-  color: rgba(253, 241, 219, 0.7);
+  color: rgba(255, 253, 249, 0.7);
   line-height: 1.7;
   margin-bottom: 0.5rem;
 }
@@ -2472,26 +2531,26 @@
 
 .bk-footer__links a {
   font-size: 0.875rem;
-  color: rgba(253, 241, 219, 0.72);
+  color: rgba(255, 253, 249, 0.72);
   text-decoration: none;
   transition: color 0.2s;
 }
 
-.bk-footer__links a:hover { color: #FDF1DB; }
+.bk-footer__links a:hover { color: var(--yc-on-dark); }
 
 /* 重要連結（取消退款等）加強調 */
-.bk-footer__links a.important { color: #FDF1DB; font-weight: 600; }
+.bk-footer__links a.important { color: var(--yc-on-dark); font-weight: 600; }
 .bk-footer__links a.important:hover { color: #fff; }
 
 /* 聯絡資訊 */
 .bk-footer__contact-item {
   font-size: 0.875rem;
-  color: rgba(253, 241, 219, 0.7);
+  color: rgba(255, 253, 249, 0.7);
   margin-bottom: 0.5rem;
   line-height: 1.6;
 }
 
-.bk-footer__contact-item strong { color: #FDF1DB; }
+.bk-footer__contact-item strong { color: var(--yc-on-dark); }
 
 /* 社群連結 */
 .social {
@@ -2501,14 +2560,14 @@
 }
 
 .social a i {
-  color: var(--color-primary);
+  color: var(--yc-on-dark);
   font-size: 1.5rem;
   transition: color 0.3s ease;
   padding: 20px;
 }
 
 .social a i:hover {
-  color: #111;
+  color: var(--yc-cta);
 }
 
 .site-footer p {
@@ -2518,7 +2577,7 @@
 /* 分隔線 */
 .bk-footer__divider {
   border: none;
-  border-top: 1px solid rgba(253, 241, 219, 0.15);
+  border-top: 1px solid rgba(255, 253, 249, 0.15);
   margin: 0 0 1.5rem;
 }
 
@@ -2527,7 +2586,7 @@
 
 .bk-footer__copyright {
   font-size: 0.8rem;
-  color: rgba(253, 241, 219, 0.5);
+  color: rgba(255, 253, 249, 0.5);
   margin-bottom: 0.75rem;
 }
 
@@ -2536,18 +2595,18 @@
 
 .bk-footer__policy a {
   font-size: 0.8rem;
-  color: rgba(253, 241, 219, 0.52);
+  color: rgba(255, 253, 249, 0.52);
   text-decoration: none;
   margin: 0 0.75rem;
   transition: color 0.2s;
 }
 
-.bk-footer__policy a:hover { color: rgba(253, 241, 219, 0.85); }
+.bk-footer__policy a:hover { color: rgba(255, 253, 249, 0.85); }
 
 /* 付款圖示列 */
 .bk-footer__payment {
   font-size: 0.8rem;
-  color: rgba(253, 241, 219, 0.52);
+  color: rgba(255, 253, 249, 0.52);
   margin-bottom: 0.5rem;
 }
 

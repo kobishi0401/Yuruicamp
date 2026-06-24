@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#244d4d">
+  <meta name="theme-color" content="#73816E">
   <meta name="description" content="Yuruicamp 預約系統常見問題：預約付款、取消退款、裝備押金、入住退房、裝備送達等完整說明。">
   <link rel="icon" href="../../assets/icons/camping_icon.png" type="image/png">
   <title>常見問題 | Yuruicamp 營地預約</title>
@@ -15,17 +15,17 @@
 
   <style>
     /* ======================================================
-       booking-faq.html 頁面專屬樣式
+       booking-faq.html 頁面專屬樣式 — Yuruicamp v3
        ====================================================== */
     .faq-page {
-      background: #f6fbf6;
+      background: var(--yc-bg, #F8F5EE);
       min-height: 100vh;
       padding-bottom: 4rem;
     }
 
     /* ── 頁首橫幅 ── */
     .faq-hero {
-      background: linear-gradient(135deg, #244d4d 0%, #316868 100%);
+      background: linear-gradient(135deg, var(--yc-sage-dark, #62705D) 0%, var(--yc-sage-action, #73816E) 100%);
       color: #fff;
       padding: 4rem 1.5rem 3rem;
       text-align: center;
@@ -39,7 +39,7 @@
 
     .faq-hero__subtitle {
       font-size: 1rem;
-      color: rgba(255,255,255,.85);
+      color: rgba(255,253,249,.85);
       max-width: 480px;
       margin: 0 auto;
     }
@@ -60,18 +60,18 @@
       align-items: center;
       gap: .4rem;
       padding: .5rem 1.1rem;
-      background: #fff;
-      border: 2px solid #d4e6e6;
+      background: var(--yc-surface, #FFFDF9);
+      border: 2px solid var(--yc-sage-soft, #DCE5DA);
       border-radius: 20px;
       font-size: .875rem;
-      color: #244d4d;
+      color: var(--yc-sage-action, #73816E);
       text-decoration: none;
-      transition: background .2s, border-color .2s;
+      transition: background .2s, border-color .2s, color .2s;
     }
 
     .faq-nav__link:hover {
-      background: #244d4d;
-      border-color: #244d4d;
+      background: var(--yc-sage-action, #73816E);
+      border-color: var(--yc-sage-action, #73816E);
       color: #fff;
     }
 
@@ -85,7 +85,7 @@
     /* ── 每個主題區塊 ── */
     .faq-section {
       margin-bottom: 3.5rem;
-      scroll-margin-top: 80px; /* sticky header 高度補償 */
+      scroll-margin-top: 80px;
     }
 
     .faq-section__header {
@@ -93,7 +93,7 @@
       align-items: center;
       gap: .75rem;
       padding-bottom: .75rem;
-      border-bottom: 3px solid #244d4d;
+      border-bottom: 3px solid var(--yc-sage-action, #73816E);
       margin-bottom: 1.5rem;
     }
 
@@ -104,15 +104,15 @@
     .faq-section__title {
       font-size: 1.3rem;
       font-weight: 700;
-      color: #244d4d;
+      color: var(--yc-text, #3E473D);
       margin: 0;
     }
 
     /* ── 問答 Accordion ── */
     .faq-item {
-      background: #fff;
+      background: var(--yc-surface, #FFFDF9);
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(36,77,77,.08);
+      box-shadow: 0 2px 8px rgba(60,70,59,.08);
       margin-bottom: .75rem;
       overflow: hidden;
     }
@@ -126,7 +126,7 @@
       text-align: left;
       font-size: .95rem;
       font-weight: 600;
-      color: #333;
+      color: var(--yc-text, #3E473D);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -135,11 +135,11 @@
       transition: background .15s;
     }
 
-    .faq-item__question:hover { background: #f2f8f2; }
+    .faq-item__question:hover { background: var(--yc-sage-mist, #EEF2EC); }
 
     .faq-item__question.is-open {
-      color: #244d4d;
-      background: #e8f4f4;
+      color: var(--yc-sage-action, #73816E);
+      background: var(--yc-sage-mist, #EEF2EC);
     }
 
     /* 展開箭頭 */
@@ -158,9 +158,9 @@
       display: none;
       padding: 0 1.25rem 1.25rem;
       font-size: .9rem;
-      color: #555;
+      color: var(--yc-text-secondary, #625E56);
       line-height: 1.8;
-      border-top: 1px solid #e8f0f0;
+      border-top: 1px solid var(--yc-border, #D8CFC3);
     }
 
     .faq-item__answer.is-open { display: block; }
@@ -173,7 +173,7 @@
     .faq-item__answer li { margin-bottom: .35rem; }
 
     .faq-item__answer a {
-      color: #244d4d;
+      color: var(--yc-sage-action, #73816E);
       text-decoration: underline;
     }
 
@@ -186,7 +186,7 @@
     }
 
     .faq-cta__box {
-      background: linear-gradient(135deg, #244d4d, #316868);
+      background: linear-gradient(135deg, var(--yc-sage-dark, #62705D), var(--yc-sage-action, #73816E));
       border-radius: 16px;
       padding: 2.5rem;
       color: #fff;
@@ -199,7 +199,7 @@
 
     .faq-cta__box p {
       font-size: .9rem;
-      color: rgba(255,255,255,.85);
+      color: rgba(255,253,249,.85);
       margin-bottom: 1.5rem;
     }
 
@@ -208,16 +208,19 @@
       align-items: center;
       gap: .5rem;
       padding: .75rem 1.75rem;
-      background: #fff;
-      color: #244d4d;
+      background: var(--yc-cta, #A96352);
+      color: #fff;
       font-weight: 700;
       font-size: .95rem;
       border-radius: 8px;
       text-decoration: none;
-      transition: transform .2s;
+      transition: background .2s, transform .2s;
     }
 
-    .faq-cta__btn:hover { transform: translateY(-2px); }
+    .faq-cta__btn:hover {
+      background: var(--yc-cta-hover, #925342);
+      transform: translateY(-2px);
+    }
 
     /* ── RWD ── */
     @media (max-width: 768px) {
