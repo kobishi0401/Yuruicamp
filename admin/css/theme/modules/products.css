@@ -7,9 +7,9 @@
 }
 
 .yr-admin-products .yr-admin-products__table thead.table-light th {
-  background: #f4efe5;
+  background: var(--yr-admin-surface-soft);
   color: var(--yr-admin-text);
-  border-bottom: 1px solid var(--yr-admin-border-strong);
+  border-bottom: 1px solid var(--yr-admin-border);
 }
 
 .yr-admin-products .yr-admin-products__table th,
@@ -18,7 +18,7 @@
 }
 
 .yr-admin-products .yr-admin-products__table tbody tr:hover td {
-  background: #f1f6ef;
+  background: var(--yr-admin-table-hover);
 }
 
 .yr-admin-products .yr-admin-products__table .sticky-col {
@@ -26,7 +26,7 @@
 }
 
 .yr-admin-products .yr-admin-products__table .sticky-col-total-stock {
-  box-shadow: inset -1px 0 0 var(--yr-admin-border-strong), 8px 0 10px -10px rgba(69, 73, 65, 0.35);
+  box-shadow: inset -1px 0 0 var(--yr-admin-border), 8px 0 10px -10px rgb(52 58 52 / 22%);
 }
 
 .yr-admin-products .yr-admin-products__table tr.table-danger td {
@@ -42,27 +42,27 @@
   color: var(--yr-admin-text-muted);
 }
 
-.yr-admin-modal .modal-body #transferModeHint,
-.yr-admin-modal .modal-body #transferDistributionCounter {
+[id="productsModuleCard"] .yr-admin-modal .modal-body [id="transferModeHint"],
+[id="productsModuleCard"] .yr-admin-modal .modal-body [id="transferDistributionCounter"] {
   color: var(--yr-admin-text-muted) !important;
 }
 
-.yr-admin-modal #addTransferCampRow {
+[id="productsModuleCard"] .yr-admin-modal [id="addTransferCampRow"] {
   border-color: var(--yr-admin-border-strong);
   color: var(--yr-admin-text-muted);
 }
 
-.yr-admin-modal #submitTransferToRental {
+[id="productsModuleCard"] .yr-admin-modal [id="submitTransferToRental"] {
+  background: var(--yr-admin-brand);
+  border-color: var(--yr-admin-brand);
+}
+
+[id="productsModuleCard"] .yr-admin-modal [id="submitTransferToRental"]:hover {
   background: var(--yr-admin-brand-strong);
   border-color: var(--yr-admin-brand-strong);
 }
 
-.yr-admin-modal #submitTransferToRental:hover {
-  background: var(--yr-admin-brand-hover);
-  border-color: var(--yr-admin-brand-hover);
-}
-
-@media (max-width: 767.98px) {
+@media (width <= 767.98px) {
   .yr-admin-products .yr-admin-products__header {
     display: block !important;
   }

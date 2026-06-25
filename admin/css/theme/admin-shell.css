@@ -1,0 +1,156 @@
+.yr-admin-dashboard-page {
+  background: var(--yr-admin-bg);
+}
+
+.yr-admin-dashboard-page .yr-admin-sidebar {
+  background: var(--yr-admin-brand-dark);
+  color: var(--yr-admin-text-inverse);
+  border-right: 1px solid rgb(255 253 248 / 10%);
+}
+
+.yr-admin-dashboard-page .yr-admin-sidebar .sidebar-brand {
+  border-bottom: 1px solid rgb(255 253 248 / 12%);
+}
+
+.yr-admin-dashboard-page .yr-admin-sidebar-brand-icon {
+  color: var(--yr-admin-surface-sage);
+}
+
+.yr-admin-dashboard-page .yr-admin-sidebar-subtitle,
+.yr-admin-dashboard-page .yr-admin-sidebar-user-name,
+.yr-admin-dashboard-page .yr-admin-sidebar-user-icon,
+.yr-admin-dashboard-page .yr-admin-sidebar-logout {
+  color: rgb(255 253 248 / 76%);
+}
+
+.yr-admin-dashboard-page .yr-admin-sidebar-separator {
+  border-color: rgb(255 253 248 / 12%);
+  margin: 8px 16px;
+}
+
+.yr-admin-dashboard-page .sidebar-link {
+  color: rgb(255 253 248 / 76%);
+  border-radius: var(--yr-admin-radius-sm);
+  border-left: 3px solid transparent;
+}
+
+.yr-admin-dashboard-page .sidebar-link:hover {
+  background: var(--yr-admin-sidebar-hover);
+  color: rgb(255 253 248 / 92%);
+}
+
+.yr-admin-dashboard-page .sidebar-link.active {
+  background: var(--yr-admin-sidebar-active-soft);
+  border-left-color: var(--yr-admin-brand);
+  color: var(--yr-admin-text);
+  font-weight: 600;
+}
+
+.yr-admin-dashboard-page .sidebar-link.active i {
+  color: var(--yr-admin-brand-strong);
+}
+
+.yr-admin-dashboard-page .offcanvas {
+  background: var(--yr-admin-brand-dark);
+}
+
+.yr-admin-dashboard-page .yr-admin-main-wrapper {
+  min-height: 100vh;
+  background: var(--yr-admin-bg);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar {
+  background: var(--yr-admin-surface);
+  border-bottom: 1px solid var(--yr-admin-border);
+  box-shadow: none;
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar [id="pageTitle"] {
+  color: var(--yr-admin-text);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .btn {
+  min-height: 38px;
+  min-width: 38px;
+  border-radius: var(--yr-admin-radius-sm);
+  border: 1px solid var(--yr-admin-border);
+  background: var(--yr-admin-surface);
+  color: var(--yr-admin-brand);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .btn:hover {
+  background: var(--yr-admin-surface-sage);
+  border-color: var(--yr-admin-border);
+  color: var(--yr-admin-brand-strong);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .yr-admin-muted-icon {
+  color: var(--yr-admin-text-muted);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .dropdown .dropdown-menu {
+  background: var(--yr-admin-surface);
+  border-color: var(--yr-admin-border);
+  border-radius: var(--yr-admin-radius-md);
+  box-shadow: var(--yr-admin-shadow-sm);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .dropdown .dropdown-item,
+.yr-admin-dashboard-page .yr-admin-topbar .dropdown .dropdown-item-text {
+  color: var(--yr-admin-text);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .dropdown .dropdown-item:hover {
+  background: var(--yr-admin-surface-soft);
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .yr-admin-danger-text {
+  color: var(--yr-admin-danger) !important;
+}
+
+.yr-admin-dashboard-page .yr-admin-topbar .yr-admin-danger-text:hover {
+  background: var(--yr-admin-danger-soft);
+}
+
+.yr-admin-dashboard-page .yr-admin-avatar-button {
+  width: 39px;
+  height: 39px;
+  background-color: var(--yr-admin-surface);
+  color: var(--yr-admin-brand-strong) !important;
+  border: 1px solid var(--yr-admin-border);
+  border-radius: 10px !important;
+  cursor: pointer;
+}
+
+.yr-admin-dashboard-page .yr-admin-avatar-button:hover {
+  background: var(--yr-admin-surface-sage);
+}
+
+.yr-admin-dashboard-page .yr-admin-content-area {
+  background: var(--yr-admin-bg);
+  color: var(--yr-admin-text);
+  width: 100%;
+  max-width: var(--yr-admin-content-max-width);
+  margin-inline: auto;
+}
+
+.yr-admin-dashboard-page .yr-admin-content-spinner {
+  color: var(--yr-admin-brand);
+}
+
+@media (width <= 767.98px) {
+  .yr-admin-dashboard-page .yr-admin-content-area {
+    padding: 1rem !important;
+  }
+
+  .yr-admin-dashboard-page .yr-admin-topbar {
+    padding-inline: 0.875rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yr-admin-dashboard-page .sidebar-link,
+  .yr-admin-dashboard-page .yr-admin-topbar .btn {
+    transition: none;
+  }
+}
