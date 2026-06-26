@@ -73,10 +73,10 @@
       <!-- 支付方式 Icon （可選） -->
       <div class="text-center mt-lg">
         <p class="text-sm text-muted mb-md">我們接受以下付款方式：</p>
-        <div class="u-migrated-193">
-          <span title="信用卡">💳</span>
-          <span title="LINE Pay">📱</span>
-          <span title="貨到付款">📦</span>
+        <div class="bk-footer__payment-icons">
+          <i class="bi bi-credit-card" title="信用卡"></i>
+          <i class="bi bi-phone" title="LINE Pay"></i>
+          <!-- <i class="bi bi-box-seam" title="貨到付款"></i> -->
         </div>
       </div>
     </div>
@@ -89,7 +89,6 @@
      Keep this as .partial so Live Server does not inject reload scripts into it.
      booking-footer 區塊 — 預約系統專屬 Footer 元件
      4 欄式資訊區塊 + 底部版權宣告
-     背景色 #244d4d（深青綠，與買家端 footer 相同，維持品牌一致）
      ============================================================ -->
   <footer class="booking-footer" id="booking-footer">
     <div class="bk-footer__inner">
