@@ -1018,9 +1018,10 @@
   border-color: var(--yr-admin-border) !important;
 }
 
-.yr-admin-dashboard-page .yr-admin-discounts-module code {
-  color: var(--yr-admin-data-link);
-  font-weight: 700;
+.yr-admin-dashboard-page .yr-admin-discounts-module .yr-admin-discount-code {
+  color: var(--yr-admin-primary-hover);
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .yr-admin-dashboard-page .yr-admin-discounts-module .status-badge.bg-success {

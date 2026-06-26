@@ -55,6 +55,11 @@
   color: var(--yr-admin-primary-soft);
 }
 
+.yr-admin-dashboard-page .yr-admin-sidebar .sidebar-link i,
+.yr-admin-dashboard-page #mobileSidebar .sidebar-link i {
+  color: inherit;
+}
+
 .yr-admin-dashboard-page .sidebar-link:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--yr-admin-focus-ring);

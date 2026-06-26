@@ -158,7 +158,7 @@ window.initDiscounts = function () {
     // startVal / endVal 直接傳入 formatDateDisplay()，空值自動顯示 "—"
     var newRow =
       '<tr data-coupon-code="' + code + '" data-coupon-status="active">' +
-      '<td><code class="fw-bold">' + code + '</code></td>' +
+      '<td><code class="yr-admin-discount-code">' + code + '</code></td>' +
       '<td>' + discountDisplay + '</td>' +
       '<td class="text-center">' + quantity + '</td>' +
       '<td class="text-center">0</td>' +
@@ -215,7 +215,7 @@ function renderCouponsTable(coupons) {
       : '<button class="btn btn-sm btn-outline-success btn-toggle-coupon me-1">啟用</button>';
 
     return '<tr data-coupon-code="' + coupon.code + '" data-coupon-status="' + coupon.status + '">' +
-      '<td><code class="fw-bold">' + coupon.code + '</code></td>' +
+      '<td><code class="yr-admin-discount-code">' + coupon.code + '</code></td>' +
       '<td>折抵 NT$ ' + coupon.discount + '</td>' +
       '<td class="text-center">' + coupon.quantity + '</td>' +
       '<td class="text-center">' + coupon.used + '</td>' +

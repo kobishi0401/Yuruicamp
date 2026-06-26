@@ -327,13 +327,13 @@ button[data-permission-disabled="true"] {
   margin-bottom: 24px;
 }
 
-/* ===== 星星評分顏色 ===== */
-.fa-star.fas {
-  color: #f5a623;     /* 實心星：橙黃 */
+/* ===== 星星評分顏色（僅限評論模組） ===== */
+.yr-admin-dashboard-page .yr-admin-reviews-module .yr-admin-review-star--filled {
+  color: var(--yr-admin-rating-gold);
 }
 
-.fa-star.far {
-  color: #d0d0d0;     /* 空心星：淺灰 */
+.yr-admin-dashboard-page .yr-admin-reviews-module .yr-admin-review-star--empty {
+  color: #a9a39a;
 }
 
 /* ===== Loading Spinner 品牌色 ===== */
