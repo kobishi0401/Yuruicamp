@@ -3,7 +3,7 @@
 ----------------------------------------------------------------
 # Settings：全站設計 token 與不輸出元件樣式的設定值
 # Generic：reset 與低權重通用預設
-# Base：HTML 元素基礎樣式
+# Elements：HTML 元素基礎樣式
 # Objects：不帶視覺語意的版面物件
 # Components：可重用 UI 元件
 # Pages：單一頁面範圍樣式
@@ -12,7 +12,7 @@
 
 @use 'settings/settings';
 @use 'generic/generic';
-@use 'base/base';
+@use 'elements/elements';
 @use 'objects/objects';
 @use 'components/components';
 @use 'pages/pages';

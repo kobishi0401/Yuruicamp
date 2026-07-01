@@ -1,12 +1,3 @@
-// Base 層：設定原生 HTML 元素的基礎外觀，不綁定特定 component class。
-body {
-  min-inline-size: 320px;
-  background: var(--yui-bg);
-  color: var(--yui-text);
-  font-family: var(--yui-font-sans);
-  line-height: 1.5;
-}
-
-a {
-  color: inherit;
-}
+// 舊相容入口：原生元素基礎樣式已移到 css/elements，保留此檔避免舊路徑匯入失效。
+// 新增 element rule 請放在 css/elements，main.scss 也會優先載入 elements/elements。
+@use '../elements/elements';

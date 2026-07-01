@@ -1,5 +1,5 @@
 // Components 層：只放跨頁可重用 UI 元件，避免混入單一頁面專屬樣式。
-// 載入順序：先匯入按鈕、modal、drawer、header，再匯入 widgets 與共用內容規則。
+// 載入順序：先匯入基礎互動元件，再匯入 header 與 widgets。
 @use 'buttons';
 @use 'modal';
 @use 'auth-modal';
@@ -8,4 +8,3 @@
 @use 'cart-drawer';
 @use 'header';
 @use 'widgets/widgets';
-@use 'content/content';

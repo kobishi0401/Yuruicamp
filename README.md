@@ -761,3 +761,28 @@ window.YuruiAuth.sync()
 - `css/layouts/_layouts.scss` 改為舊路徑相容入口，後續新增版面物件應放在 `css/objects/`。
 - 更新 [docs/itcss-architecture.md](docs/itcss-architecture.md)，同步記錄 Objects 層與 layouts 相容策略。
 - 本輪未修改 HTML / JS；驗證結果見本次回覆。
+
+## v1.3.36 - 2026/07/01
+
+- 新增正式 ITCSS `Elements` 層：`css/elements/_elements.scss` 集中管理 `body`、`a` 等原生 HTML 元素基礎樣式。
+- `css/main.scss` 載入順序改為 settings、generic、elements、objects、components、pages、utilities，讓 reset、元素樣式與版面物件責任更清楚。
+- `css/base/_base.scss` 改為舊路徑相容入口，後續新增原生元素規則應放在 `css/elements/`。
+- 補強 Elements 層 SCSS 中文註解，說明 `body` 基底與連結繼承色的用途。
+- 更新 [docs/itcss-architecture.md](docs/itcss-architecture.md)，同步記錄 Elements 層與 base 相容策略。
+- 本輪未修改 HTML / JS；驗證結果見本次回覆。
+
+## v1.3.37 - 2026/07/01
+
+- 將全站 `a:hover` / `a:focus-visible` 連結互動基底從 `css/components/content/_content.scss` 移到 `css/elements/_elements.scss`。
+- `css/components/content/_content.scss` 改為舊相容入口，避免 Components 層保留非元件 class 的全站元素規則。
+- 補上 Elements 層連結互動中文註解，說明 hover / focus 不使用底線的既有視覺規則。
+- 更新 [docs/itcss-architecture.md](docs/itcss-architecture.md)，明確記錄原生元素互動狀態應放在 Elements 層。
+- 本輪未修改 HTML / JS；驗證結果見本次回覆。
+
+## v1.3.38 - 2026/07/01
+
+- 移除 `css/components/_components.scss` 對 `content/content` 的載入，讓 Components 層只保留實際可重用 UI 元件。
+- 刪除已無實際樣式輸出的 `css/components/content/_content.scss`，避免後續誤把全站元素或頁面規則放回 Components 層。
+- 更新 [docs/itcss-architecture.md](docs/itcss-architecture.md)，新增 selector 歸層判斷表，明確列出 settings、generic、elements、objects、components、pages、utilities 的放置依據。
+- 補強 Components 聚合檔中文註解，說明目前只匯入基礎互動元件、header 與 widgets。
+- 本輪未修改 HTML / JS；驗證結果見本次回覆。

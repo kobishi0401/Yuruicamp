@@ -1,0 +1,23 @@
+// Elements 層：設定原生 HTML 元素的基礎外觀，不綁定特定 component class。
+// 全站頁面基底：集中設定 body 的最小寬度、背景、文字色與主要字體。
+body {
+  min-inline-size: 320px;
+  background: var(--yui-bg);
+  color: var(--yui-text);
+  font-family: var(--yui-font-sans);
+  line-height: 1.5;
+}
+
+// 連結基底：讓連結預設繼承所在區塊文字色，實際互動色由 component 或 page 決定。
+a {
+  color: inherit;
+}
+
+// 連結互動基底：全站文字連結 hover/focus 不使用底線，維持既有視覺一致性。
+a:hover,
+a:focus-visible,
+[class] a:hover,
+[class] a:focus-visible {
+  cursor: pointer;
+  text-decoration: none;
+}
