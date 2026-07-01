@@ -1,7 +1,9 @@
 <div data-layout-part="main-header">
-  <header class="siteHeader" id="header">
+  <!-- 主站頁首：提供黏性導覽、搜尋、購物車與會員入口 -->
+  <header class="siteHeader">
     <nav class="siteNavbar" aria-label="主站導覽">
       <div class="siteNavbarInner">
+        <!-- 主選單按鈕：手機與窄版開啟側邊導覽 -->
         <button
           class="siteMenuButton"
           type="button"
@@ -12,11 +14,13 @@
           <i class="bi bi-list" aria-hidden="true"></i>
         </button>
 
+        <!-- 品牌連結：Logo 與站名固定置中顯示 -->
         <a class="siteBrandLink" href="/pages/home.html" aria-label="Yuruicamp 首頁">
           <img class="siteBrandImage" src="/assets/icons/brand_icon.png" alt="" />
           <span class="siteBrandText">Yuruicamp</span>
         </a>
 
+        <!-- 頁首操作區：搜尋、預約、購物車、登入與會員選單 -->
         <div class="siteHeaderActions">
           <div class="siteSearch">
             <button
@@ -59,6 +63,7 @@
 
           <button class="siteLoginButton" type="button" data-modal-target="loginModal">登入</button>
 
+          <!-- 會員選單：登入後顯示會員中心與登出操作 -->
           <div class="siteUserMenu" hidden>
             <button
               class="siteUserTrigger"

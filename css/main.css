@@ -1732,6 +1732,8 @@
   }
 }
 .checkoutPage {
+  width: min(1120px, 100vw - 32px);
+  margin-inline: auto;
   padding-bottom: 4rem;
   padding-top: 2rem;
 }
@@ -1940,6 +1942,43 @@
 
 .checkoutSecondaryAction {
   margin-top: 0.25rem;
+}
+
+.checkoutSecondaryAction,
+.couponBtn,
+.checkoutConfirmBtn {
+  min-height: 44px;
+  border: 1px solid var(--yui-primary, #244d4d);
+  border-radius: var(--yui-radius-lg);
+  background: var(--yui-primary, #244d4d);
+  color: var(--yui-surface, #fff);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding-inline: var(--yui-space-3);
+  transition: background-color var(--yui-transition-fast), border-color var(--yui-transition-fast), color var(--yui-transition-fast), opacity var(--yui-transition-fast);
+}
+
+.checkoutSecondaryAction:hover,
+.couponBtn:hover,
+.checkoutConfirmBtn:hover {
+  background: var(--yui-primary-hover, #316868);
+  border-color: var(--yui-primary-hover, #316868);
+  color: var(--yui-surface, #fff);
+}
+
+.checkoutSecondaryAction:focus-visible,
+.couponBtn:focus-visible,
+.checkoutConfirmBtn:focus-visible {
+  outline: 3px solid var(--yui-primary, #244d4d);
+  outline-offset: 3px;
+}
+
+.checkoutSecondaryAction:disabled,
+.couponBtn:disabled,
+.checkoutConfirmBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .checkoutChoice {
@@ -2242,6 +2281,7 @@
 }
 @media (width <= 440px) {
   .checkoutPage {
+    width: min(100% - 24px, 1120px);
     padding-inline: 0;
   }
   .checkoutPanelBody,
@@ -2817,6 +2857,13 @@
     transition: none;
   }
 }
+#header,
+#booking-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--yui-z-sticky);
+}
+
 .isHeaderLayerOpen,
 .isModalOpen {
   overflow: hidden;
@@ -2824,9 +2871,7 @@
 
 .siteHeader,
 .bookingHeader {
-  position: sticky;
-  top: 0;
-  z-index: var(--yui-z-sticky);
+  position: relative;
   background: var(--yui-surface);
   border-bottom: 1px solid var(--yui-border);
   color: var(--yui-text);
@@ -2842,9 +2887,9 @@
   width: min(1120px, 100vw - 32px);
   min-height: 72px;
   margin-inline: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--yui-space-4);
 }
 
@@ -2911,11 +2956,17 @@
 .bookingBrandLink {
   display: inline-flex;
   align-items: center;
+  justify-self: center;
   gap: var(--yui-space-2);
   color: var(--yui-primary);
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.siteMenuButton,
+.bookingMenuButton {
+  justify-self: start;
 }
 
 .siteBrandImage,
@@ -2929,7 +2980,10 @@
 .bookingHeaderActions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--yui-space-3);
+  justify-self: end;
+  min-width: 0;
 }
 
 .siteSearch {
@@ -2941,13 +2995,16 @@
   top: calc(100% + var(--yui-space-2));
   right: 0;
   width: min(360px, 100vw - 32px);
-  display: flex;
   gap: var(--yui-space-2);
   padding: var(--yui-space-2);
   background: var(--yui-surface);
   border: 1px solid var(--yui-border);
   border-radius: var(--yui-radius-lg);
   box-shadow: var(--yui-shadow-md);
+}
+
+.siteSearchForm:not([hidden]) {
+  display: flex;
 }
 
 .siteSearchInput {
@@ -3015,7 +3072,6 @@
 .bookingCartPanelEmptyLink,
 .bookingCartPanelClear {
   min-height: 44px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -3025,6 +3081,20 @@
   text-decoration: none;
   cursor: pointer;
   transition: background-color var(--yui-transition-fast), border-color var(--yui-transition-fast), color var(--yui-transition-fast);
+}
+
+.siteBookingLink,
+.siteLoginButton:not([hidden]),
+.bookingSwitchLink,
+.bookingLoginButton:not([hidden]),
+.siteCartCheckoutLink,
+.bookingPanelCheckoutLink,
+.surveyActionButton,
+.sharedConfirmSubmit,
+.sharedConfirmCancel,
+.bookingCartPanelEmptyLink,
+.bookingCartPanelClear {
+  display: inline-flex;
 }
 
 .siteBookingLink,
@@ -3071,7 +3141,6 @@
   right: -6px;
   min-width: 20px;
   height: 20px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--yui-radius-pill);
@@ -3079,6 +3148,11 @@
   color: #fff;
   font-size: 12px;
   font-weight: 800;
+}
+
+.siteCartBadge:not([hidden]),
+.bookingCartBadge:not([hidden]) {
+  display: inline-flex;
 }
 
 .siteUserMenu {
@@ -3107,13 +3181,16 @@
   top: calc(100% + var(--yui-space-2));
   right: 0;
   min-width: 168px;
-  display: grid;
   gap: var(--yui-space-1);
   padding: var(--yui-space-2);
   background: var(--yui-surface);
   border: 1px solid var(--yui-border);
   border-radius: var(--yui-radius-lg);
   box-shadow: var(--yui-shadow-md);
+}
+
+.siteUserDropdown:not([hidden]) {
+  display: grid;
 }
 
 .siteUserDropdownItem {
@@ -3424,11 +3501,29 @@
 .siteCartRemoveButton {
   min-width: 36px;
   min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--yui-border);
   border-radius: var(--yui-radius-md);
   background: var(--yui-surface);
   color: var(--yui-primary);
   cursor: pointer;
+}
+
+.siteCartRemoveIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.siteCartRemoveText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .siteCartItemQuantity,
@@ -5764,6 +5859,52 @@
   font-weight: 700;
 }
 
+.qtyStepper {
+  display: inline-grid;
+  grid-template-columns: 44px minmax(56px, 72px) 44px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--yui-border, #e0e0e0);
+  border-radius: var(--yui-radius-lg);
+  background: var(--yui-surface, #fff);
+}
+
+.qtyBtn {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: var(--yui-surface, #fff);
+  color: var(--yui-primary, #244d4d);
+  cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.qtyBtn:hover,
+.qtyBtn:focus-visible {
+  background: var(--yui-primary-soft, #e8f4f4);
+  color: var(--yui-primary-dark, #1a3838);
+}
+
+.qtyBtn:focus-visible {
+  outline: 3px solid rgba(36, 77, 77, 0.35);
+  outline-offset: -3px;
+}
+
+.qtyInput {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  border-inline: 1px solid var(--yui-border, #e0e0e0);
+  background: var(--yui-surface, #fff);
+  color: var(--yui-text, #333);
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+}
+
 .progressContainer {
   background: var(--yui-success-soft, #f0fdf4);
   border: 1px solid var(--yui-success-border, #bbf7d0);
@@ -6100,6 +6241,7 @@
   .galleryThumb,
   .productTabBtn,
   .specOptionBtn,
+  .qtyBtn,
   .shippingProgressBar::-webkit-progress-value {
     transition-duration: 0.01ms;
   }

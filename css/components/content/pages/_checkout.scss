@@ -14,6 +14,8 @@ $checkout-danger: var(--yui-danger, #d32f2f);
 $checkout-shadow: var(--yui-shadow-md, 0 4px 12px rgb(36 77 77 / 10%));
 
 .checkoutPage {
+  width: min(1120px, calc(100vw - 32px));
+  margin-inline: auto;
   padding-bottom: 4rem;
   padding-top: 2rem;
 }
@@ -222,6 +224,48 @@ $checkout-shadow: var(--yui-shadow-md, 0 4px 12px rgb(36 77 77 / 10%));
 
 .checkoutSecondaryAction {
   margin-top: 0.25rem;
+}
+
+// 結帳頁主要操作按鈕；套用於帶入會員資料、套用折扣碼與確認結帳按鈕。
+.checkoutSecondaryAction,
+.couponBtn,
+.checkoutConfirmBtn {
+  min-height: 44px;
+  border: 1px solid $checkout-primary;
+  border-radius: var(--yui-radius-lg);
+  background: $checkout-primary;
+  color: $checkout-surface;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding-inline: var(--yui-space-3);
+  transition:
+    background-color var(--yui-transition-fast),
+    border-color var(--yui-transition-fast),
+    color var(--yui-transition-fast),
+    opacity var(--yui-transition-fast);
+}
+
+.checkoutSecondaryAction:hover,
+.couponBtn:hover,
+.checkoutConfirmBtn:hover {
+  background: $checkout-primary-hover;
+  border-color: $checkout-primary-hover;
+  color: $checkout-surface;
+}
+
+.checkoutSecondaryAction:focus-visible,
+.couponBtn:focus-visible,
+.checkoutConfirmBtn:focus-visible {
+  outline: 3px solid $checkout-primary;
+  outline-offset: 3px;
+}
+
+.checkoutSecondaryAction:disabled,
+.couponBtn:disabled,
+.checkoutConfirmBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .checkoutChoice {
@@ -527,6 +571,7 @@ $checkout-shadow: var(--yui-shadow-md, 0 4px 12px rgb(36 77 77 / 10%));
 
 @media (width <= 440px) {
   .checkoutPage {
+    width: min(100% - 24px, 1120px);
     padding-inline: 0;
   }
 

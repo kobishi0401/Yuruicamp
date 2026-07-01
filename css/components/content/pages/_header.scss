@@ -8,16 +8,23 @@ $header-border: var(--yui-border);
 $header-shadow: var(--yui-shadow-md);
 $header-transition: var(--yui-transition-fast);
 
+// 頁首黏性容器；套用於各主站頁面的 #header 掛載點與 booking 頁面的 #booking-header 掛載點。
+#header,
+#booking-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--yui-z-sticky);
+}
+
 .isHeaderLayerOpen,
 .isModalOpen {
   overflow: hidden;
 }
 
+// 共用頁首外觀；套用於 components/header.partial 的 .siteHeader 與 .bookingHeader。
 .siteHeader,
 .bookingHeader {
-  position: sticky;
-  top: 0;
-  z-index: var(--yui-z-sticky);
+  position: relative;
   background: $header-surface;
   border-bottom: 1px solid $header-border;
   color: $header-text;
@@ -33,12 +40,13 @@ $header-transition: var(--yui-transition-fast);
   width: min(1120px, calc(100vw - 32px));
   min-height: 72px;
   margin-inline: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--yui-space-4);
 }
 
+// 頁首圖示按鈕；套用於主選單、搜尋、購物車、關閉與 booking 控制按鈕。
 .siteMenuButton,
 .siteSearchToggle,
 .siteSearchSubmit,
@@ -102,15 +110,22 @@ $header-transition: var(--yui-transition-fast);
   outline-offset: 2px;
 }
 
+// 品牌識別連結；套用於主站與 booking 頁首 Logo。
 .siteBrandLink,
 .bookingBrandLink {
   display: inline-flex;
   align-items: center;
+  justify-self: center;
   gap: var(--yui-space-2);
   color: $header-primary;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.siteMenuButton,
+.bookingMenuButton {
+  justify-self: start;
 }
 
 .siteBrandImage,
@@ -120,23 +135,27 @@ $header-transition: var(--yui-transition-fast);
   object-fit: contain;
 }
 
+// 頁首操作區；套用於搜尋、購物車、登入與會員選單容器。
 .siteHeaderActions,
 .bookingHeaderActions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--yui-space-3);
+  justify-self: end;
+  min-width: 0;
 }
 
 .siteSearch {
   position: relative;
 }
 
+// Header 搜尋表單；套用於 components/header.partial 的 #siteSearchForm。
 .siteSearchForm {
   position: absolute;
   top: calc(100% + var(--yui-space-2));
   right: 0;
   width: min(360px, calc(100vw - 32px));
-  display: flex;
   gap: var(--yui-space-2);
   padding: var(--yui-space-2);
   background: $header-surface;
@@ -145,6 +164,11 @@ $header-transition: var(--yui-transition-fast);
   box-shadow: $header-shadow;
 }
 
+.siteSearchForm:not([hidden]) {
+  display: flex;
+}
+
+// Header 搜尋欄位；套用於 components/header.partial 的 .siteSearchInput。
 .siteSearchInput {
   min-width: 0;
   width: 100%;
@@ -155,6 +179,7 @@ $header-transition: var(--yui-transition-fast);
   color: $header-text;
 }
 
+// Header 搜尋建議層；套用於 components/header.partial 的 .siteSearchDropdown。
 .siteSearchDropdown {
   position: absolute;
   top: calc(100% + 64px);
@@ -210,7 +235,6 @@ $header-transition: var(--yui-transition-fast);
 .bookingCartPanelEmptyLink,
 .bookingCartPanelClear {
   min-height: 44px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -223,6 +247,20 @@ $header-transition: var(--yui-transition-fast);
     background-color $header-transition,
     border-color $header-transition,
     color $header-transition;
+}
+
+.siteBookingLink,
+.siteLoginButton:not([hidden]),
+.bookingSwitchLink,
+.bookingLoginButton:not([hidden]),
+.siteCartCheckoutLink,
+.bookingPanelCheckoutLink,
+.surveyActionButton,
+.sharedConfirmSubmit,
+.sharedConfirmCancel,
+.bookingCartPanelEmptyLink,
+.bookingCartPanelClear {
+  display: inline-flex;
 }
 
 .siteBookingLink,
@@ -269,7 +307,6 @@ $header-transition: var(--yui-transition-fast);
   right: -6px;
   min-width: 20px;
   height: 20px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--yui-radius-pill);
@@ -277,6 +314,11 @@ $header-transition: var(--yui-transition-fast);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
+}
+
+.siteCartBadge:not([hidden]),
+.bookingCartBadge:not([hidden]) {
+  display: inline-flex;
 }
 
 .siteUserMenu {
@@ -300,18 +342,22 @@ $header-transition: var(--yui-transition-fast);
   font-weight: 800;
 }
 
+// 會員下拉選單；套用於 components/header.partial 的 .siteUserDropdown。
 .siteUserDropdown {
   position: absolute;
   top: calc(100% + var(--yui-space-2));
   right: 0;
   min-width: 168px;
-  display: grid;
   gap: var(--yui-space-1);
   padding: var(--yui-space-2);
   background: $header-surface;
   border: 1px solid $header-border;
   border-radius: var(--yui-radius-lg);
   box-shadow: $header-shadow;
+}
+
+.siteUserDropdown:not([hidden]) {
+  display: grid;
 }
 
 .siteUserDropdownItem {
@@ -626,11 +672,29 @@ $header-transition: var(--yui-transition-fast);
 .siteCartRemoveButton {
   min-width: 36px;
   min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid $header-border;
   border-radius: var(--yui-radius-md);
   background: $header-surface;
   color: $header-primary;
   cursor: pointer;
+}
+
+.siteCartRemoveIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.siteCartRemoveText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .siteCartItemQuantity,

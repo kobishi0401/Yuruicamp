@@ -257,6 +257,21 @@ function openPartnerDetail(index) {
   window.openModal?.('partnerModal');
 }
 
+/**
+ * 開啟合作夥伴詳情並保留目前捲動位置，避免 Modal 聚焦造成頁面跳到最上方。
+ * 套用元件：pages/branches.html 的 .partnerCardTrigger。
+ */
+function openPartnerDetailWithoutScrollJump(index) {
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+
+  openPartnerDetail(index);
+
+  window.requestAnimationFrame(() => {
+    window.scrollTo(scrollX, scrollY);
+  });
+}
+
 function bindBranchSelection() {
   const container = document.getElementById('branchList');
   if (!container || container.dataset.branchesBound === 'true') return;
@@ -277,7 +292,8 @@ function bindPartnerGrid() {
   partnersGrid.addEventListener('click', event => {
     const trigger = event.target.closest('.partnerCardTrigger');
     if (!trigger || !partnersGrid.contains(trigger)) return;
-    openPartnerDetail(Number(trigger.dataset.partnerIndex));
+    event.preventDefault();
+    openPartnerDetailWithoutScrollJump(Number(trigger.dataset.partnerIndex));
   });
 }
 

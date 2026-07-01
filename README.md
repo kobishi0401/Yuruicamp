@@ -3,6 +3,7 @@
 - 修復 shared header 登入互動：主站 `_header.scss` 補齊共用 modal 基礎樣式，`js/main.js` 與 `booking/js/layout.js` 在 shared-auth 注入後載入 `modal.js`，恢復登入、社群登入、個人化問卷與會員下拉選單初始化順序。
 - 修復 header 登入按鈕顯示狀態：`isLoggedIn` 為 true 時隱藏 `.siteLoginButton`，並顯示 `.siteUserMenu`；未登入時恢復登入按鈕既有 `inline-flex` 顯示，避免與會員選單同時出現。
 - 修復前台共用 UI：浮動回頂部 / LINE 按鈕改用 token 圓形固定樣式，合作夥伴 modal 開啟時不再捲到頁首，商品詳情頁加入購物車與直接購買按鈕同步商品列表 CTA 視覺。
+- 修復 `.agents/agents.md` 指定的前台細節：共用 header 改由掛載點維持 sticky、品牌 Logo 置中、會員下拉與購物車 badge 改成可見狀態才套用 display、購物車移除改垃圾桶 SVG、商品數量與 checkout CTA 套用 token 按鈕樣式，並補齊 checkout-success header icon 樣式來源。
 - 依 `.agents/agents.md` 補齊新版 `header.partial` 互動：`js/main.js` 在 partial 注入後一律執行可重複的 header / modal / cart 初始化，`js/components/header.js` 改用現有 `keyword` 搜尋導頁、維持搜尋下拉隱藏並同步登入狀態與會員選單。
 - `pages/products.html`、`js/pages/product-list.js` 與商品頁 SCSS 新增 `keyword` 搜尋結果、0.1 顆星裁切評分、廣告輪播複製首張後無縫回跳、手機篩選按鈕共用商品 CTA 視覺與價格欄位 `step="100"`。
 - `pages/home.html` 相關首頁邏輯與 SCSS 補上 0.1 顆星裁切、品牌跑馬燈維持兩組品牌無限捲動、商品卡 hover 改為整卡平滑微放大 / 上移 / 加深陰影，並調整服務特色標題顯示。

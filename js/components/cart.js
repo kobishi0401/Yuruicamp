@@ -39,6 +39,10 @@
     ].join('');
   }
 
+  /**
+   * 渲染購物車單一商品列，包含數量控制與垃圾桶移除按鈕。
+   * 套用元件：#siteCartDrawerBody 內的 .siteCartItem。
+   */
   function renderCartItem(item) {
     var itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
     var detailUrl = getMainPageUrl('product-detail.html') + '?id=' + encodeURIComponent(item.id);
@@ -57,7 +61,13 @@
       '      <span class="siteCartItemQuantity">' + Number(item.quantity || 0) + '</span>',
       '      <button class="siteCartQuantityIncrease" data-product-id="' + escapeCartHtml(item.id) + '" type="button" aria-label="增加數量">+</button>',
       '      <strong class="siteCartItemSubtotal">' + window.formatCurrency(itemTotal) + '</strong>',
-      '      <button class="siteCartRemoveButton" data-product-id="' + escapeCartHtml(item.id) + '" type="button" aria-label="移除商品">移除</button>',
+      '      <button class="siteCartRemoveButton" data-product-id="' + escapeCartHtml(item.id) + '" type="button" aria-label="移除商品">',
+      '        <svg class="siteCartRemoveIcon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">',
+      '          <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>',
+      '          <path fill="currentColor" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1 0-2H5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1h2.5a1 1 0 0 1 1 1M4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>',
+      '        </svg>',
+      '        <span class="siteCartRemoveText">移除</span>',
+      '      </button>',
       '    </div>',
       '  </div>',
       '</article>',

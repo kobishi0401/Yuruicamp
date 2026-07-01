@@ -75,7 +75,7 @@ getMainHtmlPages().forEach(assertRuntimeScriptOrder);
 
 const header = readProjectFile('components/header.partial');
 assert(header.includes('id="siteCartDrawer"'), 'Header must include shared cart drawer');
-assert(header.includes('class="navbar-cart-btn"'), 'Header must include shared cart button');
+assert(header.includes('class="siteCartButton"'), 'Header must include shared cart button');
 assert(!header.includes('id="bkLoginBtn"'), 'Legacy booking login button should be removed');
 assert(!header.includes('id="bkUserMenu"'), 'Legacy booking user menu should be removed');
 assert(!/style=/.test(header), 'Header partial should not contain inline styles');
