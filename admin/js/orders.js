@@ -99,7 +99,7 @@ window.initOrders = function () {
       applyFiltersAndSort();
     }).fail(function () {
       $('#ordersTableBody').html(
-        '<tr><td colspan="7" class="text-center text-danger py-4">' +
+        '<tr><td colspan="7" class="text-center py-4 yr-admin-orders-error">' +
         '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
         '</td></tr>'
       );
@@ -639,7 +639,7 @@ function updateFilterUI() {
 function renderOrdersTable(orders) {
   if (!orders || orders.length === 0) {
     $('#ordersTableBody').html(
-      '<tr><td colspan="7" class="text-center text-muted py-4">' +
+      '<tr><td colspan="7" class="text-center py-4 yr-admin-orders-empty">' +
       '<i class="fas fa-inbox me-2"></i>沒有符合條件的訂單' +
       '</td></tr>'
     );
@@ -649,18 +649,18 @@ function renderOrdersTable(orders) {
   // 付款狀態 badge（3 種）
   // paid = 已付款（綠）/ unpaid = 未付款（黃）/ cod = 貨到付款（藍）
   var payBadgeMap = {
-    paid:   '<span class="badge bg-success">已付款</span>',
-    unpaid: '<span class="badge bg-warning text-dark">未付款</span>',
-    cod:    '<span class="badge bg-info text-dark">貨到付款</span>'
+    paid:   '<span class="yr-admin-payment-status yr-admin-payment-status--paid">已付款</span>',
+    unpaid: '<span class="yr-admin-payment-status yr-admin-payment-status--unpaid">未付款</span>',
+    cod:    '<span class="yr-admin-payment-status yr-admin-payment-status--cod">貨到付款</span>'
   };
 
   // 訂單狀態 badge（4 種）
   // unshipped = 黃色 / shipped = 綠色 / returned = 紅色 / completed = 藍色
   var orderStatusMap = {
-    unshipped: '<span class="badge bg-warning text-dark order-status-badge">未出貨</span>',
-    shipped:   '<span class="badge bg-success order-status-badge">已出貨</span>',
-    returned:  '<span class="badge bg-danger order-status-badge">已退貨</span>',
-    completed: '<span class="badge bg-primary order-status-badge">已完成</span>'
+    unshipped: '<span class="yr-admin-order-status yr-admin-order-status--pending">未出貨</span>',
+    shipped:   '<span class="yr-admin-order-status yr-admin-order-status--shipped">已出貨</span>',
+    returned:  '<span class="yr-admin-order-status yr-admin-order-status--returned">已退貨</span>',
+    completed: '<span class="yr-admin-order-status yr-admin-order-status--completed">已完成</span>'
   };
 
   var html = orders.map(function (order) {
@@ -673,10 +673,10 @@ function renderOrdersTable(orders) {
     //   其餘狀態             → 不顯示按鈕
     var actionBtn = '';
     if (order.orderStatus === 'unshipped') {
-      actionBtn = '<button class="btn btn-sm btn-outline-success btn-ship-order" title="確認出貨">' +
+      actionBtn = '<button class="btn btn-sm btn-outline-success btn-ship-order yr-admin-orders-action-btn yr-admin-orders-action-btn--primary" title="確認出貨">' +
                   '<i class="fas fa-truck me-1"></i>出貨</button>';
     } else if (order.orderStatus === 'shipped' && order.paymentStatus !== 'cod') {
-      actionBtn = '<button class="btn btn-sm btn-outline-primary btn-complete-order" title="確認送達完成">' +
+      actionBtn = '<button class="btn btn-sm btn-outline-primary btn-complete-order yr-admin-orders-action-btn yr-admin-orders-action-btn--secondary" title="確認送達完成">' +
                   '<i class="fas fa-check-circle me-1"></i>完成</button>';
     }
 
@@ -684,20 +684,21 @@ function renderOrdersTable(orders) {
     var date = order.createdAt.split(' ')[0] || '';
 
     // 訂單編號：可點擊連結樣式
-    var idLink = '<span class="admin-cell-link order-id-link" ' +
+    var idLink = '<span class="order-id-link yr-admin-orders-order-id fw-semibold" ' +
                  'data-order-id="' + order.id + '" ' +
+                 'style="cursor:pointer;" ' +
                  'title="點擊查看訂單明細">' +
                  order.id + '</span>';
 
     return '<tr data-order-id="' + order.id + '"' +
-           ' data-order-status="' + order.orderStatus + '">' +
+           ' data-order-status="' + order.orderStatus + '" class="yr-admin-orders-row">' +
            '<td>' + idLink + '</td>' +
            '<td>' + date + '</td>' +
            '<td class="fw-semibold">' + order.buyerName + '</td>' +
-           '<td class="admin-cell-amount">NT$ ' + order.total.toLocaleString() + '</td>' +
+           '<td class="fw-semibold yr-admin-orders-amount">NT$ ' + order.total.toLocaleString() + '</td>' +
            '<td>' + payBadge + '</td>' +
            '<td>' + statusBadge + '</td>' +
-           '<td>' + actionBtn + '</td>' +
+           '<td class="yr-admin-orders-actions">' + actionBtn + '</td>' +
            '</tr>';
   }).join('');
 
@@ -724,10 +725,10 @@ window.showOrderModal = function (order) {
 
   // 訂單狀態 badge（4 種，需與 renderOrdersTable 的 orderStatusMap 保持一致）
   var statusMap = {
-    unshipped: '<span class="badge bg-warning text-dark">未出貨</span>',
-    shipped:   '<span class="badge bg-success">已出貨</span>',
-    returned:  '<span class="badge bg-danger">已退貨</span>',
-    completed: '<span class="badge bg-primary">已完成</span>'
+    unshipped: '<span class="yr-admin-order-status yr-admin-order-status--pending">未出貨</span>',
+    shipped:   '<span class="yr-admin-order-status yr-admin-order-status--shipped">已出貨</span>',
+    returned:  '<span class="yr-admin-order-status yr-admin-order-status--returned">已退貨</span>',
+    completed: '<span class="yr-admin-order-status yr-admin-order-status--completed">已完成</span>'
   };
   $('#modalOrderStatus').html(statusMap[order.orderStatus] || '');
 
@@ -759,12 +760,13 @@ window.showOrderModal = function (order) {
 
   // 訂單紀錄時間軸
   var historyHtml = (order.history || []).map(function (entry) {
-    return '<li class="d-flex align-items-start gap-2 mb-1">' +
-           '<i class="fas fa-circle mt-1" style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-           '<span><span class="text-muted me-2">' + entry.time + '</span>' + entry.action + '</span>' +
+    return '<li class="yr-admin-order-history__item d-flex align-items-start gap-2 mb-1">' +
+           '<i class="fas fa-circle mt-1 yr-admin-order-history__dot" style="font-size:6px; flex-shrink:0;"></i>' +
+           '<span><span class="text-muted me-2 yr-admin-order-history__time">' + entry.time + '</span>' +
+           '<span class="yr-admin-order-history__action">' + entry.action + '</span></span>' +
            '</li>';
   }).join('');
-  $('#modalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');
+  $('#modalHistory').html(historyHtml || '<li class="text-muted yr-admin-order-history__item">無紀錄</li>');
 
   // 開啟 modal
   new bootstrap.Modal('#orderDetailModal').show();

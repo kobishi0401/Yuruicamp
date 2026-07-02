@@ -4,21 +4,22 @@
      列表與 Modal 邏輯由 reviews.js 處理
 -->
 
+<section class="yr-admin-reviews-module">
 <div class="card shadow-sm border-0" id="reviewsModuleCard">
 
   <!-- 工具列：固定兩列 — 第 1 列狀態 Tab / 第 2 列搜尋與篩選 -->
-  <div class="card-header bg-white border-0 reviews-toolbar py-3">
+  <div class="card-header border-0 reviews-toolbar py-3 yr-admin-reviews-toolbar">
 
     <!-- 第 1 列：全部 / 未回覆 / 已回覆 -->
-    <div class="reviews-toolbar-row reviews-toolbar-tabs d-flex align-items-center flex-wrap gap-2">
-      <button class="btn btn-sm btn-dark active filter-btn" type="button" data-filter="all">
-        全部 <span class="badge bg-secondary ms-1" id="tabCountAll">0</span>
+    <div class="reviews-toolbar-row reviews-toolbar-tabs d-flex align-items-center flex-wrap gap-2 yr-admin-reviews-tabs">
+      <button class="btn btn-sm btn-dark active filter-btn yr-admin-reviews-tab" type="button" data-filter="all">
+        全部 <span class="yr-admin-review-status yr-admin-review-status--unknown ms-1" id="tabCountAll">0</span>
       </button>
-      <button class="btn btn-sm btn-outline-secondary filter-btn" type="button" data-filter="unreplied">
-        未回覆 <span class="badge bg-danger ms-1" id="tabCountUnreplied">0</span>
+      <button class="btn btn-sm btn-outline-secondary filter-btn yr-admin-reviews-tab" type="button" data-filter="unreplied">
+        未回覆 <span class="yr-admin-review-status yr-admin-review-status--pending ms-1" id="tabCountUnreplied">0</span>
       </button>
-      <button class="btn btn-sm btn-outline-secondary filter-btn" type="button" data-filter="replied">
-        已回覆 <span class="badge bg-success ms-1" id="tabCountReplied">0</span>
+      <button class="btn btn-sm btn-outline-secondary filter-btn yr-admin-reviews-tab" type="button" data-filter="replied">
+        已回覆 <span class="yr-admin-review-status yr-admin-review-status--answered ms-1" id="tabCountReplied">0</span>
       </button>
     </div>
 
@@ -50,9 +51,8 @@
   <!-- 評論卡片列表（由 reviews.js 動態填入） -->
   <div class="card-body">
     <div id="reviewsContainer">
-      <div class="text-center py-5">
-        <div class="spinner-border spinner-border-sm me-2"
-             style="color: var(--admin-brand-accent);"></div>
+      <div class="text-center py-5 yr-admin-reviews-loading">
+        <div class="spinner-border spinner-border-sm me-2"></div>
         <span class="text-muted">載入評論中...</span>
       </div>
     </div>
@@ -60,7 +60,7 @@
 </div>
 
 <!-- 回覆 / 編輯回覆 Modal -->
-<div class="modal fade" id="reviewReplyModal" tabindex="-1"
+<div class="modal fade yr-admin-review-modal" id="reviewReplyModal" tabindex="-1"
      aria-labelledby="reviewReplyModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -120,3 +120,4 @@
     </div>
   </div>
 </div>
+</section>

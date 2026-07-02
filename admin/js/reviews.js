@@ -52,7 +52,7 @@ function loadReviews(callback) {
     callback(reviews || []);
   }).fail(function () {
     $('#reviewsContainer').html(
-      '<div class="alert alert-danger mb-0">' +
+      '<div class="yr-admin-reviews-error text-center">' +
       '<i class="fas fa-exclamation-triangle me-2"></i>載入評論數據失敗' +
       '</div>'
     );
@@ -262,18 +262,18 @@ function renderStars(rating) {
   var r = Number(rating) || 0;
   for (var i = 1; i <= 5; i++) {
     html += i <= r
-      ? '<i class="fas fa-star text-warning"></i>'
-      : '<i class="far fa-star text-muted"></i>';
+      ? '<i class="fas fa-star yr-admin-review-star yr-admin-review-star--filled"></i>'
+      : '<i class="far fa-star yr-admin-review-star yr-admin-review-star--empty"></i>';
   }
   return html;
 }
 
 /** 未回覆卡片的左邊框樣式（低分優先標示）/ Border class for unreplied cards */
 function getReviewCardBorderClass(review) {
-  if (review.replied === true) return '';
+  if (review.replied === true) return ' yr-admin-review-card--answered';
   var rating = Number(review.rating) || 0;
   if (rating <= 2) return ' review-card-urgent';
-  return ' review-card-pending';
+  return ' yr-admin-review-card--pending';
 }
 
 /** 渲染買家附圖縮圖 / Render buyer photo thumbnails */
@@ -299,9 +299,9 @@ function renderReplyBlock(review) {
   // 不顯示回覆人員姓名 / Do not show responder name on UI
   if (review.replyUpdatedAt) metaParts.push('（已編輯 ' + escapeHtml(review.replyUpdatedAt) + '）');
 
-  return '<div class="reply-display mt-3 p-3 bg-light border-start border-3 border-success rounded-end">' +
-    '<div class="small text-muted mb-1"><i class="fas fa-store me-1"></i>賣家回覆</div>' +
-    '<p class="mb-1 review-reply-text">' + escapeHtml(review.replyText) + '</p>' +
+  return '<div class="reply-display mt-3 yr-admin-review-reply">' +
+    '<div class="small mb-1 yr-admin-review-reply__header"><i class="fas fa-store me-1"></i>賣家回覆</div>' +
+    '<p class="mb-1 review-reply-text yr-admin-review-reply__content">' + escapeHtml(review.replyText) + '</p>' +
     (metaParts.length
       ? '<div class="small text-muted">' + metaParts.join(' · ') + '</div>'
       : '') +
@@ -315,7 +315,7 @@ function renderReplyBlock(review) {
 function renderReviewCards(reviews) {
   if (!reviews || reviews.length === 0) {
     $('#reviewsContainer').html(
-      '<div class="text-center text-muted py-5">' +
+      '<div class="text-center py-5 yr-admin-reviews-empty">' +
       '<i class="far fa-comment-dots fa-2x mb-2 d-block opacity-50"></i>' +
       escapeHtml(getReviewEmptyMessage()) +
       '</div>'
@@ -332,8 +332,8 @@ function renderReviewCards(reviews) {
         : '';
 
       var repliedBadge = isReplied
-        ? '<span class="badge bg-success">已回覆</span>'
-        : '<span class="badge bg-warning text-dark">待回覆</span>';
+        ? '<span class="yr-admin-review-status yr-admin-review-status--answered">已回覆</span>'
+        : '<span class="yr-admin-review-status yr-admin-review-status--pending">待回覆</span>';
 
       var avatarSrc = r.buyerAvatar || 'https://placehold.co/44x44/cccccc/555555?text=U';
 
@@ -346,14 +346,14 @@ function renderReviewCards(reviews) {
           '<i class="fas fa-reply me-1"></i>回覆評論</button>';
 
       return '<div class="col-12">' +
-        '<div class="card shadow-sm review-card' + getReviewCardBorderClass(r) + '"' +
+        '<div class="card shadow-sm review-card yr-admin-review-card' + getReviewCardBorderClass(r) + '"' +
         ' data-review-id="' + escapeHtml(r.id) + '"' +
         ' data-replied="' + isReplied + '"' +
         ' data-rating="' + rating + '">' +
         '<div class="card-body">' +
-        '<div class="d-flex align-items-start gap-3">' +
+        '<div class="d-flex align-items-start gap-3 yr-admin-review-card__header">' +
         '<img src="' + escapeHtml(avatarSrc) + '" width="44" height="44"' +
-        ' class="rounded-circle border object-fit-cover flex-shrink-0"' +
+        ' class="rounded-circle border object-fit-cover flex-shrink-0 yr-admin-review-avatar"' +
         ' alt="' + escapeHtml(r.buyerName) + ' 頭像"' +
         ' onerror="this.src=\'https://placehold.co/44x44/cccccc/555555?text=U\'">' +
         '<div class="flex-grow-1 min-w-0">' +
@@ -363,18 +363,18 @@ function renderReviewCards(reviews) {
         '<span class="badge bg-secondary">' + escapeHtml(r.id) + '</span>' +
         repliedBadge + urgentBadge +
         '</div>' +
-        '<div class="review-card-stars">' + renderStars(rating) + '</div>' +
+        '<div class="review-card-stars yr-admin-review-rating">' + renderStars(rating) + '</div>' +
         '</div>' +
-        '<div class="small text-muted mb-2">' +
+        '<div class="small text-muted mb-2 yr-admin-review-card__meta">' +
         escapeHtml(r.createdAt) + ' · ' + escapeHtml(r.productName) +
         '</div>' +
-        '<div class="review-buyer-comment">' +
+        '<div class="review-buyer-comment yr-admin-review-card__content">' +
         '<div class="small text-muted mb-1">買家評論</div>' +
         '<p class="mb-0">' + escapeHtml(r.comment) + '</p>' +
         renderReviewPhotos(r.photos) +
         '</div>' +
         renderReplyBlock(r) +
-        '<div class="d-flex justify-content-end mt-3">' + actionBtn + '</div>' +
+        '<div class="d-flex justify-content-end mt-3 yr-admin-review-card__actions">' + actionBtn + '</div>' +
         '</div></div>' +
         '</div></div></div>';
     }).join('') +

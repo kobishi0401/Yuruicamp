@@ -209,8 +209,8 @@ window.initBookings = function () {
 
     // 更新畫面：badge、data 屬性、操作欄
     $row.find('.booking-status-badge')
-        .removeClass('bg-warning text-dark')
-        .addClass('bg-primary')
+        .removeClass('yr-admin-booking-status--pending')
+        .addClass('yr-admin-booking-status--confirmed')
         .text('已確認');
     $row.attr('data-booking-status', 'confirmed');
 
@@ -255,8 +255,8 @@ window.initBookings = function () {
     // 更新畫面上的 badge
     var $row = $('#bookingsTableBody tr[data-booking-id="' + bookingId + '"]');
     $row.find('.booking-status-badge')
-        .removeClass('bg-warning text-dark bg-primary bg-success')
-        .addClass('bg-danger')
+        .removeClass('yr-admin-booking-status--pending yr-admin-booking-status--confirmed yr-admin-booking-status--completed')
+        .addClass('yr-admin-booking-status--cancelled')
         .text('已取消');
     $row.attr('data-booking-status', 'cancelled');
     $row.attr('data-payment-status', 'refunded');
@@ -298,8 +298,8 @@ window.initBookings = function () {
     // 更新表格列的 badge
     var $row = $('#bookingsTableBody tr[data-booking-id="' + bookingId + '"]');
     $row.find('.booking-status-badge')
-        .removeClass('bg-primary bg-warning text-dark')
-        .addClass('bg-success')
+        .removeClass('yr-admin-booking-status--confirmed yr-admin-booking-status--pending')
+        .addClass('yr-admin-booking-status--completed')
         .text('已完成');
     $row.attr('data-booking-status', 'completed');
     // 已完成無操作按鈕
@@ -333,7 +333,7 @@ function loadBookingsData() {
       applyBookingFiltersAndSort();
     }).fail(function () {
       $('#bookingsTableBody').html(
-        '<tr><td colspan="10" class="text-center text-danger py-4">' +
+        '<tr><td colspan="10" class="text-center py-4 yr-admin-bookings-error">' +
         '<i class="fas fa-exclamation-triangle me-2"></i>載入預約數據失敗' +
         '</td></tr>'
       );
@@ -713,7 +713,7 @@ function updateBookingFilterUI() {
 function renderBookingsTable(bookings) {
   if (!bookings || bookings.length === 0) {
     $('#bookingsTableBody').html(
-      '<tr><td colspan="10" class="text-center text-muted py-4">' +
+      '<tr><td colspan="10" class="text-center text-muted py-4 yr-admin-bookings-empty">' +
       '<i class="fas fa-inbox me-2"></i>沒有符合條件的預約</td></tr>'
     );
     return;
@@ -721,10 +721,10 @@ function renderBookingsTable(bookings) {
 
   // 訂單狀態 badge（4 種）
   var statusBadgeMap = {
-    pending:   '<span class="badge bg-warning text-dark booking-status-badge">待確認</span>',
-    confirmed: '<span class="badge bg-primary booking-status-badge">已確認</span>',
-    completed: '<span class="badge bg-success booking-status-badge">已完成</span>',
-    cancelled: '<span class="badge bg-danger booking-status-badge">已取消</span>'
+    pending:   '<span class="yr-admin-booking-status yr-admin-booking-status--pending booking-status-badge">待確認</span>',
+    confirmed: '<span class="yr-admin-booking-status yr-admin-booking-status--confirmed booking-status-badge">已確認</span>',
+    completed: '<span class="yr-admin-booking-status yr-admin-booking-status--completed booking-status-badge">已完成</span>',
+    cancelled: '<span class="yr-admin-booking-status yr-admin-booking-status--cancelled booking-status-badge">已取消</span>'
   };
 
   var html = bookings.map(function (booking) {
@@ -737,20 +737,20 @@ function renderBookingsTable(bookings) {
     // ── 含租借 badge（同時計算 hasRental 字串供 data 屬性使用）──
     var hasRental = booking.selected_rentals && booking.selected_rentals.length > 0;
     var rentalBadge = hasRental
-      ? '<span class="badge bg-success">有租借</span>'
-      : '<span class="badge bg-secondary">無</span>';
+      ? '<span class="yr-admin-booking-rental-flag yr-admin-booking-rental-flag--yes">有租借</span>'
+      : '<span class="yr-admin-booking-rental-flag yr-admin-booking-rental-flag--none">無</span>';
 
     // ── 操作按鈕（依狀態顯示）──
     var actionBtns = '';
     if (booking.status === 'pending') {
       actionBtns =
-        '<button class="btn btn-sm btn-outline-primary btn-confirm-booking me-1" ' +
+        '<button class="btn btn-sm btn-outline-primary btn-confirm-booking yr-admin-bookings-action-btn yr-admin-bookings-action-btn--primary me-1" ' +
         'title="確認預約"><i class="fas fa-check me-1"></i>確認預約</button>' +
-        '<button class="btn btn-sm btn-outline-danger btn-cancel-booking" ' +
+        '<button class="btn btn-sm btn-outline-danger btn-cancel-booking yr-admin-bookings-action-btn yr-admin-bookings-action-btn--danger" ' +
         'title="取消預約"><i class="fas fa-times me-1"></i>取消</button>';
     } else if (booking.status === 'confirmed') {
       actionBtns =
-        '<button class="btn btn-sm btn-outline-danger btn-cancel-booking" ' +
+        '<button class="btn btn-sm btn-outline-danger btn-cancel-booking yr-admin-bookings-action-btn yr-admin-bookings-action-btn--danger" ' +
         'title="取消預約"><i class="fas fa-times me-1"></i>取消</button>';
     }
 
@@ -766,35 +766,38 @@ function renderBookingsTable(bookings) {
 
     // ── 預約單號連結 ──
     var idLink =
-      '<span class="admin-cell-link booking-id-link" ' +
+      '<span class="booking-id-link yr-admin-booking-id fw-semibold" ' +
       'data-booking-id="' + booking.id + '" ' +
+      'style="cursor:pointer;" ' +
       'title="點擊查看預約明細">' + booking.id + '</span>';
 
     // ── 顧客姓名超連結 ──
     var customerLink =
-      '<span class="admin-cell-link booking-customer-link" ' +
+      '<span class="booking-customer-link" ' +
       'data-customer-id="' + booking.customer_id + '" ' +
+      'style="cursor:pointer; text-decoration:underline dotted;" ' +
       'title="查看顧客檔案">' +
       getCustomerName(booking.customer_id) +
       '</span>';
 
     // ── <tr> 包含新增的 data-region 和 data-has-rental 屬性 ──
     return '<tr data-booking-id="' + booking.id + '"' +
+           ' class="yr-admin-bookings-row"' +
            ' data-booking-status="' + booking.status + '"' +
            ' data-payment-status="' + booking.payment_status + '"' +
            ' data-submitted-at="' + (booking.submitted_at || '').slice(0, 10) + '"' +
            ' data-region="' + info.region + '"' +
            ' data-has-rental="' + (hasRental ? 'true' : 'false') + '">' +
-           '<td>' + idLink + '</td>' +
-           '<td>' + dateStr + '</td>' +
+           '<td class="yr-admin-booking-id">' + idLink + '</td>' +
+           '<td class="yr-admin-booking-date">' + dateStr + '</td>' +
            '<td>' + customerLink + '</td>' +
-           '<td class="admin-cell-amount">' + amountStr + '</td>' +
+           '<td class="fw-semibold yr-admin-booking-amount">' + amountStr + '</td>' +
            '<td>' + campStr + '</td>' +
            '<td class="text-center">' + rentalBadge + '</td>' +
-           '<td>' + payBadge + '</td>' +
-           '<td>' + statusBadge + '</td>' +
+           '<td class="yr-admin-bookings-status-col">' + payBadge + '</td>' +
+           '<td class="yr-admin-bookings-status-col">' + statusBadge + '</td>' +
            '<td>' + info.region + '</td>' +
-           '<td>' + actionBtns + '</td>' +
+           '<td class="yr-admin-bookings-actions">' + actionBtns + '</td>' +
            '</tr>';
   }).join('');
 
@@ -822,10 +825,10 @@ function showBookingModal(booking) {
   $('#bkModalId').text(booking.id);
 
   var statusLabelMap = {
-    pending:   '<span class="badge bg-warning text-dark">待確認</span>',
-    confirmed: '<span class="badge bg-primary">已確認</span>',
-    completed: '<span class="badge bg-success">已完成</span>',
-    cancelled: '<span class="badge bg-danger">已取消</span>'
+    pending:   '<span class="yr-admin-booking-status yr-admin-booking-status--pending">待確認</span>',
+    confirmed: '<span class="yr-admin-booking-status yr-admin-booking-status--confirmed">已確認</span>',
+    completed: '<span class="yr-admin-booking-status yr-admin-booking-status--completed">已完成</span>',
+    cancelled: '<span class="yr-admin-booking-status yr-admin-booking-status--cancelled">已取消</span>'
   };
   $('#bkModalStatus').html(statusLabelMap[booking.status] || '');
 
@@ -850,7 +853,7 @@ function showBookingModal(booking) {
   $('#bkModalStayDetail').html(
     '<div class="mb-2 text-muted small">' +
     '<i class="fas fa-campground me-1"></i>' + info.campground_name +
-    '&ensp;<span class="badge bg-secondary bg-opacity-50 text-dark">' + info.region + '</span>' +
+    '&ensp;<span class="yr-admin-booking-status yr-admin-booking-status--unknown">' + info.region + '</span>' +
     '</div>' +
     '<div class="mb-2 text-muted small">' +
     '<i class="fas fa-calendar-alt me-1"></i>' +
@@ -903,14 +906,14 @@ function showBookingModal(booking) {
 
   if (summary.applied_discount > 0) {
     costHtml +=
-      '<div class="d-flex justify-content-between mb-1 text-success">' +
+      '<div class="d-flex justify-content-between mb-1 yr-admin-booking-cost-discount">' +
       '<span><i class="fas fa-tag me-1"></i>租借折扣</span>' +
       '<span>- NT$ ' + summary.applied_discount.toLocaleString() + '</span></div>';
   }
 
   costHtml +=
     '<hr class="my-2">' +
-    '<div class="d-flex justify-content-between fw-bold">' +
+    '<div class="d-flex justify-content-between fw-bold yr-admin-booking-detail-total">' +
     '<span>合計</span>' +
     '<span>NT$ ' + (summary.final_amount || 0).toLocaleString() + '</span></div>';
 
@@ -934,14 +937,13 @@ function showBookingModal(booking) {
 
   // ── 狀態紀錄時間軸 ──
   var historyHtml = (booking.history || []).map(function (entry) {
-    return '<li class="d-flex align-items-start gap-2 mb-1">' +
-           '<i class="fas fa-circle mt-1" ' +
-           'style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-           '<span><span class="text-muted me-2">' + entry.time + '</span>' +
-           entry.action + '</span>' +
+    return '<li class="yr-admin-booking-history__item">' +
+           '<span class="yr-admin-booking-history__dot" aria-hidden="true"></span>' +
+           '<span><span class="yr-admin-booking-history__time">' + entry.time + '</span>' +
+           '<span class="yr-admin-booking-history__action">' + entry.action + '</span></span>' +
            '</li>';
   }).join('');
-  $('#bkModalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');
+  $('#bkModalHistory').html(historyHtml || '<li class="yr-admin-booking-history__item"><span class="yr-admin-booking-history__action text-muted">無紀錄</span></li>');
 
   // 開啟 Modal
   new bootstrap.Modal('#bookingDetailModal').show();
@@ -962,8 +964,8 @@ function showBookingModal(booking) {
  */
 function getPayBadgeHtml(paymentStatus) {
   var map = {
-    paid:     '<span class="badge bg-success payment-status-badge">已付款</span>',
-    refunded: '<span class="badge bg-secondary payment-status-badge">已退款</span>'
+    paid:     '<span class="yr-admin-booking-payment yr-admin-booking-payment--paid payment-status-badge">已付款</span>',
+    refunded: '<span class="yr-admin-booking-payment yr-admin-booking-payment--refunded payment-status-badge">已退款</span>'
   };
   return map[paymentStatus] || '';
 }

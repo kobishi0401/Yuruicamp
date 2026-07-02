@@ -26,10 +26,27 @@ var shopState    = { days: 30, startDate: null, endDate: null };
 var bookingState = { days: 30, startDate: null, endDate: null };
 
 // ─── 品牌色系（圖表用）──────────────────────────────────────────
+// 從 yr-admin-analytics-module 的 CSS 自訂屬性讀取圖表色票（定義於 analytics.css），
+// 找不到時退回原本寫死的十六進位色碼，確保視覺退化時仍可正常繪圖。
+function getAnalyticsChartVar(name, fallback) {
+  var scope  = document.querySelector('.yr-admin-analytics-module') || document.documentElement;
+  var value  = getComputedStyle(scope).getPropertyValue(name);
+  return value ? value.trim() : fallback;
+}
+
 var ANALYTICS_COLORS = [
-  '#244d4d', '#3d7d7d', '#779988', '#aabbaa', '#d0e4d0',
+  getAnalyticsChartVar('--yr-admin-chart-1', '#244d4d'),
+  getAnalyticsChartVar('--yr-admin-chart-2', '#3d7d7d'),
+  getAnalyticsChartVar('--yr-admin-chart-3', '#779988'),
+  getAnalyticsChartVar('--yr-admin-chart-4', '#aabbaa'),
+  getAnalyticsChartVar('--yr-admin-chart-5', '#d0e4d0'),
   '#4e91a0', '#7ab8c3', '#e07040', '#f0a080', '#6f42c1'
 ];
+
+// 折線圖主色（銷售額 / 訂單量）與格線顏色，同樣讀取主題變數
+var ANALYTICS_LINE_PRIMARY   = ANALYTICS_COLORS[0];
+var ANALYTICS_LINE_SECONDARY = ANALYTICS_COLORS[1];
+var ANALYTICS_GRID_COLOR     = getAnalyticsChartVar('--yr-admin-chart-grid', 'rgba(0,0,0,0.05)');
 
 // ═══════════════════════════════════════════════════════════════
 // 主入口：由 core.js 呼叫
@@ -521,10 +538,10 @@ function renderShopLineChart() {
       datasets: [{
         label: '銷售額 (NT$)',
         data: data,
-        borderColor: '#244d4d',
+        borderColor: ANALYTICS_LINE_PRIMARY,
         backgroundColor: 'rgba(36,77,77,0.08)',
         borderWidth: 2.5,
-        pointBackgroundColor: '#244d4d',
+        pointBackgroundColor: ANALYTICS_LINE_PRIMARY,
         pointRadius: 4,
         pointHoverRadius: 6,
         tension: 0.4,
@@ -554,7 +571,7 @@ function renderShopLineChart() {
                 : 'NT$ ' + val;
             }
           },
-          grid: { color: 'rgba(0,0,0,0.05)' }
+          grid: { color: ANALYTICS_GRID_COLOR }
         },
         x: {
           grid: { display: false },
@@ -786,10 +803,10 @@ function renderBookingLineChart() {
       datasets: [{
         label: '預約收入 (NT$)',
         data: data,
-        borderColor: '#3d7d7d',
+        borderColor: ANALYTICS_LINE_SECONDARY,
         backgroundColor: 'rgba(61,125,125,0.08)',
         borderWidth: 2.5,
-        pointBackgroundColor: '#3d7d7d',
+        pointBackgroundColor: ANALYTICS_LINE_SECONDARY,
         pointRadius: 4,
         pointHoverRadius: 6,
         tension: 0.4,
@@ -819,7 +836,7 @@ function renderBookingLineChart() {
                 : 'NT$ ' + val;
             }
           },
-          grid: { color: 'rgba(0,0,0,0.05)' }
+          grid: { color: ANALYTICS_GRID_COLOR }
         },
         x: {
           grid: { display: false },
@@ -962,7 +979,7 @@ function renderCampgroundBar() {
         label: '預約筆數',
         data: data,
         backgroundColor: 'rgba(36,77,77,0.75)',
-        borderColor: '#244d4d',
+        borderColor: ANALYTICS_LINE_PRIMARY,
         borderWidth: 1,
         borderRadius: 4
       }]
@@ -983,7 +1000,7 @@ function renderCampgroundBar() {
         x: {
           beginAtZero: true,
           ticks: { stepSize: 1 },
-          grid: { color: 'rgba(0,0,0,0.05)' }
+          grid: { color: ANALYTICS_GRID_COLOR }
         },
         y: { grid: { display: false } }
       }
@@ -1034,7 +1051,7 @@ function renderRegionBar() {
       datasets: [{
         label: '預約收入 (NT$)',
         data: data,
-        backgroundColor: ['#244d4d', '#3d7d7d', '#779988', '#aabbaa'],
+        backgroundColor: ANALYTICS_COLORS.slice(0, 4),
         borderWidth: 0,
         borderRadius: 4
       }]
@@ -1062,7 +1079,7 @@ function renderRegionBar() {
                 : 'NT$ ' + val;
             }
           },
-          grid: { color: 'rgba(0,0,0,0.05)' }
+          grid: { color: ANALYTICS_GRID_COLOR }
         },
         x: { grid: { display: false } }
       }

@@ -256,10 +256,12 @@ function renderEmployeeTable() {
   }
 
   var html = employees.map(function (emp) {
-    var roleLabel = emp.isSuperAdmin ? '超級管理員' : '一般員工';
+    var roleLabel = emp.isSuperAdmin
+      ? '<span class="yr-admin-role yr-admin-role--super-admin">超級管理員</span>'
+      : '<span class="yr-admin-role yr-admin-role--staff">一般員工</span>';
     var statusBadge = emp.isActive
-      ? '<span class="badge bg-success">啟用</span>'
-      : '<span class="badge bg-secondary">停用</span>';
+      ? '<span class="yr-admin-employee-status yr-admin-employee-status--active">啟用</span>'
+      : '<span class="yr-admin-employee-status yr-admin-employee-status--disabled">停用</span>';
 
     var toggleBtn = '';
     // 自己那一列不顯示停用按鈕 / Hide toggle on current user's row
@@ -272,11 +274,11 @@ function renderEmployeeTable() {
     }
 
     return '<tr data-employee-id="' + emp.id + '">' +
-      '<td class="fw-semibold">' + emp.id + '</td>' +
+      '<td class="yr-admin-permission-id">' + emp.id + '</td>' +
       '<td>' + escapeHtml(emp.displayName) + '</td>' +
-      '<td>' + roleLabel + '</td>' +
+      '<td class="yr-admin-permission-role">' + roleLabel + '</td>' +
       '<td>' + statusBadge + '</td>' +
-      '<td>' +
+      '<td class="yr-admin-permission-actions">' +
         '<button type="button" class="btn btn-sm btn-outline-primary btn-edit-employee" ' +
         'data-employee-id="' + emp.id + '">編輯</button>' +
         toggleBtn +

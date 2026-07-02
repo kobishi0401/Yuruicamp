@@ -4,22 +4,17 @@
    與買家前台刻意區隔，展現工具性與專業感
    ============================================================ */
 
-/* ===== UI 縮放（等同瀏覽器 75%） ===== */
-html {
-  font-size: 75%; /* Bootstrap rem + 全站字級基準：16px → 12px */
-}
-
 /* ===== CSS 變數定義 ===== */
 :root {
   /* Sidebar */
   --admin-sidebar-bg: #1e2329;                    /* 深灰炭黑 */
   --admin-sidebar-text: #c9d1d9;                  /* 淺灰文字 */
-  --admin-sidebar-width: 184px;                   /* 8px 網格：250×0.75≈188 → 184 */
+  --admin-sidebar-width: 250px;                   /* 側欄寬度 */
   --admin-sidebar-active-border: #244d4d;         /* 選中左側邊框：品牌綠 */
   --admin-sidebar-active-bg: rgba(36, 77, 77, 0.25); /* 選中背景：半透明 */
 
   /* Topbar */
-  --admin-topbar-height: 48px;                    /* 8px 網格：60×0.75=45 → 48 */
+  --admin-topbar-height: 60px;
 
   --admin-topbar-bg: #ffffff;
   --admin-topbar-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
@@ -64,7 +59,7 @@ body {
 
 /* Sidebar 品牌 Logo 區塊底線 */
 #adminSidebar .sidebar-brand {
-  padding: 16px;
+  padding: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -72,8 +67,8 @@ body {
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 12px;
+  padding: 12px 20px;
   color: var(--admin-sidebar-text);
   text-decoration: none;
   transition: all 0.2s ease;
@@ -110,14 +105,14 @@ button[data-permission-disabled="true"] {
 
 /* Sidebar Icon 寬度固定，讓文字對齊 */
 .sidebar-link i {
-  width: 16px;
+  width: 18px;
   text-align: center;
   font-size: 0.95rem;
 }
 
 /* Sidebar 底部登出區塊 */
 #adminSidebar .sidebar-footer {
-  padding: 12px 16px;
+  padding: 16px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: auto;          /* 推到最底部 */
 }
@@ -144,12 +139,12 @@ button[data-permission-disabled="true"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 24px;
 }
 
 /* ===== 主內容區 ===== */
 #contentArea {
-  padding: 16px;
+  padding: 24px;
   flex: 1;
   min-width: 0;
   width: 100%;
@@ -157,11 +152,11 @@ button[data-permission-disabled="true"] {
 
 /* ===== 卡片共用強化 ===== */
 .card {
-  border-radius: 8px !important;
+  border-radius: 12px !important;
 }
 
 .card-header {
-  border-radius: 8px 8px 0 0 !important;
+  border-radius: 12px 12px 0 0 !important;
 }
 
 /* ===== 商品管理頁籤 ===== */
@@ -176,7 +171,7 @@ button[data-permission-disabled="true"] {
 
 .admin-product-tabs .nav-link {
   color: #6c757d;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.875rem;
   padding: 0.35rem 0.85rem;
 }
@@ -188,42 +183,42 @@ button[data-permission-disabled="true"] {
 
 /* ===== 商品庫存數量控制 ===== */
 .admin-stock-control {
-  width: 100px;
-  min-width: 100px;
+  width: 132px;
+  min-width: 132px;
 }
 
 .admin-stock-control .btn {
-  width: 24px;
+  width: 32px;
   padding-left: 0;
   padding-right: 0;
 }
 
 .admin-stock-control .stock-input {
-  min-width: 40px;
+  min-width: 52px;
   padding-left: 0.25rem;
   padding-right: 0.25rem;
 }
 
 .admin-stock-control .stock-input.stock-input-increase {
-  background-color: #d1e7dd;
-  border-color: #198754;
-  color: #0f5132;
+  background-color: var(--yr-admin-success-bg);
+  border-color: var(--yr-admin-success-border);
+  color: var(--yr-admin-success-text);
 }
 
 .admin-stock-control .stock-input.stock-input-decrease {
-  background-color: #f8d7da;
-  border-color: #dc3545;
-  color: #842029;
+  background-color: var(--yr-admin-danger-bg);
+  border-color: var(--yr-admin-danger-border);
+  color: var(--yr-admin-danger-text);
 }
 
 /* ===== 租借商品營地欄位 ===== */
 .rental-camp-row .rental-camp-quantity-input {
-  flex: 0 0 80px;
-  max-width: 80px;
+  flex: 0 0 112px;
+  max-width: 112px;
 }
 
 .rental-camp-row .remove-rental-camp-btn {
-  flex: 0 0 24px;
+  flex: 0 0 36px;
 }
 
 /* ===== 表格樣式（Bootstrap 預設 fallback） ===== */
@@ -231,6 +226,7 @@ button[data-permission-disabled="true"] {
   font-size: 0.82rem;
   font-weight: 600;
   color: #6c757d;
+  text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
@@ -291,8 +287,8 @@ button[data-permission-disabled="true"] {
 
 /* ===== KPI 卡片 ===== */
 .kpi-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -440,7 +436,7 @@ button[data-permission-disabled="true"] {
 
 /* ===== 評論卡片：未回覆紅框 ===== */
 .card.border-start.border-danger {
-  border-left-width: 4px !important;
+  border-left-width: 5px !important;
 }
 
 /* ===== Toast 容器（固定右下角，由 JS 動態建立） ===== */
@@ -465,22 +461,22 @@ button[data-permission-disabled="true"] {
 
 /* ===== 登入頁樣式 ===== */
 .login-card {
-  width: 320px;
+  width: 420px;
   max-width: 95vw;
   border-radius: 16px !important;
 }
 
 .login-card .card-body {
-  padding: 32px !important;
+  padding: 40px !important;
 }
 
 /* ===== 折扣券生成操作區 ===== */
 .coupon-generate-area {
   background: rgba(36, 77, 77, 0.08);
   border: 1px dashed var(--admin-brand-accent);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
 /* ===== 星星評分顏色 ===== */
@@ -509,7 +505,7 @@ button[data-permission-disabled="true"] {
   }
 
   #contentArea {
-    padding: 12px;
+    padding: 16px;
   }
 
   .login-card {
@@ -571,10 +567,10 @@ button[data-permission-disabled="true"] {
 }
 
 /* 可水平捲動的庫存欄（分店 / 各營區）統一欄寬
-   Scrollable stock columns - compact width for display / inline input */
+   Scrollable stock columns - uniform width to match the stepper widget */
 .scrollable-stock-col {
-  width: 64px;
-  min-width: 64px;
+  width: 150px;
+  min-width: 150px;
 }
 
 /* 右側 sticky 欄（表格最後一欄「修改庫存數量」）
@@ -646,12 +642,12 @@ button[data-permission-disabled="true"] {
   padding: 0.2rem 0.35rem;
 }
 
-/* 各欄位的左側偏移（8px 網格：48 → 168 → 232 → 296） */
-.sticky-col-img          { left: 0;     width: 48px;  min-width: 48px; }
-.sticky-col-name         { left: 48px;  width: 120px; min-width: 120px; }
-.sticky-col-category     { left: 168px; width: 64px;  min-width: 64px; }
-.sticky-col-action       { left: 232px; width: 64px;  min-width: 64px; }
-.sticky-col-total-stock  { left: 296px; width: 112px; min-width: 112px; }
+/* 各欄位的左側偏移（依欄寬累加：60 → 220 → 310 → 400） */
+.sticky-col-img          { left: 0;     width: 60px;  min-width: 60px; }
+.sticky-col-name         { left: 60px;  width: 160px; min-width: 160px; }
+.sticky-col-category     { left: 220px; width: 90px;  min-width: 90px; }
+.sticky-col-action       { left: 310px; width: 90px;  min-width: 90px; }
+.sticky-col-total-stock  { left: 400px; width: 150px; min-width: 150px; }
 
 /* 商品表 sticky 欄：縮小左右 padding，避免 admin-data-table 大 padding 擠爆窄欄 */
 .admin-data-table.product-table-fixed .sticky-col {
@@ -686,41 +682,41 @@ button[data-permission-disabled="true"] {
 /* Orange cell in a normal (non-danger) row */
 .stock-cell-below-min .admin-stock-control .stock-input,
 .stock-cell-below-min .stock-input-inline {
-  border-color: #fd7e14;
-  background-color: #fff3e0;
+  border-color: var(--yr-admin-warning-border);
+  background-color: var(--yr-admin-warning-bg);
 }
 
 .stock-cell-below-min .stock-display-value {
-  color: #e65c00;
+  color: var(--yr-admin-warning-text);
 }
 
 /* table-danger（淡紅列）內的不足格：橘色加深版本，確保與紅色底色區別 */
 /* Orange cell inside a table-danger row: use deeper orange to contrast with red row bg */
 .table tr.table-danger .stock-cell-below-min .admin-stock-control .stock-input,
 .table tr.table-danger .stock-cell-below-min .stock-input-inline {
-  border-color: #e65c00;
-  background-color: #ffe0b2;
+  border-color: var(--yr-admin-danger-border);
+  background-color: var(--yr-admin-danger-bg);
 }
 
 /* 最低庫存設定模式（isMinStockMode）：表格 header 加上黃色背景，提醒管理員 */
 /* Min-stock mode header: yellow background to remind admin they are in edit mode */
 #productsTable thead.min-stock-mode-header,
 #rentalProductsTable thead.min-stock-mode-header {
-  background-color: #fff3cd !important;  /* Bootstrap warning 淺黃色 */
+  background-color: var(--yr-admin-warning-bg) !important;
 }
 
 /* 最低庫存模式下步進器按鈕改為黃色外框，與正常模式視覺區分 */
 /* Min-stock mode steppers use yellow outline to distinguish from normal mode */
 .min-stock-mode .admin-stock-control .stock-step-btn {
-  border-color: #ffc107;
-  color: #856404;
+  border-color: var(--yr-admin-warning-border);
+  color: var(--yr-admin-warning-text);
 }
 
 /* ===== 商品名稱截斷（超過欄寬顯示 ...，hover 透過 title 屬性顯示完整名稱） ===== */
 .admin-cell-link.product-name-cell,
 .product-name-cell {
   display: block;
-  max-width: 96px;
+  max-width: 140px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -777,13 +773,13 @@ button[data-permission-disabled="true"] {
 /* 紅點提示：疊在漏斗 icon 右上角，提示目前有篩選條件啟用中 */
 .filter-dot {
   display: inline-block;
-  width: 5px;
-  height: 5px;
-  background-color: #dc3545;     /* Bootstrap danger 紅色 */
+  width: 7px;
+  height: 7px;
+  background-color: var(--yr-admin-danger-text);
   border-radius: 50%;
   position: relative;
-  top: -5px;
-  left: -4px;
+  top: -6px;
+  left: -5px;
   vertical-align: top;
 }
 
@@ -793,12 +789,12 @@ button[data-permission-disabled="true"] {
   top: calc(100% + 4px);         /* th 下方 4px 處 */
   left: 0;
   z-index: 200;
-  min-width: 96px;
+  min-width: 130px;
   background: #ffffff;
   border: 1px solid #dee2e6;
-  border-radius: 4px;
+  border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
 /* Dropdown 內每個選項列 */
@@ -806,7 +802,7 @@ button[data-permission-disabled="true"] {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px;
+  padding: 5px 14px;
   font-size: 0.875rem;
   font-weight: normal;
   cursor: pointer;
@@ -835,7 +831,7 @@ button[data-permission-disabled="true"] {
 
 /* Hover：卡片輕微上浮 + 陰影加深 */
 .kpi-clickable:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
 }
 
@@ -848,7 +844,7 @@ button[data-permission-disabled="true"] {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
