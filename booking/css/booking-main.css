@@ -1285,7 +1285,7 @@ main {
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
-  z-index: var(--yc-z-sticky);
+  z-index: var(--yc-z-modal);
 }
 
 #loginModal .sharedAuthContent {
@@ -1452,7 +1452,7 @@ main {
   position: fixed;
   right: var(--yc-space-6);
   bottom: var(--yc-space-8);
-  z-index: var(--yc-z-toast);
+  z-index: var(--yc-z-sticky);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -2397,6 +2397,8 @@ main {
 .siteFooter,
 .bookingFooter {
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .siteFooter {
@@ -2432,8 +2434,10 @@ main {
 .bookingFooterHeading {
   margin: 0;
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.5;
 }
 
 .siteFooterText,
@@ -2466,6 +2470,7 @@ main {
 .bookingFooterLinks a,
 .bookingFooterPolicies a {
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
   text-decoration: none;
   transition: color var(--yc-transition-fast);
 }
@@ -2490,6 +2495,7 @@ main {
   display: grid;
   gap: var(--yc-space-1);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
 }
 
 .siteFooterContactItem strong,
@@ -2540,6 +2546,7 @@ main {
   gap: var(--yc-space-4);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .siteFooterBottom p,

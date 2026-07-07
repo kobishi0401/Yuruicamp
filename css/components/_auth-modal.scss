@@ -8,7 +8,7 @@
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
-  z-index: var(--yc-z-sticky);
+  z-index: var(--yc-z-modal);
 }
 
 // 登入 Modal 面板：使用視窗高度，形成與抽屜一致的右側進場體驗。

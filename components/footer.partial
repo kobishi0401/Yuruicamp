@@ -1,5 +1,5 @@
 <div data-layout-part="main-footer">
-  <footer class="siteFooter" id="footer">
+  <footer class="siteFooter">
     <div class="siteFooterInner">
       <div class="siteFooterGrid">
         <section class="siteFooterSection" aria-labelledby="footerBrandTitle">
@@ -24,7 +24,9 @@
           <ul class="siteFooterLinks">
             <li class="siteFooterContactItem"><span>客服專線</span><strong>0800-123-456</strong></li>
             <li class="siteFooterContactItem"><span>服務信箱</span><strong>support@yuruicamp.com</strong></li>
-            <li class="siteFooterContactItem"><span>服務時間</span><strong>週一至週日 10:00-20:00</strong></li>
+            <li class="siteFooterContactItem">
+              <span>服務時間</span><strong>週一至週日 10:00-20:00</strong>
+            </li>
           </ul>
         </section>
 
@@ -89,7 +91,7 @@
 </div>
 
 <div data-layout-part="bookingFooter">
-  <footer class="bookingFooter" id="bookingFooter">
+  <footer class="bookingFooter">
     <div class="bookingFooterInner">
       <div class="bookingFooterGrid">
         <section class="bookingFooterSection" aria-labelledby="bookingFooterBrandTitle">
@@ -112,8 +114,12 @@
           <h2 class="bookingFooterHeading" id="bookingFooterContactTitle">聯絡資訊</h2>
           <ul class="bookingFooterLinks">
             <li class="bookingFooterContactItem"><span>客服專線</span><strong>0800-123-456</strong></li>
-            <li class="bookingFooterContactItem"><span>服務信箱</span><strong>support@yuruicamp.com</strong></li>
-            <li class="bookingFooterContactItem"><span>服務時間</span><strong>週一至週日 10:00-20:00</strong></li>
+            <li class="bookingFooterContactItem">
+              <span>服務信箱</span><strong>support@yuruicamp.com</strong>
+            </li>
+            <li class="bookingFooterContactItem">
+              <span>服務時間</span><strong>週一至週日 10:00-20:00</strong>
+            </li>
           </ul>
         </section>
 
@@ -127,7 +133,12 @@
               </a>
             </li>
             <li>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+              >
                 <i class="bi bi-instagram" aria-hidden="true"></i>
               </a>
             </li>
