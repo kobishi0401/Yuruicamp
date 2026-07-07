@@ -61,13 +61,14 @@
    */
   function syncAppState(user) {
     if (!window.AppState) return;
+    // 將登入狀態寫入前端AppState
     window.AppState.isLoggedIn = Boolean(user);
     window.AppState.currentUser = user || null;
     if (typeof window.saveAppState === 'function') window.saveAppState();
   }
 
   /**
-   * 將登入狀態寫入主站與 booking 共用 key。
+   * 將登入狀態寫入主站與 booking 共用 key，連接syncAppState > saveAppSate() 嚴格判斷登入使用者是否合法
    * @param {Object|null} user - 目前登入會員或 null。
    */
   function persistUser(user) {
@@ -93,6 +94,39 @@
     }));
   }
 
+  // 集中booking-header 和header 的登出清理
+  function syncAuthFromStorageEvent(event) {
+    if (!['isLoggedIn', 'currentUser', 'yuruiUser'].includes(event.key)) return;
+
+    var storedLoginFlag = localStorage.getItem(STORAGE_KEYS.isLoggedIn);
+
+    if (storedLoginFlag === 'false') {
+      if (window.AppState) {
+        window.AppState.isLoggedIn = false;
+        window.AppState.currentUser = null;
+      }
+
+      emitAuthChanged('logout', null);
+      return;
+    }
+
+    if (storedLoginFlag === 'true') {
+      var user = readStoredUser();
+
+      if (user && user.name) {
+        if (window.AppState) {
+          window.AppState.isLoggedIn = true;
+          window.AppState.currentUser = user;
+        }
+
+        emitAuthChanged('login', user);
+        return;
+      }
+    }
+
+    emitAuthChanged('sync', getUser());
+  }
+
   /**
    * 從任一相容 key 讀取已登入會員。
    * @returns {Object|null} 目前登入會員或 null。
@@ -106,18 +140,49 @@
    * 取得目前登入會員，並修復缺漏的相容 key。
    * @returns {Object|null} 目前登入會員或 null。
    */
+
+  // 會員判斷、跨頁狀態同步、守衛、取得userId、避免登入狀態回復
   function getUser() {
-    // [登出測試暫停] 來源：AppState 舊會員快取。
-    // 這段會讓已登出頁面仍從舊 AppState.currentUser 判定為登入，先註解以測試登出流程。
-    if (window.AppState && window.AppState.isLoggedIn && window.AppState.currentUser) {
-      return window.AppState.currentUser;
+    // 先讀取登入狀態："true"、"false" 或 null。
+    const storedLoginFlag = localStorage.getItem('isLoggedIn');
+
+    // 讀取 AppState 快取狀態。
+    const appStateLoggedIn = window.AppState?.isLoggedIn;
+    const appStateUser = window.AppState?.currentUser;
+
+    // 讀取主站與 booking 共用的會員資料。
+    const currentUser = readJsonStorage('currentUser', null);
+    const yuruiUser = readJsonStorage('yuruiUser', null);
+
+    // 第一優先：localStorage 明確登出時，任何舊 user 都不能復活。
+    if (storedLoginFlag === 'false') {
+      return null;
     }
 
-    var user = readStoredUser();
-    // [登出測試暫停] 來源：相容 key 修復邏輯。
-    // 登出後若 currentUser/yuruiUser 有殘留，這段會呼叫 persistUser(user) 把登入狀態補回去。
-    if (user && user.name) persistUser(user);
-    return user && user.name ? user : null;
+    // 第二優先：localStorage 明確登入時，才允許從 storage / AppState 取 user。
+    if (storedLoginFlag === 'true') {
+      const storedUser = currentUser || yuruiUser || appStateUser;
+      return storedUser && storedUser.name ? storedUser : null;
+    }
+
+    // 第三優先：沒有 localStorage 明確狀態時，才參考 AppState 的明確登出。
+    if (appStateLoggedIn === false) {
+      return null;
+    }
+
+    // 第四優先：AppState 明確登入時，使用 AppState user。
+    if (appStateLoggedIn === true && appStateUser && appStateUser.name) {
+      return appStateUser;
+    }
+
+    // 第五優先：狀態不明時，才允許相容 key 修復。
+    const compatibleUser = currentUser || yuruiUser;
+    if (compatibleUser && compatibleUser.name) {
+      persistUser(compatibleUser);
+      return compatibleUser;
+    }
+
+    return null;
   }
 
   /**
@@ -159,6 +224,7 @@
    */
   function logout(options) {
     options = options || {};
+    // 登出清除AppState and storage
     persistUser(null);
     emitAuthChanged('logout', null);
 
@@ -182,4 +248,9 @@
       emitAuthChanged('sync', getUser());
     }
   };
+
+  if (!window.__yuruiAuthStorageBound) {
+    window.__yuruiAuthStorageBound = true;
+    window.addEventListener('storage', syncAuthFromStorageEvent);
+  }
 }());

@@ -231,26 +231,17 @@
     });
   }
 
+  // 委派auth.logout 進行統一的清理，不額外在此檔清理造成不同步
   window.handleLogout = function () {
-    // [登出測試暫停] 來源：Header 登出委派共用 auth 後直接 return。
-    // 先停用早退路徑，讓主站登出按鈕直接跑下方 localStorage 清除與 UI 更新流程。
-    // if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
-    //   window.YuruiAuth.logout({ close: closeUserMenu });
-    //   return;
-    // }
-    if (window.AppState) {
-      window.AppState.isLoggedIn = false;
-      window.AppState.currentUser = null;
-      window.saveAppState?.();
+    if (typeof window.YuruiAuth?.logout !== 'function') {
+      console.warn('YuruiAuth.logout is not available. Header logout was not executed.');
+      return false;
     }
-    localStorage.setItem('isLoggedIn', 'false');
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('yuruiUser');
-    window.dispatchEvent(new CustomEvent('yurui:auth-changed', { detail: { type: 'logout', user: null } }));
-    closeUserMenu();
-    window.updateNavbarLoginState();
-    window.showToast && window.showToast('已登出', 'success');
+
+    window.YuruiAuth.logout({ close: closeUserMenu });
+    return true;
   };
+
 
   function bindSearch() {
     var search = document.querySelector('.siteSearch');
@@ -403,10 +394,26 @@
       window.closeMainNavOffcanvas?.();
       window.closeCartDrawer?.();
     });
-    window.addEventListener('storage', function (event) {
-      if (['isLoggedIn', 'currentUser', 'yuruiUser'].includes(event.key)) window.updateNavbarLoginState();
+    
+    // 更嚴格的檢查登出狀態，如果為登出則不呼叫getCurrentUser, YuruiAuth.getUser
+    // UI 更新為未登入、關閉會員選單
+    window.addEventListener('yurui:auth-changed', function (event) {
+      if (event.detail && event.detail.type === 'logout') {
+        closeUserMenu();
+
+        document.querySelectorAll('.siteLoginButton').forEach(function (button) {
+          button.hidden = false;
+        });
+
+        document.querySelectorAll('.siteUserMenu').forEach(function (menu) {
+          menu.hidden = true;
+        });
+
+        return;
+      }
+
+      window.updateNavbarLoginState();
     });
-    window.addEventListener('yurui:auth-changed', window.updateNavbarLoginState);
   }
 
   window.initNavbar();

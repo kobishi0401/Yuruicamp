@@ -40,41 +40,54 @@ window.AppState = {
   theme: localStorage.getItem('theme') || 'light',
 };
 
+// 驗證user 合法性
+function isValidUser(user) {
+  return Boolean(
+    user &&
+      typeof user === 'object' &&
+      typeof user.name === 'string' &&
+      user.name.trim()
+  );
+}
+
 /**
- * Persists the current AppState fields that must survive page navigation.
+ * 只有登入狀態、使用者資料被認證後才可以寫入localStorage
  */
 window.saveAppState = () => {
-  // [登出測試暫停] 來源：AppState 認證狀態寫回。
-  // 其他功能呼叫 saveAppState() 時，舊分頁可能把 isLoggedIn/currentUser/yuruiUser 重新寫回 localStorage。
-  // window.YuruiStorage.writeJson('isLoggedIn', Boolean(window.AppState.isLoggedIn));
-  // window.YuruiStorage.writeJson('currentUser', window.AppState.currentUser);
-  // if (window.AppState.currentUser) {
-  //   window.YuruiStorage.writeJson('yuruiUser', window.AppState.currentUser);
-  // } else {
-  //   localStorage.removeItem('yuruiUser');
-  // }
-  window.YuruiStorage.writeJson('cart', window.AppState.cart || []);
-  window.YuruiStorage.writeJson('preferences', window.AppState.preferences || {});
+  // 抓取目前使用者和登入狀態，必須同時滿足明確登入與合法使用者才會判斷成功
+  const currentUser = window.AppState.currentUser;
+  const shouldPersistUser = window.AppState.isLoggedIn === true && isValidUser(currentUser);
+  // 有寫這段後面使用writeJson 就不用加前綴了 (window.YuruiStorage.writeJson)
+  const { writeJson } = window.YuruiStorage;
+
+  // 更新登入狀態booking and buyer 網頁的使用者資料
+  if (shouldPersistUser) {
+    writeJson('isLoggedIn', true);
+    writeJson('currentUser', currentUser);
+    writeJson('yuruiUser', currentUser);
+  } else {
+    writeJson('isLoggedIn', false);
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('yuruiUser');
+  }
+  // 寫入購物車、喜好選項
+  writeJson('cart', window.AppState.cart || []);
+  writeJson('preferences', window.AppState.preferences || {});
   localStorage.setItem('theme', window.AppState.theme || 'light');
 };
 
 /**
- * Logs out through the shared auth service when available while preserving carts.
- */
-window.logout = () => {
-  if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
-    window.YuruiAuth.logout({ showToast: false });
-    return;
+ * 將登出規則引導至auth.js (YuruiAuth.logout) 統一登出規則
+ * (options = {}) 可帶參數也可不帶參數
+*/
+window.logout = (options = {}) => {
+  if (typeof window.YuruiAuth?.logout !== 'function') {
+    console.warn('YuruiAuth.logout is not available. Logout was not executed.');
+    return false;
   }
 
-  window.AppState.isLoggedIn = false;
-  window.AppState.currentUser = null;
-  localStorage.setItem('isLoggedIn', 'false');
-  localStorage.removeItem('currentUser');
-  localStorage.removeItem('yuruiUser');
-  window.dispatchEvent(new CustomEvent('yurui:auth-changed', {
-    detail: { type: 'logout', user: null },
-  }));
+  window.YuruiAuth.logout(options);
+  return true;
 };
 
 /**
