@@ -196,6 +196,61 @@ async function appendPartial(targetId, url, partSelector) {
 }
 
 /**
+ * 取得全頁 overlay 掛載點，讓 modal/drawer 脫離 sticky header 的 stacking context。
+ * @returns {HTMLElement} 全頁 overlay root。
+ */
+function getGlobalOverlayRoot() {
+  let overlayRoot = document.getElementById('yuruiOverlayRoot');
+
+  if (!overlayRoot) {
+    overlayRoot = document.createElement('div');
+    overlayRoot.id = 'yuruiOverlayRoot';
+    overlayRoot.className = 'yuruiOverlayRoot';
+    document.body.appendChild(overlayRoot);
+  }
+
+  return overlayRoot;
+}
+
+/**
+ * 將指定 partial 區塊附加到 body 根層 overlay root，避免被 header 層級限制。
+ * @param {string} url - partial 檔案路徑。
+ * @param {string} partSelector - 要附加的 data-layout-part selector。
+ */
+async function appendPartialToOverlayRoot(url, partSelector) {
+  const overlayRoot = getGlobalOverlayRoot();
+
+  try {
+    // Shared auth 只需要一組，避免重複初始化時產生同 ID modal。
+    if (partSelector === '[data-layout-part="shared-auth"]' && overlayRoot.querySelector('#loginModal'))
+      return;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`無法載入組件: ${url}`);
+    const html = await response.text();
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const part = template.content.querySelector(partSelector);
+    if (part) overlayRoot.insertAdjacentHTML('beforeend', part.innerHTML);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * 將主站購物車抽屜移到 overlay root，讓它能蓋過 floatingActions。
+ */
+function moveMainOverlayElementsToRoot() {
+  const overlayRoot = getGlobalOverlayRoot();
+  ['siteCartDrawer', 'siteCartBackdrop'].forEach((elementId) => {
+    const element = document.getElementById(elementId);
+    if (element && element.parentElement !== overlayRoot) {
+      overlayRoot.appendChild(element);
+    }
+  });
+}
+
+/**
  * 輔助函式：動態載入 JS 腳本。
  * @param {string} src - Script 路徑。
  * @returns {Promise<void>} 載入完成 promise。
@@ -222,8 +277,8 @@ async function initGlobalLayout() {
     loadPartial('header', `${rootPrefix}/components/header.partial`, '[data-layout-part="main-header"]'),
     loadPartial('footer', `${rootPrefix}/components/footer.partial`, '[data-layout-part="main-footer"]'),
   ]);
-  await appendPartial(
-    'header',
+  moveMainOverlayElementsToRoot();
+  await appendPartialToOverlayRoot(
     `${rootPrefix}/components/header.partial`,
     '[data-layout-part="shared-auth"]'
   );
