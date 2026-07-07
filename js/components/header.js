@@ -232,10 +232,12 @@
   }
 
   window.handleLogout = function () {
-    if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
-      window.YuruiAuth.logout({ close: closeUserMenu });
-      return;
-    }
+    // [登出測試暫停] 來源：Header 登出委派共用 auth 後直接 return。
+    // 先停用早退路徑，讓主站登出按鈕直接跑下方 localStorage 清除與 UI 更新流程。
+    // if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
+    //   window.YuruiAuth.logout({ close: closeUserMenu });
+    //   return;
+    // }
     if (window.AppState) {
       window.AppState.isLoggedIn = false;
       window.AppState.currentUser = null;

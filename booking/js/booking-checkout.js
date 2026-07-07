@@ -118,12 +118,12 @@ window.onBookingHeaderReady = function () {
 
 function initLoginGuard() {
   function isLoggedIn() {
-    try {
-      var user = JSON.parse(localStorage.getItem('yuruiUser'));
-      return !!(user && user.name);
-    } catch (e) {
-      return false;
+    if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') {
+      return Boolean(window.YuruiAuth.getUser());
     }
+    // 登入提示判斷：booking 與主站共用登入資料，因此 currentUser / yuruiUser 任一存在都視為已登入。
+    var user = readBookingCheckoutUser();
+    return !!(user && user.name);
   }
 
   function showNotice() {
@@ -131,6 +131,11 @@ function initLoginGuard() {
   }
   function hideNotice() {
     $('#loginNotice').removeClass('isVisible');
+  }
+
+  // 登入提示同步：同分頁登入不會觸發 storage event，需監聽共用 auth 事件即時隱藏提示。
+  function syncLoginNotice() {
+    isLoggedIn() ? hideNotice() : showNotice();
   }
 
   if (!isLoggedIn()) {
@@ -150,9 +155,12 @@ function initLoginGuard() {
 
   window.addEventListener('storage', function (e) {
     if (e.key === 'yuruiUser') {
-      isLoggedIn() ? hideNotice() : showNotice();
+      syncLoginNotice();
     }
   });
+
+  window.addEventListener('yurui:auth-changed', syncLoginNotice);
+  syncLoginNotice();
 }
 
 // ============================================================
@@ -216,14 +224,10 @@ function initPaymentMethod() {
 // ============================================================
 
 function handleCheckout(cart) {
-  try {
-    var u = JSON.parse(localStorage.getItem('yuruiUser'));
-    if (!u || !u.name) {
-      if (typeof window.openModal === 'function') window.openModal('loginModal');
-      return;
-    }
-  } catch (e) {
+  var u = readBookingCheckoutUser();
+  if (!u || !u.name) {
     if (typeof window.openModal === 'function') window.openModal('loginModal');
+    $('#loginNotice').addClass('isVisible');
     return;
   }
 
@@ -277,7 +281,7 @@ function handleCheckout(cart) {
   console.log('[booking-checkout] 預約送出資料:', payload);
 
   setTimeout(function () {
-    onCheckoutSuccess();
+    onCheckoutSuccess(cart, payload);
   }, 1000);
 }
 
@@ -285,21 +289,91 @@ function handleCheckout(cart) {
 // 結帳成功後處理
 // ============================================================
 
-function onCheckoutSuccess() {
+function onCheckoutSuccess(cart, payload) {
+  const bookingOrder = createBookingOrderSnapshot(cart, payload);
+  localStorage.setItem('lastBookingCheckoutOrder', JSON.stringify(bookingOrder));
+  localStorage.setItem('lastCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.removeItem('bookingCart');
   console.log('[booking-checkout] bookingCart 已清除');
 
-  $('#confirmPayBtn')
-    .removeClass('btnPrimary')
-    .addClass('btnOutline isSuccess')
-    .html('<i class="bi bi-check-circle-fill"></i> ✓ 預約已成功送出')
-    .prop('disabled', true);
+  const orderNum = String(bookingOrder.orderNumber || bookingOrder.id).replace(/^#/, '');
+  window.location.href =
+    '../../pages/checkout-success.html?type=booking&orderNum=' + encodeURIComponent(orderNum);
+}
 
-  $('#backToCartLink').hide();
-  $('#upsellBanner').slideDown(400);
-  $('#upsellSection').slideDown(400);
+function createBookingOrderSnapshot(cart, payload) {
+  const info = cart.booking_info || {};
+  const summary = cart.summary || {};
+  const rentals = cart.selected_rentals || [];
+  const zones = cart.selected_zones || [];
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+  const orderNumber = 'RENT-' + datePart + timePart;
 
-  $('html, body').animate({ scrollTop: 0 }, 600);
+  // 預約成功快照：共用 checkout-success.html 讀取 lastCheckoutOrder 顯示成立編號。
+  return {
+    id: 'rent-local-' + Date.now(),
+    type: 'booking',
+    orderNumber,
+    userId: getBookingCheckoutUserId(),
+    buyerName: payload.contact.name,
+    buyerPhone: payload.contact.phone,
+    buyerEmail: payload.contact.email,
+    items: [
+      ...zones.map(function (zone) {
+        return {
+          productId: zone.zone_id || zone.zone_type,
+          name: info.campground_name + '・' + zone.zone_type,
+          price: Number(zone.subtotal || 0) / Math.max(Number(zone.quantity || 1), 1),
+          quantity: Number(zone.quantity || 1),
+          subtotal: Number(zone.subtotal || 0),
+        };
+      }),
+      ...rentals.map(function (rental) {
+        return {
+          productId: rental.id || rental.rental_id || rental.name,
+          name: rental.name,
+          price: Number(rental.subtotal || 0) / Math.max(Number(rental.quantity || 1), 1),
+          quantity: Number(rental.quantity || 1),
+          image: rental.image || '',
+          subtotal: Number(rental.subtotal || 0),
+        };
+      }),
+    ],
+    subtotal: Number(summary.zone_total || 0) + Number(summary.rental_total || 0),
+    discount: Number(summary.applied_discount || 0),
+    total: Number(summary.final_amount || 0),
+    status: 'confirmed',
+    paymentStatus: 'paid',
+    payment: payload.payment_method === 'linepay' ? 'line-pay' : 'credit-card',
+    createdAt: now.toISOString(),
+    rentalStart: info.check_in || '',
+    rentalEnd: info.check_out || '',
+    pickupStore: info.campground_name || '營地現場',
+    returnStore: info.campground_name || '營地現場',
+    campgroundName: info.campground_name || '',
+    region: info.region || '',
+  };
+}
+
+function getBookingCheckoutUserId() {
+  const user = readBookingCheckoutUser();
+  return user && (user.id || user.userId) ? user.id || user.userId : 'user-001';
+}
+
+function readBookingCheckoutUser() {
+  const keys = ['yuruiUser', 'currentUser'];
+  for (const key of keys) {
+    try {
+      const rawValue = localStorage.getItem(key);
+      const user = rawValue ? JSON.parse(rawValue) : null;
+      if (user && user.name) return user;
+    } catch (error) {
+      console.warn('[booking-checkout] 會員資料解析失敗:', key, error);
+    }
+  }
+  return null;
 }
 
 // ============================================================

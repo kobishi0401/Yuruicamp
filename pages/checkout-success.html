@@ -103,7 +103,10 @@
     <script>
       (function initSuccessPage() {
         const orderNumberDisplay = document.getElementById('orderNumberDisplay');
+        const successMode = readSuccessMode();
         const orderNum = readOrderNumber();
+
+        applySuccessMode(successMode);
 
         if (orderNumberDisplay) {
           const normalizedOrderNum = String(orderNum || '--').replace(/^#/, '');
@@ -118,18 +121,59 @@
         initSharedComponents();
       })();
 
+      function readSuccessMode() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('type') === 'booking' ? 'booking' : 'shopping';
+      }
+
       function readOrderNumber() {
         const params = new URLSearchParams(window.location.search);
         const queryOrderNum = params.get('orderNum');
         if (queryOrderNum) return queryOrderNum;
 
         try {
+          // Booking 共用成功頁：預約結帳會先寫入 lastBookingCheckoutOrder，再回退讀主站 lastCheckoutOrder。
+          const successMode = readSuccessMode();
+          if (successMode === 'booking') {
+            const lastBookingOrder = JSON.parse(localStorage.getItem('lastBookingCheckoutOrder') || 'null');
+            if (lastBookingOrder?.orderNumber || lastBookingOrder?.id) {
+              return lastBookingOrder.orderNumber || lastBookingOrder.id;
+            }
+          }
           const lastOrder = JSON.parse(localStorage.getItem('lastCheckoutOrder') || 'null');
           return lastOrder?.orderNumber || lastOrder?.id || '';
         } catch (error) {
           console.warn('Failed to read lastCheckoutOrder on checkout success page.', error);
           return '';
         }
+      }
+
+      function applySuccessMode(mode) {
+        if (mode !== 'booking') return;
+
+        document.title = '預約成立 - Yuruicamp 預約營地';
+        document.getElementById('successTitle').textContent = '預約成立';
+        document.querySelector('.successDescription').textContent =
+          '感謝您完成 Yuruicamp 預約。我們已收到預約資料，確認信將寄送至您的電子信箱。';
+        document.querySelector('.orderNumberLabel').textContent = '預約編號';
+
+        const timelineItems = document.querySelectorAll('.shippingTimelineItem');
+        const bookingTimeline = [
+          ['預約確認', '系統已建立'],
+          ['營地通知', '確認入住資訊'],
+          ['準備出發', '依預約日期報到'],
+        ];
+        timelineItems.forEach((item, index) => {
+          item.querySelector('.shippingTimelineLabel').textContent = bookingTimeline[index][0];
+          item.querySelector('.shippingTimelineMeta').textContent = bookingTimeline[index][1];
+        });
+
+        const primaryAction = document.querySelector('.successActionPrimary');
+        const secondaryAction = document.querySelector('.successActionSecondary');
+        primaryAction.textContent = '查看預約明細';
+        primaryAction.href = '../booking/pages/member-center.html?returnTo=booking';
+        secondaryAction.textContent = '再預約一次';
+        secondaryAction.href = '../booking/pages/camp-search.html';
       }
 
       function initSharedComponents() {

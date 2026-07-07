@@ -44,13 +44,15 @@ window.AppState = {
  * Persists the current AppState fields that must survive page navigation.
  */
 window.saveAppState = () => {
-  window.YuruiStorage.writeJson('isLoggedIn', Boolean(window.AppState.isLoggedIn));
-  window.YuruiStorage.writeJson('currentUser', window.AppState.currentUser);
-  if (window.AppState.currentUser) {
-    window.YuruiStorage.writeJson('yuruiUser', window.AppState.currentUser);
-  } else {
-    localStorage.removeItem('yuruiUser');
-  }
+  // [登出測試暫停] 來源：AppState 認證狀態寫回。
+  // 其他功能呼叫 saveAppState() 時，舊分頁可能把 isLoggedIn/currentUser/yuruiUser 重新寫回 localStorage。
+  // window.YuruiStorage.writeJson('isLoggedIn', Boolean(window.AppState.isLoggedIn));
+  // window.YuruiStorage.writeJson('currentUser', window.AppState.currentUser);
+  // if (window.AppState.currentUser) {
+  //   window.YuruiStorage.writeJson('yuruiUser', window.AppState.currentUser);
+  // } else {
+  //   localStorage.removeItem('yuruiUser');
+  // }
   window.YuruiStorage.writeJson('cart', window.AppState.cart || []);
   window.YuruiStorage.writeJson('preferences', window.AppState.preferences || {});
   localStorage.setItem('theme', window.AppState.theme || 'light');

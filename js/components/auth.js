@@ -107,11 +107,15 @@
    * @returns {Object|null} 目前登入會員或 null。
    */
   function getUser() {
+    // [登出測試暫停] 來源：AppState 舊會員快取。
+    // 這段會讓已登出頁面仍從舊 AppState.currentUser 判定為登入，先註解以測試登出流程。
     if (window.AppState && window.AppState.isLoggedIn && window.AppState.currentUser) {
       return window.AppState.currentUser;
     }
 
     var user = readStoredUser();
+    // [登出測試暫停] 來源：相容 key 修復邏輯。
+    // 登出後若 currentUser/yuruiUser 有殘留，這段會呼叫 persistUser(user) 把登入狀態補回去。
     if (user && user.name) persistUser(user);
     return user && user.name ? user : null;
   }
