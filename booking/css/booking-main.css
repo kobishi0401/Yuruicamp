@@ -4244,11 +4244,6 @@ main {
   color: var(--yc-error);
 }
 
-.cartItemQtyLabelBooking {
-  color: var(--yc-text-muted);
-  font-size: 0.72rem;
-}
-
 .cartEmptyNoteBooking {
   padding: 1rem 1.25rem;
   color: var(--yc-text-muted);

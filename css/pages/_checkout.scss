@@ -134,9 +134,14 @@ $checkout-shadow: var(--yc-shadow-soft, 0 4px 12px rgb(36 77 77 / 10%));
 }
 
 .checkoutPanelArrow {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid currentcolor;
   color: $checkout-muted;
-  font-size: 1.1rem;
-  transition: transform 200ms ease;
+  flex: 0 0 auto;
+  height: 0;
+  transition: transform 200ms ease, color 200ms ease;
+  width: 0;
 }
 
 .checkoutPanel.isOpen .checkoutPanelArrow {

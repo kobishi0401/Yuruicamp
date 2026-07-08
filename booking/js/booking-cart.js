@@ -1,12 +1,11 @@
 /**
  * booking-cart.js
  * 功能：預約背包確認頁（步驟 4）
- *   ① 讀取 LocalStorage，渲染住宿 + 裝備項目（含數量調整器）
+ *   ① 讀取 LocalStorage，渲染住宿 + 裝備項目
  *   ② 「修改日期」連結帶入正確 campground_id
- *   ③ 住宿：調整營位數量，即時重算小計
- *   ④ 裝備：調整數量 / 刪除項目，即時重算小計
- *   ⑤ 右側摘要隨數量變化同步更新
- *   ⑥ 所有變更即時寫回 localStorage
+ *   ③ 裝備：調整數量 / 刪除項目，即時重算小計
+ *   ④ 右側摘要隨數量變化同步更新
+ *   ⑤ 所有變更即時寫回 localStorage
  */
 
 // 目前操作中的 bookingCart，初始從 localStorage 讀取
@@ -48,27 +47,6 @@ $(document).ready(function () {
       $('#bookingCartContent').removeClass('isVisible');
       showEmptyState();
     });
-  });
-
-  // 住宿數量調整：事件委派使用 quantityButtonBooking，避免互動 hook 與舊式命名耦合。
-  $('#bookingCartStayBody').on('click', '.quantityButtonBooking', function () {
-    var $btn = $(this);
-    var action = $btn.data('action');
-    var idx = parseInt($btn.data('idx'));
-    var zone = bookingCart.selected_zones[idx];
-    if (!zone) return;
-
-    var unitPrice = zone.subtotal / zone.quantity;
-    var newQty = zone.quantity + (action === 'inc' ? 1 : -1);
-    if (newQty < 1 || newQty > 10) return;
-
-    zone.quantity = newQty;
-    zone.subtotal = Math.round(unitPrice * newQty);
-
-    recalcSummary();
-    saveCart('zone-quantity');
-    renderStayBody();
-    renderSummary();
   });
 
   // 裝備數量調整：共用 quantityButton 語意，booking 變體只表示預約背包流程使用。
@@ -129,7 +107,7 @@ function renderAll() {
   $('#bookingCartContent').addClass('isVisible');
 }
 
-// ── 住宿卡內容：輸出共用 cartItem / quantityStepper 語意與 booking 變體 class ──
+// ── 住宿卡內容：預約流程只允許單一營區與單一營位，不提供數量調整 ──
 function renderStayBody() {
   var info = bookingCart.booking_info || {};
   var zones = bookingCart.selected_zones || [];
@@ -140,9 +118,7 @@ function renderStayBody() {
   }
 
   var html = zones
-    .map(function (z, idx) {
-      var atMin = z.quantity <= 1;
-      var atMax = z.quantity >= 10;
+    .map(function (z) {
       return `
       <div class="cartItem cartItemBooking">
         <div class="cartItemInfo cartItemInfoBooking">
@@ -154,13 +130,7 @@ function renderStayBody() {
           </div>
         </div>
         <div class="cartItemActions cartItemActionsBooking">
-          <div class="quantityStepper quantityStepperBooking">
-            <button class="quantityButton quantityButtonBooking" data-action="dec" data-idx="${idx}"${atMin ? ' disabled' : ''}>−</button>
-            <span class="quantityValue quantityValueBooking">${z.quantity}</span>
-            <button class="quantityButton quantityButtonBooking" data-action="inc" data-idx="${idx}"${atMax ? ' disabled' : ''}>+</button>
-          </div>
-          <div class="cartItemPrice cartItemPriceBooking" id="zonePrice${idx}">NT$${z.subtotal.toLocaleString()}</div>
-          <div class="cartItemQtyLabel cartItemQtyLabelBooking">營位數量</div>
+          <div class="cartItemPrice cartItemPriceBooking">NT$${z.subtotal.toLocaleString()}</div>
         </div>
       </div>
     `;
@@ -294,6 +264,15 @@ function recalcSummary() {
 }
 
 function normalizeBookingCart() {
+  var zones = bookingCart.selected_zones || [];
+  if (zones.length > 0) {
+    var firstZone = zones[0];
+    var originalQuantity = Math.max(Number(firstZone.quantity || 1), 1);
+    firstZone.subtotal = Math.round(Number(firstZone.subtotal || 0) / originalQuantity);
+    firstZone.quantity = 1;
+    bookingCart.selected_zones = [firstZone];
+  }
+
   (bookingCart.selected_rentals || []).forEach(function (rental) {
     var quantity = Math.max(Number(rental.quantity || 1), 1);
     var subtotal = Number(rental.subtotal || 0);
@@ -303,14 +282,19 @@ function normalizeBookingCart() {
     if (!finalUnit && subtotal > 0) finalUnit = subtotal / quantity;
     rental.unit_final_price = Math.max(finalUnit, 0);
     rental.unit_discount = Math.max(legacyDiscount, 0);
-    rental.unit_original_price = Math.max(Number(rental.unit_original_price || 0), rental.unit_final_price + rental.unit_discount);
+    rental.unit_original_price = Math.max(
+      Number(rental.unit_original_price || 0),
+      rental.unit_final_price + rental.unit_discount
+    );
     rental.subtotal = Math.round(rental.unit_final_price * quantity);
   });
   recalcSummary();
 }
 
 function getRentalOriginalUnitPrice(rental) {
-  return Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental);
+  return (
+    Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental)
+  );
 }
 
 function getRentalUnitDiscount(rental) {
@@ -327,8 +311,8 @@ function updateItemCount() {
   var zones = bookingCart.selected_zones || [];
   var rentals = bookingCart.selected_rentals || [];
   var total =
-    zones.reduce(function (s, z) {
-      return s + (z.quantity || 0);
+    zones.reduce(function (s) {
+      return s + 1;
     }, 0) +
     rentals.reduce(function (s, r) {
       return s + (r.quantity || 0);
