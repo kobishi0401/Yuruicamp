@@ -304,6 +304,9 @@ a:focus-visible,
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-button);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
 }
 
 .modalHeader {
@@ -319,13 +322,17 @@ a:focus-visible,
 .modalTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .modalBody {
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .modalClose {
@@ -361,6 +368,8 @@ a:focus-visible,
 }
 .sharedAuthContent {
   width: min(440px, 100vw - 32px);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 #loginModal {
@@ -388,6 +397,8 @@ a:focus-visible,
 .sharedAuthBody {
   display: grid;
   gap: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 #loginModal .modalTabPanel.isOpen {
@@ -541,6 +552,9 @@ a:focus-visible,
   width: min(420px, 100vw);
   background: var(--yc-surface);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
   transition: transform var(--yc-transition-base);
 }
 
@@ -601,8 +615,10 @@ a:focus-visible,
 .bookingSlidePanelTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteOffcanvasBody,
@@ -612,6 +628,8 @@ a:focus-visible,
   height: calc(100% - 72px);
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -668,6 +686,8 @@ a:focus-visible,
   padding: var(--yc-space-4);
   border-top: 1px solid var(--yc-border);
   background: var(--yc-surface);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 .siteCartSummary,
@@ -677,6 +697,7 @@ a:focus-visible,
   display: flex;
   justify-content: space-between;
   gap: var(--yc-space-4);
+  line-height: 1.5;
 }
 
 .siteCartSummary {
@@ -714,12 +735,16 @@ a:focus-visible,
 .siteCartEmptyTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteCartEmptyText {
   margin: 0;
   color: var(--yc-text-muted);
+  line-height: 1.5;
 }
 
 .siteCartItem {
@@ -751,7 +776,9 @@ a:focus-visible,
 
 .siteCartItemName {
   color: var(--yc-text);
+  font-family: var(--yc-font-ui);
   font-weight: 800;
+  line-height: 1.35;
   text-decoration: none;
 }
 
@@ -811,13 +838,17 @@ a:focus-visible,
 .bookingCartPanelLabel {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .bookingCartPanelMeta {
   margin: 0;
   color: var(--yc-text-muted);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (width <= 480px) {

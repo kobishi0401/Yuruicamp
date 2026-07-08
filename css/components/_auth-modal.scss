@@ -1,6 +1,10 @@
 ﻿// Auth Modal 內容元件：管理登入、個人化問卷與確認流程共用的 modal 內層版面。
 .sharedAuthContent {
   width: min(440px, calc(100vw - 32px));
+
+  // 登入面板字體契約：主站與 booking 共用登入內容，固定使用 UI 字體避免入口差異。
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 // 登入 Modal 外層：改為右側滑出視窗，保留共用 .modal 開關契約。
@@ -31,6 +35,8 @@
 .sharedAuthBody {
   display: grid;
   gap: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 // 登入內容面板：讓說明文字、社群按鈕與隱私文字維持固定垂直間距。
@@ -77,6 +83,8 @@
 .surveyHint,
 .modalConfirmMessage {
   color: var(--yc-text-muted);
+
+  // 長文字輔助說明：只在說明段落放寬行高，避免整個 overlay 跟著變鬆。
   line-height: 1.7;
 }
 

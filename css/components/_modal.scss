@@ -25,6 +25,11 @@
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-button);
   box-shadow: var(--yc-shadow-hover);
+
+  // Modal 字體契約：所有浮層視窗使用 UI 字體，避免不同入口的 body/heading 基準造成差異。
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
 }
 
 // Modal 標題列：保留標題與關閉按鈕的固定高度。
@@ -41,13 +46,19 @@
 .modalTitle {
   margin: 0;
   color: var(--yc-sage-action);
+
+  // Modal 標題契約：登入與確認視窗標題屬於操作介面，不吃 booking 全域 heading serif。
+  font-family: var(--yc-font-ui);
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .modalBody {
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 // Modal 關閉按鈕：使用全站 token，避免依賴 header 專用 Sass 變數。

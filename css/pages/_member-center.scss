@@ -303,7 +303,7 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
 }
 
 .memberTierProgress {
-  background: rgb(255 255 255 / 0.7);
+  background: rgb(255 255 255 / 70%);
   border-radius: var(--yc-radius-pill, 9999px);
   height: 10px;
   overflow: hidden;
