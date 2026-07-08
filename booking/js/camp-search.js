@@ -87,6 +87,7 @@ function loadCampgrounds() {
  */
 function renderCampCards(camps) {
   const $grid = $('#campCardGrid');
+  const searchParams = buildSearchParams();
 
   // 隱藏 loading 骨架屏 / Hide loading skeleton
   $('#loadingSkeleton').hide();
@@ -122,6 +123,9 @@ function renderCampCards(camps) {
       .map((t) => `<span class="bookingTag bookingTagFacility">${t}</span>`)
       .join('');
 
+    const detailParams = new URLSearchParams(searchParams);
+    detailParams.set('id', camp.campground_id);
+
     // 建立營區卡片 HTML：輸出 campCard 共通語意與 campCardBooking 預約流程變體。
     const cardHTML = `
       <div class="campCard campCardBooking"
@@ -147,7 +151,7 @@ function renderCampCards(camps) {
         </div>
 
         <div class="campCardFooter campCardFooterBooking">
-          <a href="./camp-detail.html?id=${camp.campground_id}" class="btn btnPrimary">
+          <a href="./camp-detail.html?${detailParams.toString()}" class="btn btnPrimary">
             查看詳情 <i class="bi bi-arrow-right"></i>
           </a>
         </div>
@@ -177,6 +181,10 @@ function bindFilterEvents() {
   // 地區下拉選單變更時觸發 / Trigger on region dropdown change
   $('#regionFilter').on('change', filterCampgrounds);
 
+  // 首屏搜尋列條件變更時同步篩選。
+  $('#guestCount').on('change', filterCampgrounds);
+  $('#searchBtn').on('click', filterCampgrounds);
+
   // 雙滑塊價格篩選器 / Dual-thumb price slider
   initPriceRangeSlider();
 
@@ -185,6 +193,7 @@ function bindFilterEvents() {
     $('input[name="env"]').prop('checked', false);
     $('input[name="facility"]').prop('checked', false);
     $('#regionFilter').val('');
+    $('#guestCount').val('');
     $('#priceMin').val(500);
     $('#priceMax').val(5000);
 
@@ -207,9 +216,10 @@ function initFlatpickrDateRange() {
     minDate: 'today',
     locale: 'zh_tw',
     dateFormat: 'Y-m-d',
-    onChange: function (selectedDates, dateStr, instance) {
-      // 可以在這裡加入針對日期選擇完成後的額外行為
-      // 若後續有綁定日期作為篩選條件，可在此呼叫 filterCampgrounds();
+    onChange: function (selectedDates) {
+      if (selectedDates.length === 0 || selectedDates.length === 2) {
+        filterCampgrounds();
+      }
     },
   });
 }
@@ -243,11 +253,19 @@ function filterCampgrounds() {
 
   // 取得選擇的地區 / Get selected region
   const selectedRegion = $('#regionFilter').val();
+  const selectedGuestCount = parseInt($('#guestCount').val());
 
   // 過濾陣列 / Filter array
   const filtered = allCampgrounds.filter(function (camp) {
     // 地區篩選：有選才過濾，未選則略過 / Region: filter only if selected
     if (selectedRegion && camp.region !== selectedRegion) return false;
+
+    if (selectedGuestCount) {
+      const hasEnoughCapacity = camp.zones.some(
+        (zone) => Number(zone.capacity_per_site || 0) >= selectedGuestCount
+      );
+      if (!hasEnoughCapacity) return false;
+    }
 
     // 環境標籤：每個勾選的標籤都必須存在於 camp.environment_tags
     // Every checked env tag must be in camp.environment_tags
@@ -271,6 +289,28 @@ function filterCampgrounds() {
   });
 
   renderCampCards(filtered);
+}
+
+function buildSearchParams() {
+  const params = new URLSearchParams();
+  const guestCount = $('#guestCount').val();
+  const datePicker = document.querySelector('#dateRange')?._flatpickr;
+
+  if (guestCount) params.set('guests', guestCount);
+
+  if (datePicker && datePicker.selectedDates.length === 2) {
+    params.set('checkIn', formatSearchDate(datePicker.selectedDates[0]));
+    params.set('checkOut', formatSearchDate(datePicker.selectedDates[1]));
+  }
+
+  return params;
+}
+
+function formatSearchDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 // ============================================================
@@ -300,6 +340,13 @@ function initPriceRangeSlider() {
     // 文字顯示
     const maxLabel = maxVal >= TOTAL_MAX ? 'NT$5,000+' : 'NT$' + maxVal.toLocaleString();
     $label.text('NT$' + minVal.toLocaleString() + ' - ' + maxLabel);
+
+    const minPercent = ((minVal - TOTAL_MIN) / (TOTAL_MAX - TOTAL_MIN)) * 100;
+    const maxPercent = ((maxVal - TOTAL_MIN) / (TOTAL_MAX - TOTAL_MIN)) * 100;
+    $('#priceRangeFill').css({
+      left: minPercent + '%',
+      right: 100 - maxPercent + '%',
+    });
   }
 
   // 暴露給重設按鈕使用

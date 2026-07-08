@@ -41,7 +41,20 @@ $(document).ready(function () {
     return;
   }
 
-  bookingCart = JSON.parse(stored);
+  try {
+    bookingCart = JSON.parse(stored);
+  } catch {
+    showToast('預約資訊異常，請重新搜尋營區。', 'warning');
+    localStorage.removeItem('bookingCart');
+    window.location.href = './camp-search.html';
+    return;
+  }
+
+  if (!bookingCart.booking_info || !bookingCart.booking_info.campground_id) {
+    showToast('預約資訊不完整，請重新搜尋營區。', 'warning');
+    window.location.href = './camp-search.html';
+    return;
+  }
 
   // 步驟 2：渲染頂部預約摘要列 / Step 2: Render summary bar
   renderSummaryBar(bookingCart.booking_info);
@@ -109,6 +122,7 @@ function loadRentals(campId) {
 
       // 渲染裝備卡片 / Render rental cards
       renderRentalItems(filtered);
+      restoreSelectedRentals(filtered);
 
       // 更新數量顯示 / Update count badge
       if (filtered.length > 0) {
@@ -124,6 +138,20 @@ function loadRentals(campId) {
       </div>
     `);
     });
+}
+
+function restoreSelectedRentals(availableRentals) {
+  selectedRentals = {};
+
+  (bookingCart.selected_rentals || []).forEach(function (saved) {
+    const source = availableRentals.find((item) => item.equipment_id === saved.equipment_id);
+    if (!source) return;
+
+    const quantity = Math.max(1, Math.min(Number(saved.quantity || 1), Number(source.stock || 1)));
+    selectedRentals[source.equipment_id] = { ...source, quantity };
+  });
+
+  updateRentalCartUI();
 }
 
 // ============================================================

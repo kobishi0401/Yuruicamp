@@ -20,6 +20,7 @@ let checkInDate = null; // 入住日期（Date 物件）/ Check-in Date object
 let checkOutDate = null; // 退房日期（Date 物件）/ Check-out Date object
 let weekdayCount = 0; // 平日天數 / Weekday nights count
 let holidayCount = 0; // 假日天數 / Holiday nights count
+let initialBookingParams = null; // 搜尋頁帶入的日期與人數 / Search prefill params
 
 // ============================================================
 // 頁面初始化 / Page Initialization
@@ -28,6 +29,11 @@ $(document).ready(function () {
   // 步驟 1：從 URL 取得 id 參數 / Step 1: Get id from URL
   const params = new URLSearchParams(window.location.search);
   const campId = params.get('id');
+  initialBookingParams = {
+    checkIn: params.get('checkIn'),
+    checkOut: params.get('checkOut'),
+    guests: params.get('guests'),
+  };
 
   // 防呆：缺少 id 時返回搜尋頁 / Guard: redirect if id missing
   if (!campId) {
@@ -74,6 +80,7 @@ function loadCampDetail(campId) {
 
       renderCampDetail(currentCamp);
       initDatePicker();
+      applyInitialBookingParams();
     })
     .fail(function (xhr, textStatus) {
       console.error('[camp-detail] AJAX 失敗:', textStatus);
@@ -185,6 +192,7 @@ function renderZoneSelector(zones) {
     $card.addClass('isSelected');
     $(this).html('<i class="bi bi-check-circle-fill"></i> ✓ 已選擇');
     selectedZoneId = $card.data('zone-id');
+    updateGuestCapacityLimit();
 
     // 若日期已選擇，立即更新費用 / If dates already selected, update price
     if (weekdayCount + holidayCount > 0) {
@@ -246,6 +254,19 @@ function initDatePicker() {
       }
     },
   });
+}
+
+function applyInitialBookingParams() {
+  const guests = parseInt(initialBookingParams?.guests);
+  if (guests > 0) $('#guestNum').val(guests);
+
+  const start = parseBookingDate(initialBookingParams?.checkIn);
+  const end = parseBookingDate(initialBookingParams?.checkOut);
+  const picker = document.querySelector('#dateRange')?._flatpickr;
+
+  if (!picker || !start || !end || start >= end) return;
+
+  picker.setDate([start, end], true);
 }
 
 // ============================================================
@@ -326,6 +347,13 @@ function updatePriceSummary() {
   $('#confirmBookingBtn').prop('disabled', false);
 }
 
+function updateGuestCapacityLimit() {
+  const zone = currentCamp.zones.find((z) => z.zone_id === selectedZoneId);
+  if (!zone) return;
+
+  $('#guestNum').attr('max', zone.capacity_per_site);
+}
+
 // ============================================================
 // 儲存至 LocalStorage 並前往下一頁
 // ============================================================
@@ -354,6 +382,17 @@ function saveToLocalStorageAndNext() {
   const subtotal = zone.price_weekday * weekdayCount + zone.price_holiday * holidayCount;
   const totalDays = weekdayCount + holidayCount;
   const guestCount = parseInt($('#guestNum').val()) || 2;
+  const maxGuests = Number(zone.capacity_per_site || 0);
+
+  if (guestCount < 1) {
+    showToast('請填寫正確的人數。', 'warning');
+    return;
+  }
+
+  if (maxGuests > 0 && guestCount > maxGuests) {
+    showToast(`此營位最多容納 ${maxGuests} 人，請調整人數或選擇其他營位。`, 'warning');
+    return;
+  }
 
   // 建立 bookingCart 資料結構 / Build bookingCart data structure
   const bookingCart = {
@@ -413,4 +452,10 @@ function formatDate(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function parseBookingDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }

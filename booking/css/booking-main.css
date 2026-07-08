@@ -2891,7 +2891,9 @@ main {
 
 .priceRangeFill {
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  left: 0;
+  right: 0;
   height: 6px;
   background: var(--yc-sage-action);
   border-radius: 3px;
