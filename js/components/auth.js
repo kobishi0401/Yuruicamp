@@ -1,15 +1,15 @@
 /**
  * 主站與 booking 共用的前端登入狀態模組。
- * 同步 currentUser、yuruiUser、isLoggedIn 與可用時的 AppState。
+ * Auth 以 currentUser 為唯一會員資料來源；yuruiUser 僅在登出時清除舊殘留。
  */
 (function () {
   'use strict';
 
   var STORAGE_KEYS = {
     isLoggedIn: 'isLoggedIn',
-    currentUser: 'currentUser',
-    bookingUser: 'yuruiUser'
+    currentUser: 'currentUser'
   };
+  var LEGACY_AUTH_KEYS = ['yuruiUser'];
 
   /**
    * 安全讀取 localStorage JSON。
@@ -75,10 +75,11 @@
     localStorage.setItem(STORAGE_KEYS.isLoggedIn, JSON.stringify(Boolean(user)));
     if (user) {
       localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(user));
-      localStorage.setItem(STORAGE_KEYS.bookingUser, JSON.stringify(user));
     } else {
       localStorage.removeItem(STORAGE_KEYS.currentUser);
-      localStorage.removeItem(STORAGE_KEYS.bookingUser);
+      LEGACY_AUTH_KEYS.forEach(function (key) {
+        localStorage.removeItem(key);
+      });
     }
     syncAppState(user);
   }
@@ -96,7 +97,7 @@
 
   // 集中booking-header 和header 的登出清理
   function syncAuthFromStorageEvent(event) {
-    if (!['isLoggedIn', 'currentUser', 'yuruiUser'].includes(event.key)) return;
+    if (!['isLoggedIn', 'currentUser'].includes(event.key)) return;
 
     var storedLoginFlag = localStorage.getItem(STORAGE_KEYS.isLoggedIn);
 
@@ -128,16 +129,15 @@
   }
 
   /**
-   * 從任一相容 key 讀取已登入會員。
+   * 從唯一正式 currentUser key 讀取已登入會員。
    * @returns {Object|null} 目前登入會員或 null。
    */
   function readStoredUser() {
-    return readJsonStorage(STORAGE_KEYS.currentUser, null)
-      || readJsonStorage(STORAGE_KEYS.bookingUser, null);
+    return readJsonStorage(STORAGE_KEYS.currentUser, null);
   }
 
   /**
-   * 取得目前登入會員，並修復缺漏的相容 key。
+   * 取得目前登入會員，currentUser 是唯一正式會員資料來源。
    * @returns {Object|null} 目前登入會員或 null。
    */
 
@@ -150,9 +150,8 @@
     const appStateLoggedIn = window.AppState?.isLoggedIn;
     const appStateUser = window.AppState?.currentUser;
 
-    // 讀取主站與 booking 共用的會員資料。
-    const currentUser = readJsonStorage('currentUser', null);
-    const yuruiUser = readJsonStorage('yuruiUser', null);
+    // 讀取唯一正式會員資料來源。
+    const currentUser = readStoredUser();
 
     // 第一優先：localStorage 明確登出時，任何舊 user 都不能復活。
     if (storedLoginFlag === 'false') {
@@ -161,7 +160,8 @@
 
     // 第二優先：localStorage 明確登入時，才允許從 storage / AppState 取 user。
     if (storedLoginFlag === 'true') {
-      const storedUser = currentUser || yuruiUser || appStateUser;
+      const storedUser = currentUser || appStateUser;
+      if (!currentUser && appStateUser && appStateUser.name) persistUser(appStateUser);
       return storedUser && storedUser.name ? storedUser : null;
     }
 
@@ -170,16 +170,15 @@
       return null;
     }
 
-    // 第四優先：AppState 明確登入時，使用 AppState user。
-    if (appStateLoggedIn === true && appStateUser && appStateUser.name) {
-      return appStateUser;
+    // 第四優先：狀態不明時，只允許 currentUser 作為正式資料來源。
+    if (currentUser && currentUser.name) {
+      return currentUser;
     }
 
-    // 第五優先：狀態不明時，才允許相容 key 修復。
-    const compatibleUser = currentUser || yuruiUser;
-    if (compatibleUser && compatibleUser.name) {
-      persistUser(compatibleUser);
-      return compatibleUser;
+    // 第五優先：AppState 明確登入且有合法 user 時，補回 currentUser。
+    if (appStateLoggedIn === true && appStateUser && appStateUser.name) {
+      persistUser(appStateUser);
+      return appStateUser;
     }
 
     return null;
@@ -196,7 +195,7 @@
   /**
    * 執行共用社群登入流程。
    * @param {string} provider - 社群登入來源。
-   * @param {{close?: Function, showToast?: boolean, openSurvey?: boolean}=} options - UI callback 選項。
+   * @param {{close?: Function, showToast?: boolean, openSurvey?: boolean}=} options - UI callback 選項；openSurvey 預設 false。
    * @returns {Object} 登入後會員。
    */
   function loginWithProvider(provider, options) {
@@ -211,8 +210,10 @@
     if (options.showToast !== false && typeof window.showToast === 'function') {
       window.showToast('已使用 ' + label + ' 登入', 'success');
     }
-    if (options.openSurvey !== false && typeof window.openPersonalizationModal === 'function') {
-      setTimeout(window.openPersonalizationModal, 300);
+    if (options.openSurvey === true && typeof window.maybeOpenPersonalizationModal === 'function') {
+      window.setTimeout(function () {
+        window.maybeOpenPersonalizationModal({ source: 'auth-login', openSurvey: true });
+      }, 300);
     }
 
     return user;
@@ -253,4 +254,7 @@
     window.__yuruiAuthStorageBound = true;
     window.addEventListener('storage', syncAuthFromStorageEvent);
   }
+
+  // Auth 載入完成後補發同步事件，讓較早初始化的主站 header 可改用 YuruiAuth 狀態重畫。
+  window.YuruiAuth.sync();
 }());

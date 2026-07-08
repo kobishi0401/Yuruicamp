@@ -5,6 +5,7 @@
 const APP_RESET_STORAGE_KEYS = [
   'isLoggedIn',
   'currentUser',
+  // 舊登入 key 只在 reset/logout 清除殘留，不再作為登入資料來源。
   'yuruiUser',
   'cart',
   'preferences',
@@ -54,6 +55,19 @@ function isValidUser(user) {
  * 只有登入狀態、使用者資料被認證後才可以寫入localStorage
  */
 window.saveAppState = () => {
+  // 登出鎖：localStorage 已明確登出時，任何舊分頁的 AppState 都不能再把會員寫回。
+  if (localStorage.getItem('isLoggedIn') === 'false') {
+    window.AppState.isLoggedIn = false;
+    window.AppState.currentUser = null;
+    localStorage.removeItem('currentUser');
+    // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
+    localStorage.removeItem('yuruiUser');
+    window.YuruiStorage.writeJson('cart', window.AppState.cart || []);
+    window.YuruiStorage.writeJson('preferences', window.AppState.preferences || {});
+    localStorage.setItem('theme', window.AppState.theme || 'light');
+    return;
+  }
+
   // 抓取目前使用者和登入狀態，必須同時滿足明確登入與合法使用者才會判斷成功
   const currentUser = window.AppState.currentUser;
   const shouldPersistUser = window.AppState.isLoggedIn === true && isValidUser(currentUser);
@@ -64,10 +78,10 @@ window.saveAppState = () => {
   if (shouldPersistUser) {
     writeJson('isLoggedIn', true);
     writeJson('currentUser', currentUser);
-    writeJson('yuruiUser', currentUser);
   } else {
     writeJson('isLoggedIn', false);
     localStorage.removeItem('currentUser');
+    // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
     localStorage.removeItem('yuruiUser');
   }
   // 寫入購物車、喜好選項

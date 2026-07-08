@@ -392,6 +392,7 @@ window.API = {
       // 注意：不清空 window.AppState.cart，購物車數據保留
       window.saveAppState();
       localStorage.removeItem('currentUser');
+      // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
       localStorage.removeItem('yuruiUser');
       localStorage.setItem('isLoggedIn', 'false');
       window.dispatchEvent(new CustomEvent('yurui:auth-changed', {

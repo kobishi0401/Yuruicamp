@@ -11,8 +11,9 @@
     if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') {
       return window.YuruiAuth.getUser();
     }
-    if (!window.AppState || !window.AppState.isLoggedIn) return null;
-    return window.AppState.currentUser || null;
+
+    // 主站 header 登入狀態只信任 YuruiAuth，避免 AppState 舊快取在登出後復活會員。
+    return null;
   }
 
   function lockHeaderLayer(shouldLock) {

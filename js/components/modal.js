@@ -17,6 +17,38 @@
     return Boolean(document.querySelector('.modal.isOpen'));
   }
 
+  function hasSavedPreferences() {
+    try {
+      var preferences = JSON.parse(localStorage.getItem('preferences') || '{}');
+      return Boolean(
+        preferences &&
+          Array.isArray(preferences.styles) &&
+          preferences.styles.length > 0 &&
+          Array.isArray(preferences.equipment) &&
+          preferences.equipment.length > 0
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function isCheckoutPage() {
+    return /(?:^|\/)(checkout|booking-checkout)\.html$/.test(window.location.pathname);
+  }
+
+  /**
+   * 條件式開啟偏好設定：預設不自動打擾登入流程，僅由首頁或會員中心明確呼叫。
+   * 套用元件：#personalizationModal。
+   */
+  window.maybeOpenPersonalizationModal = function (options) {
+    options = options || {};
+    if (options.openSurvey !== true && options.source !== 'manual') return false;
+    if (isCheckoutPage() || hasOpenModal() || hasSavedPreferences()) return false;
+    if (typeof window.openPersonalizationModal !== 'function') return false;
+    window.openPersonalizationModal();
+    return true;
+  };
+
   /**
    * 開啟指定 Modal 並避免聚焦時捲動頁面。
    * 套用元件：#loginModal、#personalizationModal、#partnerModal。
@@ -98,15 +130,12 @@
     }
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('currentUser', JSON.stringify(user));
-    localStorage.setItem('yuruiUser', JSON.stringify(user));
     window.saveAppState?.();
     window.dispatchEvent(new CustomEvent('yurui:auth-changed', { detail: { type: 'login', user: user } }));
     window.updateNavbarLoginState?.();
     window.closeModal('loginModal');
     window.showToast && window.showToast('已使用 ' + provider + ' 登入', 'success');
-    setTimeout(function () {
-      window.openPersonalizationModal();
-    }, 300);
+    window.maybeOpenPersonalizationModal({ source: 'fallback-login', openSurvey: false });
   }
 
   function validateSurveySelection(count, minimum) {

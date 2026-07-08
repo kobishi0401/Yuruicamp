@@ -121,7 +121,7 @@ function initLoginGuard() {
     if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') {
       return Boolean(window.YuruiAuth.getUser());
     }
-    // 登入提示判斷：booking 與主站共用登入資料，因此 currentUser / yuruiUser 任一存在都視為已登入。
+    // 登入提示判斷：booking 與主站共用 YuruiAuth/currentUser 作為唯一會員來源。
     var user = readBookingCheckoutUser();
     return !!(user && user.name);
   }
@@ -154,7 +154,7 @@ function initLoginGuard() {
   });
 
   window.addEventListener('storage', function (e) {
-    if (e.key === 'yuruiUser') {
+    if (e.key === 'currentUser' || e.key === 'isLoggedIn') {
       syncLoginNotice();
     }
   });
@@ -291,6 +291,7 @@ function handleCheckout(cart) {
 
 function onCheckoutSuccess(cart, payload) {
   const bookingOrder = createBookingOrderSnapshot(cart, payload);
+  syncBookingRentalOrder(bookingOrder);
   localStorage.setItem('lastBookingCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.setItem('lastCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.removeItem('bookingCart');
@@ -298,7 +299,26 @@ function onCheckoutSuccess(cart, payload) {
 
   const orderNum = String(bookingOrder.orderNumber || bookingOrder.id).replace(/^#/, '');
   window.location.href =
-    '../../pages/checkout-success.html?type=booking&orderNum=' + encodeURIComponent(orderNum);
+    '../../pages/checkout-success.html?type=booking&mode=booking&orderNum=' + encodeURIComponent(orderNum);
+}
+
+function syncBookingRentalOrder(order) {
+  const orders = readBookingMockOrders()
+    .filter(function (item) {
+      return item && item.id !== order.id && item.orderNumber !== order.orderNumber;
+    })
+    .concat(order);
+  localStorage.setItem('mockOrders', JSON.stringify(orders));
+}
+
+function readBookingMockOrders() {
+  try {
+    const orders = JSON.parse(localStorage.getItem('mockOrders') || '[]');
+    return Array.isArray(orders) ? orders : [];
+  } catch (error) {
+    console.warn('[booking-checkout] mockOrders 解析失敗，改用空陣列。', error);
+    return [];
+  }
 }
 
 function createBookingOrderSnapshot(cart, payload) {
@@ -363,15 +383,14 @@ function getBookingCheckoutUserId() {
 }
 
 function readBookingCheckoutUser() {
-  const keys = ['yuruiUser', 'currentUser'];
-  for (const key of keys) {
-    try {
-      const rawValue = localStorage.getItem(key);
-      const user = rawValue ? JSON.parse(rawValue) : null;
-      if (user && user.name) return user;
-    } catch (error) {
-      console.warn('[booking-checkout] 會員資料解析失敗:', key, error);
-    }
+  if (localStorage.getItem('isLoggedIn') === 'false') return null;
+
+  try {
+    const rawValue = localStorage.getItem('currentUser');
+    const user = rawValue ? JSON.parse(rawValue) : null;
+    if (user && user.name) return user;
+  } catch (error) {
+    console.warn('[booking-checkout] 會員資料解析失敗:', 'currentUser', error);
   }
   return null;
 }

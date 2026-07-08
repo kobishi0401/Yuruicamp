@@ -54,6 +54,20 @@
     return window.YuruiAuth.getUser();
   }
 
+  function closeUserDropdown() {
+    document.querySelectorAll('.bookingHeader .siteUserMenu').forEach(function (menu) {
+      var trigger = menu.querySelector('.siteUserTrigger');
+      var dropdown = menu.querySelector('.siteUserDropdown');
+
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+
+      if (dropdown) {
+        dropdown.hidden = true;
+        dropdown.classList.remove('isOpen');
+      }
+    });
+  }
+
   // 委派auth.logout 進行統一的清理，不額外在此檔清理造成不同步
   function logout() {
     if (typeof window.YuruiAuth?.logout !== 'function') {

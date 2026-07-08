@@ -40,11 +40,12 @@ window.YuruiStorage = (() => {
   }
 
   /**
-   * Reads the shared auth user from both main-site and booking-compatible keys.
+   * Reads the shared auth user from the single official currentUser key.
    * @returns {Object|null} Stored user or null.
    */
   function readAuthUser() {
-    return readJson('currentUser', null) || readJson('yuruiUser', null);
+    if (localStorage.getItem('isLoggedIn') === 'false') return null;
+    return readJson('currentUser', null);
   }
 
   return {

@@ -95,8 +95,15 @@ function _getCheckoutTodayString() {
 
 // Get the current checkout user id.
 function _getCheckoutUserId() {
-  const currentUser = window.AppState?.currentUser || {};
+  const currentUser = _getCheckoutCurrentUser() || {};
   return currentUser.id || currentUser.userId || DEFAULT_CHECKOUT_USER_ID;
+}
+
+// Read the current authenticated user through the shared auth service.
+function _getCheckoutCurrentUser() {
+  if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') return window.YuruiAuth.getUser();
+  if (window.AppState?.isLoggedIn && window.AppState.currentUser) return window.AppState.currentUser;
+  return null;
 }
 
 // Read locally stored mock orders.
@@ -469,6 +476,12 @@ function _initConfirmOrderBtn() {
 
 // Validate form, submit order, and route to success page.
 async function _handleConfirmOrder(confirmBtn) {
+  if (!_getCheckoutCurrentUser()) {
+    window.showToast('請先登入後再完成結帳', 'info');
+    window.openModal?.('loginModal');
+    return;
+  }
+
   const formData = _readCheckoutFormData();
   if (!_validateCheckoutForm(formData)) return;
   _setConfirmButtonLoading(confirmBtn, true);

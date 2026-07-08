@@ -4,7 +4,6 @@
     {
       dataBasePath: '../data',
       authStorageKey: 'currentUser',
-      fallbackAuthStorageKey: 'yuruiUser',
       homeHref: 'home.html',
       requireLogin: true,
     },
@@ -219,13 +218,13 @@
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function loginUser() {
+    if (typeof window.YuruiAuth?.getUser === 'function') return window.YuruiAuth.getUser();
     if (window.AppState && window.AppState.isLoggedIn && window.AppState.currentUser)
       return window.AppState.currentUser;
-    var keys = [cfg.authStorageKey, cfg.fallbackAuthStorageKey, 'currentUser', 'yuruiUser'].filter(Boolean);
-    for (var i = 0; i < keys.length; i++) {
-      var u = parse(localStorage.getItem(keys[i]), null);
-      if (u) return u;
-    }
+
+    if (localStorage.getItem('isLoggedIn') === 'false') return null;
+    var u = parse(localStorage.getItem(cfg.authStorageKey || 'currentUser'), null);
+    if (u) return u;
     return localStorage.getItem('isLoggedIn') === 'true' ? { id: 'user-001' } : null;
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
@@ -1010,11 +1009,18 @@
       }) || applyPointDeltas(users)[0];
     state.orders = mergeOrders(
       Array.isArray(rs[1]) ? rs[1] : fallbackOrders(),
-      arrays(MOCK_ORDERS_KEY)
+      arrays(MOCK_ORDERS_KEY).filter(function (o) {
+        return o && o.type !== 'booking' && o.type !== 'rental';
+      })
     ).filter(function (o) {
       return !o.userId || o.userId === uid || (state.user && o.userId === state.user.id);
     });
-    state.rentalOrders = (Array.isArray(rs[2]) ? rs[2] : fallbackRentals()).filter(function (o) {
+    state.rentalOrders = mergeOrders(
+      Array.isArray(rs[2]) ? rs[2] : fallbackRentals(),
+      arrays(MOCK_ORDERS_KEY).filter(function (o) {
+        return o && (o.type === 'booking' || o.type === 'rental');
+      })
+    ).filter(function (o) {
       return !o.userId || o.userId === uid || (state.user && o.userId === state.user.id);
     });
     applyProfile();
