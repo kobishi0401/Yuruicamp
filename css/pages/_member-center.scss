@@ -573,6 +573,25 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   margin-top: 0.6rem;
 }
 
+.memberOrderReviewItems {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.memberOrderReviewItem {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.memberOrderReviewItemName {
+  color: $member-muted;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 .memberOrderThumb,
 .memberOrderMore {
   border-radius: $member-radius-lg;
@@ -1017,6 +1036,26 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
 .memberReviewTextarea {
   min-height: 120px;
   resize: vertical;
+}
+
+.memberReviewFileInput {
+  padding-block: 0.7rem;
+}
+
+.memberReviewPhotoPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.memberReviewPhotoThumb {
+  aspect-ratio: 1;
+  border: 1px solid $member-border;
+  border-radius: $member-radius-lg;
+  display: block;
+  object-fit: cover;
+  width: 72px;
 }
 
 .memberClipboardProxy {

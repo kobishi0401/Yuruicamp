@@ -10,6 +10,9 @@
     window.MemberCenterConfig || {}
   );
   var REVIEW_KEY = 'member_center_reviews';
+  var REVIEW_MAX_PHOTOS = 5;
+  var REVIEW_MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+  var REVIEW_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   var MOCK_ORDERS_KEY = 'mockOrders';
   var MOCK_POINTS_KEY = 'mockUserPointDeltas';
   var MEMBER_PREFERENCE_DRAFT_KEY = 'memberPreferenceDraft';
@@ -60,7 +63,7 @@
     orders: [],
     rentalOrders: [],
     filters: { purchase: 'all', rental: 'all' },
-    review: { orderId: '', itemName: '', rating: 0, mode: 'write' },
+    review: { orderId: '', orderItemId: '', productId: '', itemName: '', rating: 0, mode: 'write', photos: [] },
     lastFocus: null,
     modalScrollPosition: null,
     initialized: false,
@@ -428,6 +431,23 @@
       '</div>'
     );
   }
+  function orderItemId(order, item, index) {
+    if (item && item.id) return item.id;
+    return (order && order.id ? order.id : 'order') + '-item-' + (index + 1);
+  }
+  function findOrderItem(orderId, itemId) {
+    var order = state.orders.find(function (o) {
+      return o && o.id === orderId;
+    });
+    if (!order) return null;
+    var items = Array.isArray(order.items) ? order.items : [];
+    for (var i = 0; i < items.length; i++) {
+      if (orderItemId(order, items[i], i) === itemId) {
+        return { order: order, item: items[i], itemId: itemId, index: i };
+      }
+    }
+    return null;
+  }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderFilters(type, orders) {
     var c = document.getElementById(type === 'rental' ? 'rentalOrderStatusTabs' : 'purchaseOrderStatusTabs');
@@ -479,6 +499,13 @@
     var content = String(review.content || '').trim();
     return rating >= 1 && rating <= 5 && content.length > 0;
   }
+  function reviewForOrderItem(orderId, itemId) {
+    if (!orderId || !itemId) return null;
+    var reviews = storedReviews().filter(function (review) {
+      return review && review.orderId === orderId && review.orderItemId === itemId && isValidReview(review);
+    });
+    return reviews.length ? reviews[reviews.length - 1] : null;
+  }
   // 用途：以有效評論紀錄作為是否已評論的依據，不只依賴訂單上的 reviewed 旗標。
   function reviewForOrder(orderId) {
     if (!orderId) return null;
@@ -500,14 +527,45 @@
       minute: '2-digit',
     });
   }
-  // 用途：判斷訂單是否可新增評論；只要已有有效評論，就改走查看評論流程。
-  function canWriteReview(o) {
-    if (!o || !o.canReview || norm('purchase', o.status) !== 'delivered') return false;
-    return !reviewForOrder(o.id);
+  function canWriteReviewItem(order, itemId) {
+    if (!order || !order.canReview || norm('purchase', order.status) !== 'delivered') return false;
+    return !reviewForOrderItem(order.id, itemId);
   }
-  // 用途：判斷訂單是否能查看既有評論，確保空內容或無評分的舊資料不會被當成已評論。
-  function canViewReview(o) {
-    return Boolean(o && reviewForOrder(o.id));
+  function renderReviewItemActions(order) {
+    var items = Array.isArray(order.items) ? order.items : [];
+    if (!items.length || norm('purchase', order.status) !== 'delivered' || !order.canReview) return '';
+    return (
+      '<div class="memberOrderReviewItems">' +
+      items
+        .map(function (item, index) {
+          var itemId = orderItemId(order, item, index);
+          var review = reviewForOrderItem(order.id, itemId);
+          var action = review
+            ? '<button class="memberOrderDetailButton" type="button" data-review-detail="' +
+              html(order.id) +
+              '" data-review-item-id="' +
+              html(itemId) +
+              '">查看評價</button>'
+            : canWriteReviewItem(order, itemId)
+              ? '<button class="memberOrderDetailButton" type="button" data-review-order="' +
+                html(order.id) +
+                '" data-review-item-id="' +
+                html(itemId) +
+                '">寫評價</button>'
+              : '';
+          if (!action) return '';
+          return (
+            '<div class="memberOrderReviewItem">' +
+            '<span class="memberOrderReviewItemName">' +
+            html(item.name || '商品') +
+            '</span>' +
+            action +
+            '</div>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderOrders() {
@@ -528,20 +586,6 @@
       .map(function (o) {
         var st = meta('purchase', o.status),
           title = itemTitle(o.items);
-        var review = '';
-        if (canViewReview(o)) {
-          review =
-            '<button class="memberOrderDetailButton" type="button" data-review-detail="' +
-            html(o.id) +
-            '">查看評論</button>';
-        } else if (canWriteReview(o)) {
-          review =
-            '<button class="memberOrderDetailButton" type="button" data-review-order="' +
-            html(o.id) +
-            '" data-review-item="' +
-            html(title) +
-            '">寫評價</button>';
-        }
         return (
           '<article class="memberOrderCard" data-order-id="' +
           html(o.id) +
@@ -558,6 +602,7 @@
           ((o.items || []).length || 0) +
           ' 件商品</p>' +
           thumbs(o.items) +
+          renderReviewItemActions(o) +
           '</div>' +
           '<div class="memberOrderSummary">' +
           '<div class="memberOrderAmount">' +
@@ -571,7 +616,6 @@
           '<button class="memberOrderDetailButton" type="button" data-order-detail="' +
           html(o.id) +
           '">查看明細</button>' +
-          review +
           '</div>' +
           '</article>'
         );
@@ -1006,34 +1050,49 @@
     openModal('orderDetailOverlay');
   };
   // 用途：開啟寫評價模式，重置評分與評論內容，避免沿用上一筆訂單的輸入狀態。
-  window.openReviewModal = function (id, name) {
-    state.review = { orderId: id, itemName: name || '', rating: 0, mode: 'write' };
+  window.openReviewModal = function (id, itemId) {
+    var found = findOrderItem(id, itemId);
+    var item = found && found.item;
+    state.review = {
+      orderId: id,
+      orderItemId: itemId || '',
+      productId: (item && item.productId) || '',
+      itemName: (item && item.name) || '商品評價',
+      rating: 0,
+      mode: 'write',
+      photos: [],
+    };
     setReviewModalMode('write');
     text('reviewTitle', '撰寫評價');
-    text('reviewProductName', name || '商品評價');
+    text('reviewProductName', state.review.itemName);
     text('reviewMeta', '');
     input('reviewContent', '');
+    resetReviewPhotos();
     stars(0);
     openModal('reviewOverlay');
   };
   // 用途：開啟查看評論模式，將既有有效評論填回 modal，並鎖定欄位避免誤修改。
-  window.openReviewDetailModal = function (id) {
-    var review = reviewForOrder(id);
+  window.openReviewDetailModal = function (id, itemId) {
+    var review = itemId ? reviewForOrderItem(id, itemId) : reviewForOrder(id);
     if (!review) {
       toast('找不到有效評論內容', 'warning');
       return;
     }
     state.review = {
       orderId: review.orderId,
+      orderItemId: review.orderItemId || '',
+      productId: review.productId || '',
       itemName: review.itemName || '',
       rating: Number(review.rating) || 0,
       mode: 'view',
+      photos: Array.isArray(review.photos) ? review.photos : [],
     };
     setReviewModalMode('view');
     text('reviewTitle', '查看評論');
     text('reviewProductName', review.itemName || '商品評價');
     text('reviewMeta', '送出時間：' + reviewDateLabel(review.createdAt));
     input('reviewContent', review.content || '');
+    renderReviewPhotoPreview(state.review.photos);
     stars(review.rating);
     openModal('reviewOverlay');
   };
@@ -1043,9 +1102,13 @@
     var meta = document.getElementById('reviewMeta');
     var content = document.getElementById('reviewContent');
     var submit = document.getElementById('submitReviewBtn');
+    var photos = document.getElementById('reviewPhotos');
+    var hint = document.getElementById('reviewPhotoHint');
     if (meta) meta.hidden = !isView;
     if (content) content.readOnly = isView;
     if (submit) submit.hidden = isView;
+    if (photos) photos.hidden = isView;
+    if (hint) hint.hidden = isView;
     document.querySelectorAll('.memberRatingStar').forEach(function (button) {
       button.disabled = isView;
     });
@@ -1058,6 +1121,69 @@
       b.classList.toggle('isSelected', on);
       b.setAttribute('aria-checked', String(on));
     });
+  }
+  function resetReviewPhotos() {
+    state.review.photos = [];
+    var inputEl = document.getElementById('reviewPhotos');
+    if (inputEl) inputEl.value = '';
+    renderReviewPhotoPreview([]);
+  }
+  function renderReviewPhotoPreview(photos) {
+    var container = document.getElementById('reviewPhotoPreview');
+    if (!container) return;
+    var list = Array.isArray(photos) ? photos : [];
+    if (!list.length) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = list
+      .map(function (photo, index) {
+        var src = typeof photo === 'string' ? photo : photo && photo.src;
+        var name = typeof photo === 'string' ? '評價圖片 ' + (index + 1) : photo.originalFileName || '評價圖片 ' + (index + 1);
+        return (
+          '<img class="memberReviewPhotoThumb" src="' +
+          html(src || '') +
+          '" alt="' +
+          html(name) +
+          '" loading="lazy">'
+        );
+      })
+      .join('');
+  }
+  function readReviewPhotos(fileList) {
+    var files = Array.from(fileList || []);
+    if (files.length > REVIEW_MAX_PHOTOS) {
+      return Promise.reject(new Error('最多只能上傳 5 張圖片'));
+    }
+    var invalid = files.find(function (file) {
+      return REVIEW_PHOTO_TYPES.indexOf(file.type) === -1;
+    });
+    if (invalid) return Promise.reject(new Error('僅支援 JPG、PNG、WebP 圖片'));
+    var oversized = files.find(function (file) {
+      return file.size > REVIEW_MAX_PHOTO_SIZE;
+    });
+    if (oversized) return Promise.reject(new Error('單張圖片不可超過 5MB'));
+
+    return Promise.all(
+      files.map(function (file, index) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            resolve({
+              src: String(reader.result || ''),
+              originalFileName: file.name,
+              mimeType: file.type,
+              fileSize: file.size,
+              sortOrder: index + 1,
+            });
+          };
+          reader.onerror = function () {
+            reject(new Error('圖片讀取失敗'));
+          };
+          reader.readAsDataURL(file);
+        });
+      })
+    );
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function switchPanel(tab) {
@@ -1235,9 +1361,9 @@
       var r = e.target.closest('[data-rental-detail]');
       if (r) return window.openRentalOrderDetail(r.dataset.rentalDetail);
       var rd = e.target.closest('[data-review-detail]');
-      if (rd) return window.openReviewDetailModal(rd.dataset.reviewDetail);
+      if (rd) return window.openReviewDetailModal(rd.dataset.reviewDetail, rd.dataset.reviewItemId);
       var rv = e.target.closest('[data-review-order]');
-      if (rv) return window.openReviewModal(rv.dataset.reviewOrder, rv.dataset.reviewItem);
+      if (rv) return window.openReviewModal(rv.dataset.reviewOrder, rv.dataset.reviewItemId);
       var cp = e.target.closest('[data-copy-coupon]');
       if (cp) return copy(cp.dataset.copyCoupon);
       var no = e.target.closest('[data-notification-order-detail]');
@@ -1322,13 +1448,30 @@
         stars(b.dataset.reviewRating);
       });
     });
+    var reviewPhotos = document.getElementById('reviewPhotos');
+    if (reviewPhotos && !reviewPhotos.dataset.bound) {
+      reviewPhotos.dataset.bound = 'true';
+      reviewPhotos.addEventListener('change', function () {
+        readReviewPhotos(reviewPhotos.files)
+          .then(function (photos) {
+            state.review.photos = photos;
+            renderReviewPhotoPreview(photos);
+          })
+          .catch(function (err) {
+            reviewPhotos.value = '';
+            state.review.photos = [];
+            renderReviewPhotoPreview([]);
+            toast(err.message || '圖片讀取失敗', 'warning');
+          });
+      });
+    }
     var form = document.getElementById('reviewForm');
     if (form && !form.dataset.bound) {
       form.dataset.bound = 'true';
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (state.review.mode === 'view') return;
-        if (!state.review.orderId || !state.review.rating) {
+        if (!state.review.orderId || !state.review.orderItemId || !state.review.rating) {
           toast('請先選擇評分', 'warning');
           return;
         }
@@ -1339,18 +1482,26 @@
           if (contentEl) contentEl.focus();
           return;
         }
-        // 用途：同一訂單只保留最新一筆有效評論，避免重複資料造成查看內容不明確。
+        // 用途：同一訂單明細只保留最新一筆有效評論，避免重複資料造成查看內容不明確。
         var reviews = storedReviews().filter(function (review) {
-          return !review || review.orderId !== state.review.orderId;
+          return !review || review.orderItemId !== state.review.orderItemId;
         });
         reviews.push({
           orderId: state.review.orderId,
+          orderItemId: state.review.orderItemId,
+          productId: state.review.productId,
           itemName: state.review.itemName,
           rating: state.review.rating,
           content: content,
+          photos: state.review.photos || [],
           createdAt: new Date().toISOString(),
         });
-        localStorage.setItem(REVIEW_KEY, JSON.stringify(reviews));
+        try {
+          localStorage.setItem(REVIEW_KEY, JSON.stringify(reviews));
+        } catch {
+          toast('圖片容量過大，請減少張數或壓低尺寸後再送出', 'warning');
+          return;
+        }
         var o = state.orders.find(function (x) {
           return x.id === state.review.orderId;
         });

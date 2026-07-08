@@ -1,6 +1,7 @@
 // Product detail page state and behavior.
 const DEFAULT_PRODUCT_ID = 'prod-001';
 const FREE_SHIPPING_THRESHOLD = 3000;
+const MEMBER_REVIEW_KEY = 'member_center_reviews';
 
 // Initialize product detail page after shared scripts are available.
 window.initProductDetailPage = async () => {
@@ -39,6 +40,8 @@ function _renderProductPage(product) {
   _renderSpecOptions(product, 'color');
   _renderSpecOptions(product, 'size');
   _renderSpecTable(product);
+  _renderProductReviews(product);
+  _renderRating(product);
   _renderShippingProgress();
   _initShippingProgressSync();
   _initQtyStepper();
@@ -61,7 +64,6 @@ function _renderProductInfo(product) {
   // 商品描述支援 Summernote 輸出的 HTML / Support Summernote rich HTML output
   const descEl = document.getElementById('productDescription');
   if (descEl) descEl.innerHTML = product.description || '';
-  _renderRating(product);
   _renderPrice(product);
   _renderTags(product.tags || []);
 }
@@ -118,6 +120,113 @@ function _getReviewCardRatings() {
   return Array.from(document.querySelectorAll('[data-review-rating]'))
     .map((element) => Number(element.dataset.reviewRating))
     .filter((value) => Number.isFinite(value));
+}
+
+// Render member-center test reviews from localStorage for the current product.
+function _renderProductReviews(product) {
+  const container = document.getElementById('productReviewsList');
+  if (!container) return;
+  const reviews = _getStoredReviewsForProduct(product.id);
+  if (!reviews.length) {
+    _updateReviewTabCount(_getReviewCardRatings().length);
+    return;
+  }
+
+  container.innerHTML = reviews.map((review) => _buildReviewCard(review)).join('');
+  _updateReviewTabCount(reviews.length);
+}
+
+function _getStoredReviewsForProduct(productId) {
+  let reviews = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MEMBER_REVIEW_KEY) || '[]');
+    reviews = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    reviews = [];
+  }
+  return reviews
+    .filter((review) => review && review.productId === productId && _isValidStoredReview(review))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+}
+
+function _isValidStoredReview(review) {
+  const rating = Number(review.rating);
+  return rating >= 1 && rating <= 5 && String(review.content || '').trim().length > 0;
+}
+
+function _buildReviewCard(review) {
+  const name = _escapeHtml(_getStoredReviewAuthor());
+  const initial = _escapeHtml(name.charAt(0) || '會');
+  const rating = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 0)));
+  const date = _escapeHtml(_formatReviewDate(review.createdAt));
+  return `
+    <div class="reviewCard">
+      <div class="reviewHeader">
+        <div class="reviewAvatar">${initial}</div>
+        <div>
+          <div class="reviewAuthorName">${name}</div>
+          <div class="starStyle" data-review-rating="${rating}">${_renderStars(rating)}</div>
+        </div>
+        <div class="ratingDate">${date}</div>
+      </div>
+      <p class="reviewText">${_escapeHtml(review.content || '')}</p>
+      ${_renderReviewImages(review.photos)}
+    </div>
+  `;
+}
+
+function _getStoredReviewAuthor() {
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    const profile = JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+    return profile.name || (currentUser && currentUser.name) || '會員';
+  } catch {
+    return '會員';
+  }
+}
+
+function _formatReviewDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || '--';
+  return date.toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function _renderReviewImages(photos) {
+  const list = Array.isArray(photos) ? photos : [];
+  if (!list.length) return '';
+  return `
+    <div class="reviewImages">
+      ${list
+        .map((photo, index) => {
+          const src = typeof photo === 'string' ? photo : photo && photo.src;
+          const name =
+            typeof photo === 'string'
+              ? `評價圖片 ${index + 1}`
+              : photo.originalFileName || `評價圖片 ${index + 1}`;
+          if (!src) return '';
+          return `<img class="ratingImage" src="${_escapeHtml(src)}" alt="${_escapeHtml(name)}" loading="lazy">`;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
+function _updateReviewTabCount(count) {
+  const reviewTab = document.querySelector('.productTabBtn[data-tab="reviews"]');
+  if (reviewTab) reviewTab.textContent = `商品評價 (${count})`;
+}
+
+function _escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Render image gallery with semantic thumbnail buttons.
