@@ -37,18 +37,12 @@ window.AppState = {
   isLoggedIn: _resolveStoredLoginState(localStorage.getItem('isLoggedIn'), _storedAuthUser),
   currentUser: _storedAuthUser,
   cart: window.YuruiStorage.readJson('cart', []),
-  preferences: window.YuruiStorage.readJson('preferences', {}),
   theme: localStorage.getItem('theme') || 'light',
 };
 
 // 驗證user 合法性
 function isValidUser(user) {
-  return Boolean(
-    user &&
-      typeof user === 'object' &&
-      typeof user.name === 'string' &&
-      user.name.trim()
-  );
+  return Boolean(user && typeof user === 'object' && typeof user.name === 'string' && user.name.trim());
 }
 
 /**
@@ -63,7 +57,6 @@ window.saveAppState = () => {
     // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
     localStorage.removeItem('yuruiUser');
     window.YuruiStorage.writeJson('cart', window.AppState.cart || []);
-    window.YuruiStorage.writeJson('preferences', window.AppState.preferences || {});
     localStorage.setItem('theme', window.AppState.theme || 'light');
     return;
   }
@@ -84,16 +77,15 @@ window.saveAppState = () => {
     // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
     localStorage.removeItem('yuruiUser');
   }
-  // 寫入購物車、喜好選項
+  // 寫入購物車；會員偏好正式來源為 yurui_profile.preferences，不再由 AppState 保存。
   writeJson('cart', window.AppState.cart || []);
-  writeJson('preferences', window.AppState.preferences || {});
   localStorage.setItem('theme', window.AppState.theme || 'light');
 };
 
 /**
  * 將登出規則引導至auth.js (YuruiAuth.logout) 統一登出規則
  * (options = {}) 可帶參數也可不帶參數
-*/
+ */
 window.logout = (options = {}) => {
   if (typeof window.YuruiAuth?.logout !== 'function') {
     console.warn('YuruiAuth.logout is not available. Logout was not executed.');
@@ -113,7 +105,6 @@ window.resetAppState = () => {
     isLoggedIn: false,
     currentUser: null,
     cart: [],
-    preferences: {},
     theme: 'light',
   };
   window.YuruiStorage.removeKeys(APP_RESET_STORAGE_KEYS);

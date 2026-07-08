@@ -139,10 +139,6 @@
           <span>商品小計</span>
           <strong id="summarySubtotal">NT$0</strong>
         </div>
-        <div class="siteCartSummary">
-          <span>運費</span>
-          <strong id="summaryShipping">NT$0</strong>
-        </div>
         <div class="siteCartSummary siteCartSummaryTotal">
           <span>總計</span>
           <strong id="summaryTotal">NT$0</strong>

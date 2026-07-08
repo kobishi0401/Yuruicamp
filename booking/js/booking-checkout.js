@@ -252,7 +252,7 @@ function initPaymentMethod() {
 // 送出結帳
 // ============================================================
 
-function handleCheckout(cart) {
+async function handleCheckout(cart) {
   var u = readBookingCheckoutUser();
   if (!u || !u.name) {
     if (typeof window.openModal === 'function') window.openModal('loginModal');
@@ -296,8 +296,14 @@ function handleCheckout(cart) {
     }
   }
 
-  // 送出前再重算一次金額，避免使用者停留期間 localStorage 或數量狀態產生舊資料。
-  const normalizedCart = normalizeBookingCart(cart);
+  let normalizedCart;
+  try {
+    normalizedCart = await verifyBookingCheckoutCart(cart);
+    if (!normalizedCart) return;
+  } catch (error) {
+    showToast(error.message || '預約資料異常，請重新確認背包內容。', 'warning');
+    return;
+  }
 
   const payload = {
     ...normalizedCart,
@@ -315,6 +321,169 @@ function handleCheckout(cart) {
   setTimeout(function () {
     onCheckoutSuccess(normalizedCart, payload);
   }, 1000);
+}
+
+// 送出前重新讀取營地與裝備正式資料，避免 localStorage summary 或折扣被手動竄改。
+async function verifyBookingCheckoutCart(cart) {
+  const rebuiltCart = await rebuildBookingCartFromSource(cart);
+  if (isBookingCartPricingChanged(cart, rebuiltCart)) {
+    Object.assign(cart, rebuiltCart);
+    localStorage.setItem('bookingCart', JSON.stringify(rebuiltCart));
+    renderCheckoutPage(cart);
+    showToast('預約金額或庫存資料已更新，請確認後再送出。', 'warning');
+    return null;
+  }
+  Object.assign(cart, rebuiltCart);
+  return cart;
+}
+
+// 用 campground / rentals 資料重建 bookingCart，正式金額只從資料來源推導。
+async function rebuildBookingCartFromSource(cart) {
+  const campgrounds = await readBookingJson('../data/campgrounds.json');
+  const rentals = await readBookingJson('../data/rentals.json');
+  const info = cart.booking_info || {};
+  const camp = campgrounds.find(function (item) {
+    return item && item.campground_id === info.campground_id;
+  });
+  if (!camp) throw new Error('找不到營地資料，請重新選擇營地。');
+
+  const days = calculateBookingDateCounts(info.check_in, info.check_out);
+  const rebuiltZones = (cart.selected_zones || []).map(function (zone) {
+    const sourceZone = (camp.zones || []).find(function (item) {
+      return item.zone_id === zone.zone_id || item.type === zone.zone_type;
+    });
+    if (!sourceZone) throw new Error('部分營位已無法預約，請重新選擇。');
+
+    const quantity = Math.floor(Number(zone.quantity || 1));
+    if (quantity < 1) throw new Error('營位數量異常，請重新選擇。');
+    if (quantity > Number(sourceZone.total_sites || 0)) {
+      throw new Error(`${sourceZone.type} 剩餘 ${sourceZone.total_sites} 個營位，請調整數量。`);
+    }
+
+    const unitSubtotal = sourceZone.price_weekday * days.weekday_count + sourceZone.price_holiday * days.holiday_count;
+    return {
+      zone_id: sourceZone.zone_id,
+      zone_type: sourceZone.type,
+      capacity_per_site: sourceZone.capacity_per_site,
+      quantity,
+      subtotal: unitSubtotal * quantity,
+    };
+  });
+
+  const rebuiltRentals = (cart.selected_rentals || []).map(function (rental) {
+    const sourceRental = rentals.find(function (item) {
+      return item && item.equipment_id === rental.equipment_id && item.campground_id === camp.campground_id;
+    });
+    if (!sourceRental) throw new Error('部分租借裝備已無法租借，請重新選擇。');
+
+    const quantity = Math.floor(Number(rental.quantity || 1));
+    if (quantity < 1) throw new Error('租借裝備數量異常，請重新選擇。');
+    if (quantity > Number(sourceRental.stock || 0)) {
+      throw new Error(`${sourceRental.name} 庫存不足，最多可租借 ${sourceRental.stock} 件。`);
+    }
+
+    const price = buildRentalPriceSnapshot(sourceRental, days);
+    return {
+      equipment_id: sourceRental.equipment_id,
+      name: sourceRental.name,
+      image: sourceRental.image_url || rental.image || '',
+      quantity,
+      unit_original_price: price.unit_original_price,
+      unit_discount: price.unit_discount,
+      unit_final_price: price.unit_final_price,
+      subtotal: price.unit_final_price * quantity,
+    };
+  });
+
+  const rebuiltCart = {
+    ...cart,
+    booking_info: {
+      ...info,
+      campground_id: camp.campground_id,
+      campground_name: camp.name,
+      region: camp.region,
+      check_in: info.check_in,
+      check_out: info.check_out,
+      weekday_count: days.weekday_count,
+      holiday_count: days.holiday_count,
+      total_days: days.total_days,
+    },
+    selected_zones: rebuiltZones,
+    selected_rentals: rebuiltRentals,
+  };
+  recalcBookingSummary(rebuiltCart);
+  return rebuiltCart;
+}
+
+// 讀取 booking JSON 資料；未來接後端時只需要替換這個資料入口。
+async function readBookingJson(path) {
+  const response = await fetch(path, { cache: 'no-store' });
+  if (!response.ok) throw new Error('資料讀取失敗，請稍後再試。');
+  return response.json();
+}
+
+// 依入住日到退房日前一晚計算平日/假日晚數，與 camp-detail 的規則保持一致。
+function calculateBookingDateCounts(checkIn, checkOut) {
+  const start = parseBookingDate(checkIn);
+  const end = parseBookingDate(checkOut);
+  if (!start || !end || start >= end) throw new Error('預約日期異常，請重新選擇日期。');
+
+  let weekdayCount = 0;
+  let holidayCount = 0;
+  const cursor = new Date(start);
+  while (cursor < end) {
+    const day = cursor.getDay();
+    if (day === 5 || day === 6) holidayCount++;
+    else weekdayCount++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return {
+    weekday_count: weekdayCount,
+    holiday_count: holidayCount,
+    total_days: weekdayCount + holidayCount,
+  };
+}
+
+// 以本地日期解析 YYYY-MM-DD，避免瀏覽器把日期當 UTC 造成跨日。
+function parseBookingDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+// 依正式裝備價格與天數建立單件原價、折扣與折扣後價格。
+function buildRentalPriceSnapshot(rental, days) {
+  const pricing = rental.pricing || {};
+  const original =
+    Number(pricing.price_per_day_weekday || 0) * days.weekday_count +
+    Number(pricing.price_per_day_holiday || 0) * days.holiday_count;
+  const discount = Math.max(0, Math.min(Number(pricing.discount || 0), original));
+  return {
+    unit_original_price: original,
+    unit_discount: discount,
+    unit_final_price: Math.max(original - discount, 0),
+  };
+}
+
+// 比對正式重建後的關鍵欄位，若不同就要求使用者重新確認金額。
+function isBookingCartPricingChanged(currentCart, rebuiltCart) {
+  return JSON.stringify(buildBookingComparableSnapshot(currentCart)) !== JSON.stringify(buildBookingComparableSnapshot(rebuiltCart));
+}
+
+function buildBookingComparableSnapshot(cart) {
+  const summary = cart.summary || {};
+  return {
+    booking_info: cart.booking_info,
+    selected_zones: cart.selected_zones,
+    selected_rentals: cart.selected_rentals,
+    summary: {
+      zone_total: summary.zone_total,
+      rental_original_total: summary.rental_original_total,
+      rental_discount_total: summary.rental_discount_total,
+      rental_total: summary.rental_total,
+      final_amount: summary.final_amount,
+    },
+  };
 }
 
 // ============================================================

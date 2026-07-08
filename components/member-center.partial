@@ -274,6 +274,7 @@
       <div class="memberModalBody">
         <form class="memberReviewForm" id="reviewForm" novalidate>
           <p class="memberReviewProduct" id="reviewProductName">商品名稱</p>
+          <p class="memberOrderMeta" id="reviewMeta" hidden></p>
           <fieldset class="memberReviewFieldset">
             <legend class="memberReviewLabel">評分</legend>
             <div class="memberRatingControl" id="reviewRatingGroup" role="radiogroup" aria-label="評分">

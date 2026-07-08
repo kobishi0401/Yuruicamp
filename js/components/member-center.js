@@ -12,6 +12,7 @@
   var REVIEW_KEY = 'member_center_reviews';
   var MOCK_ORDERS_KEY = 'mockOrders';
   var MOCK_POINTS_KEY = 'mockUserPointDeltas';
+  var MEMBER_PREFERENCE_DRAFT_KEY = 'memberPreferenceDraft';
   var statusMeta = {
     purchase: [
       ['all', '全部', ''],
@@ -59,8 +60,9 @@
     orders: [],
     rentalOrders: [],
     filters: { purchase: 'all', rental: 'all' },
-    review: { orderId: '', itemName: '', rating: 0 },
+    review: { orderId: '', itemName: '', rating: 0, mode: 'write' },
     lastFocus: null,
+    modalScrollPosition: null,
     initialized: false,
   };
 
@@ -322,13 +324,17 @@
     return parse(localStorage.getItem('yurui_profile'), {}) || {};
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  function savedPreferenceDraft() {
+    if (!sessionStorage.getItem(MEMBER_PREFERENCE_DRAFT_KEY)) return null;
+    return parse(sessionStorage.getItem(MEMBER_PREFERENCE_DRAFT_KEY), { styles: [], equipment: [] });
+  }
+  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function selectedPrefs() {
-    var app = prefValues(window.AppState && window.AppState.preferences);
-    if (app.length) return app;
-    var profile = prefValues(savedProfile().preferences);
-    if (profile.length) return profile;
-    var local = prefValues(parse(localStorage.getItem('preferences'), {}));
-    return local.length ? local : prefValues(state.user && state.user.preferences);
+    var draft = savedPreferenceDraft(),
+      profile = savedProfile();
+    if (draft) return prefValues(draft);
+    if (Object.prototype.hasOwnProperty.call(profile, 'preferences')) return prefValues(profile.preferences);
+    return [];
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function syncPrefs(values) {
@@ -340,16 +346,22 @@
     });
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function savePrefs(values) {
-    var obj = prefObject(values),
-      profile = savedProfile();
-    profile.preferences = obj;
-    localStorage.setItem('yurui_profile', JSON.stringify(profile));
-    localStorage.setItem('preferences', JSON.stringify(obj));
-    if (window.AppState) {
-      window.AppState.preferences = obj;
-      if (typeof window.saveAppState === 'function') window.saveAppState();
-    }
+  function savePreferenceDraft(values) {
+    sessionStorage.setItem(MEMBER_PREFERENCE_DRAFT_KEY, JSON.stringify(prefObject(values)));
+  }
+  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  function selectedPreferenceObject() {
+    var draft = savedPreferenceDraft();
+    if (draft) return prefObject(draft);
+    return prefObject(
+      Array.from(document.querySelectorAll('#prefTags .memberPreferenceTag.isSelected')).map(function (t) {
+        return t.dataset.value;
+      })
+    );
+  }
+  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  function clearPreferenceDraft() {
+    sessionStorage.removeItem(MEMBER_PREFERENCE_DRAFT_KEY);
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function applyProfile() {
@@ -455,16 +467,47 @@
       return norm(type, o.status) === selected || norm(type, o.paymentStatus) === selected;
     });
   }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function canReview(o) {
-    if (!o || !o.canReview || norm('purchase', o.status) !== 'delivered') return false;
+  // 用途：統一讀取評論清單，避免各處直接解析 localStorage 時判斷標準不一致。
+  function storedReviews() {
     var reviews = parse(localStorage.getItem(REVIEW_KEY), []);
-    return (
-      !o.reviewed &&
-      !reviews.some(function (r) {
-        return r.orderId === o.id;
-      })
-    );
+    return Array.isArray(reviews) ? reviews : [];
+  }
+  // 用途：只有同時具備訂單、1-5 分評分與非空評論內容，才視為有效完成評論。
+  function isValidReview(review) {
+    if (!review || !review.orderId) return false;
+    var rating = Number(review.rating);
+    var content = String(review.content || '').trim();
+    return rating >= 1 && rating <= 5 && content.length > 0;
+  }
+  // 用途：以有效評論紀錄作為是否已評論的依據，不只依賴訂單上的 reviewed 旗標。
+  function reviewForOrder(orderId) {
+    if (!orderId) return null;
+    var reviews = storedReviews().filter(function (review) {
+      return review && review.orderId === orderId && isValidReview(review);
+    });
+    return reviews.length ? reviews[reviews.length - 1] : null;
+  }
+  // 用途：格式化查看評論時顯示的送出時間，時間無效時保留原始值避免畫面空白。
+  function reviewDateLabel(value) {
+    if (!value) return '--';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  // 用途：判斷訂單是否可新增評論；只要已有有效評論，就改走查看評論流程。
+  function canWriteReview(o) {
+    if (!o || !o.canReview || norm('purchase', o.status) !== 'delivered') return false;
+    return !reviewForOrder(o.id);
+  }
+  // 用途：判斷訂單是否能查看既有評論，確保空內容或無評分的舊資料不會被當成已評論。
+  function canViewReview(o) {
+    return Boolean(o && reviewForOrder(o.id));
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderOrders() {
@@ -485,13 +528,20 @@
       .map(function (o) {
         var st = meta('purchase', o.status),
           title = itemTitle(o.items);
-        var review = canReview(o)
-          ? '<button class="memberOrderDetailButton" type="button" data-review-order="' +
+        var review = '';
+        if (canViewReview(o)) {
+          review =
+            '<button class="memberOrderDetailButton" type="button" data-review-detail="' +
+            html(o.id) +
+            '">查看評論</button>';
+        } else if (canWriteReview(o)) {
+          review =
+            '<button class="memberOrderDetailButton" type="button" data-review-order="' +
             html(o.id) +
             '" data-review-item="' +
             html(title) +
-            '">寫評價</button>'
-          : '';
+            '">寫評價</button>';
+        }
         return (
           '<article class="memberOrderCard" data-order-id="' +
           html(o.id) +
@@ -854,7 +904,9 @@
           '</span></div>'
         : '') +
       (order.deposit
-        ? '<div class="memberDetailRow"><span class="memberDetailRowLabel">押金</span><span class="memberDetailRowValue">' + money(order.deposit) + '</span></div>'
+        ? '<div class="memberDetailRow"><span class="memberDetailRowLabel">押金</span><span class="memberDetailRowValue">' +
+          money(order.deposit) +
+          '</span></div>'
         : '') +
       '<div class="memberDetailRow memberDetailRowTotal"><span class="memberDetailRowLabel">訂單總計</span><span class="memberDetailRowValue">' +
       money(order.total) +
@@ -876,26 +928,60 @@
       '</a>'
     );
   }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  // 用途：記錄 modal 開啟前的頁面位置，避免 focus 或鎖定滾動時把畫面帶到最上方。
+  function currentScrollPosition() {
+    var doc = document.documentElement;
+    return {
+      x: window.scrollX || window.pageXOffset || doc.scrollLeft || 0,
+      y: window.scrollY || window.pageYOffset || doc.scrollTop || 0,
+    };
+  }
+  // 用途：modal 開啟或關閉後還原原本位置；requestAnimationFrame 處理瀏覽器延後 focus 捲動。
+  function restoreScrollPosition(position) {
+    if (!position) return;
+    window.scrollTo(position.x, position.y);
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(function () {
+        window.scrollTo(position.x, position.y);
+      });
+    }
+  }
+  // 用途：聚焦 modal 或原按鈕時禁止瀏覽器自動捲動，舊瀏覽器則回退到一般 focus。
+  function focusWithoutScroll(element) {
+    if (!element || typeof element.focus !== 'function') return;
+    try {
+      element.focus({ preventScroll: true });
+    } catch {
+      element.focus();
+    }
+  }
+  // 用途：開啟會員中心 modal 時保留背景頁位置，避免 dialog focus 造成頁面跳動。
   function openModal(id) {
     var o = document.getElementById(id);
     if (!o) return;
+    var scrollPosition = currentScrollPosition();
     state.lastFocus = document.activeElement;
+    state.modalScrollPosition = scrollPosition;
     o.classList.add('isOpen');
     o.setAttribute('aria-hidden', 'false');
     document.body.classList.add('memberModalOpen');
     var d = o.querySelector('.memberModalDialog');
-    if (d) d.focus();
+    focusWithoutScroll(d);
+    restoreScrollPosition(scrollPosition);
   }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  // 用途：關閉會員中心 modal 後回到開啟前位置，避免恢復 focus 時跳到頁面最上方。
   function closeModal(id) {
     var o = document.getElementById(id);
     if (!o) return;
+    var scrollPosition = state.modalScrollPosition || currentScrollPosition();
     o.classList.remove('isOpen');
     o.setAttribute('aria-hidden', 'true');
-    if (!document.querySelector('.memberModalOverlay.isOpen'))
+    if (!document.querySelector('.memberModalOverlay.isOpen')) {
       document.body.classList.remove('memberModalOpen');
-    if (state.lastFocus && typeof state.lastFocus.focus === 'function') state.lastFocus.focus();
+      state.modalScrollPosition = null;
+    }
+    focusWithoutScroll(state.lastFocus);
+    restoreScrollPosition(scrollPosition);
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   window.openOrderDetail = function (id) {
@@ -919,15 +1005,52 @@
     if (b) b.innerHTML = detailRows(o, meta('rental', o.status), 'rental');
     openModal('orderDetailOverlay');
   };
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  // 用途：開啟寫評價模式，重置評分與評論內容，避免沿用上一筆訂單的輸入狀態。
   window.openReviewModal = function (id, name) {
-    state.review = { orderId: id, itemName: name || '', rating: 0 };
+    state.review = { orderId: id, itemName: name || '', rating: 0, mode: 'write' };
+    setReviewModalMode('write');
+    text('reviewTitle', '撰寫評價');
     text('reviewProductName', name || '商品評價');
+    text('reviewMeta', '');
     input('reviewContent', '');
     stars(0);
     openModal('reviewOverlay');
   };
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  // 用途：開啟查看評論模式，將既有有效評論填回 modal，並鎖定欄位避免誤修改。
+  window.openReviewDetailModal = function (id) {
+    var review = reviewForOrder(id);
+    if (!review) {
+      toast('找不到有效評論內容', 'warning');
+      return;
+    }
+    state.review = {
+      orderId: review.orderId,
+      itemName: review.itemName || '',
+      rating: Number(review.rating) || 0,
+      mode: 'view',
+    };
+    setReviewModalMode('view');
+    text('reviewTitle', '查看評論');
+    text('reviewProductName', review.itemName || '商品評價');
+    text('reviewMeta', '送出時間：' + reviewDateLabel(review.createdAt));
+    input('reviewContent', review.content || '');
+    stars(review.rating);
+    openModal('reviewOverlay');
+  };
+  // 用途：在寫入與查看模式間切換控制項狀態，讓同一個 modal 可重複使用。
+  function setReviewModalMode(mode) {
+    var isView = mode === 'view';
+    var meta = document.getElementById('reviewMeta');
+    var content = document.getElementById('reviewContent');
+    var submit = document.getElementById('submitReviewBtn');
+    if (meta) meta.hidden = !isView;
+    if (content) content.readOnly = isView;
+    if (submit) submit.hidden = isView;
+    document.querySelectorAll('.memberRatingStar').forEach(function (button) {
+      button.disabled = isView;
+    });
+  }
+  // 用途：依目前評分狀態更新星星，寫評論與查看評論都使用同一套顯示規則。
   function stars(rating) {
     state.review.rating = Number(rating) || 0;
     document.querySelectorAll('.memberRatingStar').forEach(function (b) {
@@ -1080,7 +1203,7 @@
             return x.dataset.value;
           }
         );
-        savePrefs(vals);
+        savePreferenceDraft(vals);
         syncPrefs(vals);
       });
     });
@@ -1094,14 +1217,9 @@
         s.phone = document.getElementById('profilePhone').value.trim();
         s.address = document.getElementById('profileAddress').value.trim();
         s.birthday = document.getElementById('profileBirthday').value;
-        s.preferences = prefObject(
-          Array.from(document.querySelectorAll('#prefTags .memberPreferenceTag.isSelected')).map(
-            function (t) {
-              return t.dataset.value;
-            }
-          )
-        );
+        s.preferences = selectedPreferenceObject();
         localStorage.setItem('yurui_profile', JSON.stringify(s));
+        clearPreferenceDraft();
         toast('會員資料已更新', 'success');
         applyProfile();
       });
@@ -1116,6 +1234,8 @@
       if (o) return window.openOrderDetail(o.dataset.orderDetail);
       var r = e.target.closest('[data-rental-detail]');
       if (r) return window.openRentalOrderDetail(r.dataset.rentalDetail);
+      var rd = e.target.closest('[data-review-detail]');
+      if (rd) return window.openReviewDetailModal(rd.dataset.reviewDetail);
       var rv = e.target.closest('[data-review-order]');
       if (rv) return window.openReviewModal(rv.dataset.reviewOrder, rv.dataset.reviewItem);
       var cp = e.target.closest('[data-copy-coupon]');
@@ -1207,16 +1327,27 @@
       form.dataset.bound = 'true';
       form.addEventListener('submit', function (e) {
         e.preventDefault();
+        if (state.review.mode === 'view') return;
         if (!state.review.orderId || !state.review.rating) {
           toast('請先選擇評分', 'warning');
           return;
         }
-        var reviews = parse(localStorage.getItem(REVIEW_KEY), []);
+        var contentEl = document.getElementById('reviewContent');
+        var content = contentEl ? contentEl.value.trim() : '';
+        if (!content) {
+          toast('請輸入評論內容', 'warning');
+          if (contentEl) contentEl.focus();
+          return;
+        }
+        // 用途：同一訂單只保留最新一筆有效評論，避免重複資料造成查看內容不明確。
+        var reviews = storedReviews().filter(function (review) {
+          return !review || review.orderId !== state.review.orderId;
+        });
         reviews.push({
           orderId: state.review.orderId,
           itemName: state.review.itemName,
           rating: state.review.rating,
-          content: document.getElementById('reviewContent').value.trim(),
+          content: content,
           createdAt: new Date().toISOString(),
         });
         localStorage.setItem(REVIEW_KEY, JSON.stringify(reviews));

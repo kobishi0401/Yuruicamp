@@ -103,14 +103,12 @@
   function updateCartDrawerSummary() {
     var elements = getCartDrawerElements();
     var subtotal = window.calculateCartTotal(window.AppState.cart);
-    var shipping = window.calculateShippingFee(subtotal);
-    var total = subtotal + shipping;
+    // Drawer 僅呈現購物車商品金額；運費保留到 checkout 頁依配送方式計算與顯示。
+    var total = subtotal;
     var subtotalEl = document.getElementById('summarySubtotal');
-    var shippingEl = document.getElementById('summaryShipping');
     var totalEl = document.getElementById('summaryTotal');
 
     if (subtotalEl) subtotalEl.textContent = window.formatCurrency(subtotal);
-    if (shippingEl) shippingEl.textContent = shipping === 0 ? '免運' : window.formatCurrency(shipping);
     if (totalEl) totalEl.textContent = window.formatCurrency(total);
     if (elements.footer) elements.footer.hidden = window.AppState.cart.length === 0;
   }

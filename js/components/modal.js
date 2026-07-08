@@ -19,14 +19,8 @@
 
   function hasSavedPreferences() {
     try {
-      var preferences = JSON.parse(localStorage.getItem('preferences') || '{}');
-      return Boolean(
-        preferences &&
-          Array.isArray(preferences.styles) &&
-          preferences.styles.length > 0 &&
-          Array.isArray(preferences.equipment) &&
-          preferences.equipment.length > 0
-      );
+      var profile = JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+      return Boolean(profile && Object.prototype.hasOwnProperty.call(profile, 'preferences'));
     } catch {
       return false;
     }
@@ -101,8 +95,9 @@
     }
     profile.preferences = preferences;
     localStorage.setItem('yurui_profile', JSON.stringify(profile));
-    localStorage.setItem('preferences', JSON.stringify(preferences));
-    window.syncMemberPreferenceTags && window.syncMemberPreferenceTags(preferences);
+    if (!sessionStorage.getItem('memberPreferenceDraft')) {
+      window.syncMemberPreferenceTags && window.syncMemberPreferenceTags(preferences);
+    }
     window.dispatchEvent(new CustomEvent('yurui:preferences-updated', { detail: preferences }));
   }
 
@@ -112,6 +107,7 @@
         close: function () {
           window.closeModal('loginModal');
         },
+        openSurvey: true,
       });
       window.updateNavbarLoginState?.();
       return;
@@ -200,8 +196,6 @@
         surveyAnswers.equipment = Array.from(equipmentTags).map(function (selectedTag) {
           return selectedTag.dataset.value;
         });
-        if (window.AppState) window.AppState.preferences = surveyAnswers;
-        window.saveAppState?.();
         syncProfilePreferenceStorage(surveyAnswers);
         personalizationCompleted = true;
         window.closeModal('personalizationModal', { force: true });
@@ -214,12 +208,14 @@
     var loginModal = document.getElementById('loginModal');
     if (!loginModal || loginModal.dataset.loginBound === 'true') return;
     loginModal.dataset.loginBound = 'true';
-    loginModal.querySelectorAll('.btnGoogleLogin, .btnFacebookLogin, .btnLineLogin').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault();
-        handleLoginSuccess(getLoginProvider(button));
+    loginModal
+      .querySelectorAll('.btnGoogleLogin, .btnFacebookLogin, .btnLineLogin')
+      .forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          handleLoginSuccess(getLoginProvider(button));
+        });
       });
-    });
   }
 
   function initSurveyCloseConfirmModal() {
@@ -268,4 +264,4 @@
       });
     }
   };
-}());
+})();
