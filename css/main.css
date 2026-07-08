@@ -6507,6 +6507,109 @@ a:focus-visible,
   padding: 0.875rem 1rem;
 }
 
+.memberBookingDetailHero {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+}
+
+.memberBookingDetailImage {
+  aspect-ratio: 16/9;
+  border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
+  border-radius: var(--yc-radius-card, 12px);
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.memberBookingDetailContent {
+  align-content: center;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.memberBookingDetailTitle {
+  color: var(--yc-text);
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.memberBookingDetailMeta {
+  color: var(--yc-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.memberBookingDetailStats {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.memberBookingDetailStat {
+  background: var(--yc-surface-soft);
+  border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
+  border-radius: var(--yc-radius-button, 8px);
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.875rem;
+}
+
+.memberBookingDetailStat span,
+.memberBookingDetailStat small {
+  color: var(--yc-text-muted);
+  line-height: 1.4;
+}
+
+.memberBookingDetailStat strong {
+  color: var(--yc-text);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.memberBookingDetailSection {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.memberBookingDetailLine {
+  align-items: start;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  line-height: 1.5;
+}
+
+.memberBookingDetailLine span {
+  color: var(--yc-text);
+  min-width: 0;
+}
+
+.memberBookingDetailLine strong {
+  color: var(--yc-text);
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.memberBookingDetailLine.isDiscount strong {
+  color: var(--yc-error);
+}
+
+.memberBookingDetailReward strong {
+  color: var(--yc-success);
+}
+
+.memberBookingDetailTotal {
+  border-top: 1px solid color-mix(in srgb, var(--yc-sage-action) 18%, var(--yc-border));
+  padding-top: 0.875rem;
+}
+
 .memberDetailSummary {
   align-items: center;
   border-bottom: 1px solid color-mix(in srgb, var(--yc-sage-action) 16%, var(--yc-border));
@@ -6756,6 +6859,12 @@ a:focus-visible,
   .memberOrderSummary {
     place-items: start start;
   }
+  .memberBookingDetailHero {
+    grid-template-columns: 1fr;
+  }
+  .memberBookingDetailStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (width <= 440px) {
   .memberCenter {
@@ -6769,6 +6878,13 @@ a:focus-visible,
   }
   .memberCouponDivider {
     display: none;
+  }
+  .memberBookingDetailStats,
+  .memberBookingDetailLine {
+    grid-template-columns: 1fr;
+  }
+  .memberBookingDetailLine strong {
+    text-align: left;
   }
 }
 @media (width <= 375px) {

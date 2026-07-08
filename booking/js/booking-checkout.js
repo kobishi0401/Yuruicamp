@@ -360,7 +360,8 @@ async function rebuildBookingCartFromSource(cart) {
       throw new Error(`${sourceZone.type} 剩餘 ${sourceZone.total_sites} 個營位，請調整數量。`);
     }
 
-    const unitSubtotal = sourceZone.price_weekday * days.weekday_count + sourceZone.price_holiday * days.holiday_count;
+    const unitSubtotal =
+      sourceZone.price_weekday * days.weekday_count + sourceZone.price_holiday * days.holiday_count;
     return {
       zone_id: sourceZone.zone_id,
       zone_type: sourceZone.type,
@@ -467,7 +468,10 @@ function buildRentalPriceSnapshot(rental, days) {
 
 // 比對正式重建後的關鍵欄位，若不同就要求使用者重新確認金額。
 function isBookingCartPricingChanged(currentCart, rebuiltCart) {
-  return JSON.stringify(buildBookingComparableSnapshot(currentCart)) !== JSON.stringify(buildBookingComparableSnapshot(rebuiltCart));
+  return (
+    JSON.stringify(buildBookingComparableSnapshot(currentCart)) !==
+    JSON.stringify(buildBookingComparableSnapshot(rebuiltCart))
+  );
 }
 
 function buildBookingComparableSnapshot(cart) {
@@ -496,7 +500,9 @@ function onCheckoutSuccess(cart, payload) {
   localStorage.setItem('lastBookingCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.setItem('lastCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.removeItem('bookingCart');
-  window.dispatchEvent(new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'checkout-complete' } }));
+  window.dispatchEvent(
+    new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'checkout-complete' } })
+  );
   console.log('[booking-checkout] bookingCart 已清除');
 
   const orderNum = String(bookingOrder.orderNumber || bookingOrder.id).replace(/^#/, '');
@@ -561,7 +567,9 @@ function normalizeBookingCart(cart) {
 }
 
 function getRentalOriginalUnitPrice(rental) {
-  return Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental);
+  return (
+    Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental)
+  );
 }
 
 function getRentalUnitDiscount(rental) {
@@ -591,6 +599,8 @@ function createBookingOrderSnapshot(cart, payload) {
   const zones = cart.selected_zones || [];
   const now = new Date();
   const orderNumber = createBookingOrderNumber(now);
+  // 回饋點數只依「折扣後裝備租借小計」計算，不把住宿費納入點數規則。
+  const rewardPoints = Math.round(Number(summary.rental_total || 0) * 0.1);
 
   // 預約成功快照：共用 checkout-success.html 讀取 lastCheckoutOrder 顯示成立編號。
   return {
@@ -625,6 +635,7 @@ function createBookingOrderSnapshot(cart, payload) {
     subtotal: Number(summary.zone_total || 0) + Number(summary.rental_original_total || 0),
     discount: Number(summary.rental_discount_total || summary.applied_discount || 0),
     total: Number(summary.final_amount || 0),
+    rewardPoints,
     status: 'confirmed',
     paymentStatus: 'paid',
     payment: payload.payment_method === 'linepay' ? 'line-pay' : 'credit-card',
@@ -635,6 +646,30 @@ function createBookingOrderSnapshot(cart, payload) {
     returnStore: info.campground_name || '營地現場',
     campgroundName: info.campground_name || '',
     region: info.region || '',
+    campgroundImage:
+      'https://picsum.photos/seed/' +
+      encodeURIComponent(info.campground_id || info.campground_name || 'booking') +
+      '/400/250',
+    bookingInfo: {
+      campgroundId: info.campground_id || '',
+      campgroundName: info.campground_name || '',
+      region: info.region || '',
+      checkIn: info.check_in || '',
+      checkOut: info.check_out || '',
+      totalDays: Number(info.total_days || 0),
+      weekdayCount: Number(info.weekday_count || 0),
+      holidayCount: Number(info.holiday_count || 0),
+      guestCount: Number(info.guest_count || 0),
+    },
+    bookingSummary: {
+      zoneTotal: Number(summary.zone_total || 0),
+      rentalOriginalTotal: Number(summary.rental_original_total || 0),
+      rentalDiscountTotal: Number(summary.rental_discount_total || summary.applied_discount || 0),
+      rentalTotal: Number(summary.rental_total || 0),
+      finalAmount: Number(summary.final_amount || 0),
+    },
+    selectedZones: zones,
+    selectedRentals: rentals,
   };
 }
 
@@ -644,10 +679,13 @@ function createBookingOrderNumber(date) {
   var dd = String(date.getDate()).padStart(2, '0');
   var datePart = String(yyyy) + mm + dd;
   var prefix = '#RENT-' + datePart + '-';
-  var serial = readBookingMockOrders().reduce(function (max, order) {
-    var match = String(order && order.orderNumber || '').match(new RegExp('^#?RENT-' + datePart + '-(\\d{4})$'));
-    return match ? Math.max(max, Number(match[1])) : max;
-  }, 0) + 1;
+  var serial =
+    readBookingMockOrders().reduce(function (max, order) {
+      var match = String((order && order.orderNumber) || '').match(
+        new RegExp('^#?RENT-' + datePart + '-(\\d{4})$')
+      );
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0) + 1;
 
   // 預約編號使用日期加流水號，避免同一分鐘建立多筆時撞號。
   return prefix + String(serial).padStart(4, '0');

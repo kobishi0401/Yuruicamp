@@ -63,7 +63,15 @@
     orders: [],
     rentalOrders: [],
     filters: { purchase: 'all', rental: 'all' },
-    review: { orderId: '', orderItemId: '', productId: '', itemName: '', rating: 0, mode: 'write', photos: [] },
+    review: {
+      orderId: '',
+      orderItemId: '',
+      productId: '',
+      itemName: '',
+      rating: 0,
+      mode: 'write',
+      photos: [],
+    },
     lastFocus: null,
     modalScrollPosition: null,
     initialized: false,
@@ -858,6 +866,8 @@
     text('statUnread', unread);
   }
   function detailRows(order, st, type) {
+    if (type === 'rental' && order && order.type === 'booking') return bookingDetailRows(order, st);
+
     var items = Array.isArray(order.items) ? order.items : [];
     var itemTitle = type === 'rental' ? '租借品項' : '商品明細';
     var subtotalLabel = type === 'rental' ? '租借費用' : '商品小計';
@@ -970,6 +980,201 @@
       (type === 'rental' ? '租借' : '訂單') +
       '</span>' +
       '</a>'
+    );
+  }
+  function getBookingInfo(order) {
+    var info = (order && order.bookingInfo) || {};
+    return {
+      campgroundId: info.campgroundId || info.campground_id || order.campgroundId || '',
+      campgroundName:
+        info.campgroundName ||
+        info.campground_name ||
+        order.campgroundName ||
+        order.pickupStore ||
+        '預約營區',
+      region: info.region || order.region || '',
+      checkIn: info.checkIn || info.check_in || order.rentalStart || '--',
+      checkOut: info.checkOut || info.check_out || order.rentalEnd || '--',
+      totalDays: Number(info.totalDays || info.total_days || order.totalDays || 0),
+      weekdayCount: Number(info.weekdayCount || info.weekday_count || order.weekdayCount || 0),
+      holidayCount: Number(info.holidayCount || info.holiday_count || order.holidayCount || 0),
+      guestCount: Number(info.guestCount || info.guest_count || order.guestCount || 0),
+    };
+  }
+  function getBookingImage(order, info) {
+    if (order && order.campgroundImage) return order.campgroundImage;
+    var seed = (info && (info.campgroundId || info.campgroundName)) || 'booking';
+    return 'https://picsum.photos/seed/' + encodeURIComponent(seed) + '/400/250';
+  }
+  function getBookingSummary(order) {
+    var summary = (order && order.bookingSummary) || {};
+    return {
+      zoneTotal: Number(summary.zoneTotal || summary.zone_total || 0),
+      rentalOriginalTotal: Number(summary.rentalOriginalTotal || summary.rental_original_total || 0),
+      rentalDiscountTotal: Number(
+        summary.rentalDiscountTotal || summary.rental_discount_total || order.discount || 0
+      ),
+      rentalTotal: Number(summary.rentalTotal || summary.rental_total || 0),
+      finalAmount: Number(summary.finalAmount || summary.final_amount || order.total || 0),
+    };
+  }
+  function getBookingZones(order) {
+    if (Array.isArray(order.selectedZones) && order.selectedZones.length) return order.selectedZones;
+    if (Array.isArray(order.selected_zones) && order.selected_zones.length) return order.selected_zones;
+    return (Array.isArray(order.items) ? order.items : []).filter(function (item) {
+      return item && !item.image && String(item.name || '').indexOf('・') !== -1;
+    });
+  }
+  function getBookingRentals(order) {
+    if (Array.isArray(order.selectedRentals) && order.selectedRentals.length) return order.selectedRentals;
+    if (Array.isArray(order.selected_rentals) && order.selected_rentals.length) return order.selected_rentals;
+    return (Array.isArray(order.items) ? order.items : []).filter(function (item) {
+      return item && (item.image || !String(item.name || '').includes('・'));
+    });
+  }
+  function bookingDetailRows(order, st) {
+    var info = getBookingInfo(order);
+    var image = getBookingImage(order, info);
+    var summary = getBookingSummary(order);
+    var zones = getBookingZones(order);
+    var rentals = getBookingRentals(order);
+    var nights = info.totalDays || '--';
+    var guestCount = info.guestCount || '--';
+    var stayMeta =
+      info.weekdayCount || info.holidayCount
+        ? '平日 ' + info.weekdayCount + ' 晚 / 假日 ' + info.holidayCount + ' 晚'
+        : '晚數依預約資料';
+
+    return (
+      '<section class="memberBookingDetailHero" aria-label="預約營區">' +
+      '<img class="memberBookingDetailImage" src="' +
+      html(image) +
+      '" alt="' +
+      html(info.campgroundName) +
+      '" loading="lazy">' +
+      '<div class="memberBookingDetailContent">' +
+      '<div class="memberBookingDetailMeta">' +
+      html(info.region || '營區預約') +
+      '</div>' +
+      '<h3 class="memberBookingDetailTitle">' +
+      html(info.campgroundName) +
+      '</h3>' +
+      '<p class="memberBookingDetailMeta">預約編號：' +
+      html(order.orderNumber || order.id || '--') +
+      '</p>' +
+      '<span class="memberOrderStatus ' +
+      st.cls +
+      '">' +
+      html(st.label) +
+      '</span>' +
+      '</div>' +
+      '</section>' +
+      '<section class="memberBookingDetailStats" aria-label="預約重點">' +
+      bookingStat('預約日期', info.checkIn + ' - ' + info.checkOut) +
+      bookingStat('入住晚數', nights + ' 晚', stayMeta) +
+      bookingStat('入住人數', guestCount + ' 人') +
+      bookingStat('總金額', money(summary.finalAmount || order.total)) +
+      '</section>' +
+      '<section class="memberBookingDetailSection" aria-label="營位明細">' +
+      '<h3 class="memberDetailSectionTitle">營位明細</h3>' +
+      renderBookingLines(zones, '個營位', '本次沒有營位資料') +
+      '</section>' +
+      '<div class="memberDetailDivider" aria-hidden="true"></div>' +
+      '<section class="memberBookingDetailSection" aria-label="租借裝備">' +
+      '<h3 class="memberDetailSectionTitle">租借裝備</h3>' +
+      renderBookingLines(rentals, '件', '本次未加租裝備') +
+      '</section>' +
+      '<div class="memberDetailDivider" aria-hidden="true"></div>' +
+      '<section class="memberBookingDetailSection" aria-label="費用明細">' +
+      '<h3 class="memberDetailSectionTitle">費用明細</h3>' +
+      renderBookingCostRows(summary, order) +
+      '</section>' +
+      '<section class="memberDetailSection memberDetailInfo" aria-label="訂單資訊">' +
+      '<p class="memberDetailMeta"><i class="bi bi-credit-card" aria-hidden="true"></i><span>付款方式：' +
+      html(paymentLabel(order.payment)) +
+      '</span></p>' +
+      '<p class="memberDetailMeta"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>營區地點：' +
+      html(info.region || '--') +
+      '</span></p>' +
+      '</section>' +
+      '<a class="memberDetailLineButton" href="https://line.me/R/ti/p/@yuruicamp" target="_blank" rel="noopener">' +
+      '<i class="bi bi-chat-dots" aria-hidden="true"></i>' +
+      '<span>使用 LINE 詢問預約</span>' +
+      '</a>'
+    );
+  }
+  function bookingStat(label, value, note) {
+    return (
+      '<div class="memberBookingDetailStat">' +
+      '<span>' +
+      html(label) +
+      '</span>' +
+      '<strong>' +
+      html(value || '--') +
+      '</strong>' +
+      (note ? '<small>' + html(note) + '</small>' : '') +
+      '</div>'
+    );
+  }
+  function renderBookingLines(items, unitLabel, emptyText) {
+    var list = Array.isArray(items) ? items : [];
+    if (!list.length) return '<p class="memberDetailMeta">' + html(emptyText) + '</p>';
+    return list
+      .map(function (item) {
+        var quantity = Number(item.quantity || item.qty || 1);
+        var name = item.zone_type || item.name || '項目';
+        var subtotal = Number(item.subtotal || item.price * quantity || 0);
+        return (
+          '<div class="memberBookingDetailLine">' +
+          '<span>' +
+          html(name) +
+          ' x ' +
+          quantity +
+          ' ' +
+          html(unitLabel) +
+          '</span>' +
+          '<strong>' +
+          money(subtotal) +
+          '</strong>' +
+          '</div>'
+        );
+      })
+      .join('');
+  }
+  function renderBookingCostRows(summary, order) {
+    var rows = '';
+    // 回饋點數由 booking checkout 建單時寫入；假資料不補算，避免把住宿費誤計入點數。
+    var rewardPoints = Number(order && order.rewardPoints ? order.rewardPoints : 0);
+    if (summary.zoneTotal) rows += bookingCostRow('營位費用', summary.zoneTotal);
+    if (summary.rentalTotal) rows += bookingCostRow('裝備租借', summary.rentalTotal);
+    if (summary.rentalDiscountTotal) rows += bookingCostRow('折扣', -summary.rentalDiscountTotal, true);
+    rows += bookingRewardPointRow(rewardPoints);
+    rows +=
+      '<div class="memberBookingDetailLine memberBookingDetailTotal">' +
+      '<span>總計</span><strong>' +
+      money(summary.finalAmount || order.total) +
+      '</strong></div>';
+    return rows;
+  }
+  function bookingRewardPointRow(points) {
+    // 用途：在 rental/booking 訂單明細顯示本筆預約裝備租借產生的回饋點數。
+    return (
+      '<div class="memberBookingDetailLine memberBookingDetailReward">' +
+      '<span>回饋點數</span><strong>+' +
+      Number(points || 0).toLocaleString('zh-TW') +
+      ' 點</strong></div>'
+    );
+  }
+  function bookingCostRow(label, value, danger) {
+    return (
+      '<div class="memberBookingDetailLine' +
+      (danger ? ' isDiscount' : '') +
+      '">' +
+      '<span>' +
+      html(label) +
+      '</span><strong>' +
+      (value < 0 ? '- ' + money(Math.abs(value)) : money(value)) +
+      '</strong></div>'
     );
   }
   // 用途：記錄 modal 開啟前的頁面位置，避免 focus 或鎖定滾動時把畫面帶到最上方。
@@ -1139,7 +1344,10 @@
     container.innerHTML = list
       .map(function (photo, index) {
         var src = typeof photo === 'string' ? photo : photo && photo.src;
-        var name = typeof photo === 'string' ? '評價圖片 ' + (index + 1) : photo.originalFileName || '評價圖片 ' + (index + 1);
+        var name =
+          typeof photo === 'string'
+            ? '評價圖片 ' + (index + 1)
+            : photo.originalFileName || '評價圖片 ' + (index + 1);
         return (
           '<img class="memberReviewPhotoThumb" src="' +
           html(src || '') +
