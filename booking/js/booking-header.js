@@ -251,6 +251,8 @@
 
     document.getElementById('cartPanelClear')?.addEventListener('click', function () {
       localStorage.removeItem('bookingCart');
+      // 同一分頁修改 localStorage 不會觸發 storage event，因此主動發送 booking cart 事件同步 badge。
+      window.dispatchEvent(new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'clear' } }));
       updateBookingBadge();
       renderCartPanel();
     });
@@ -354,6 +356,11 @@
     
     window.addEventListener('storage', function (event) {
       if (event.key === 'bookingCart') updateBookingBadge();
+    });
+
+    window.addEventListener('yurui:booking-cart-changed', function () {
+      updateBookingBadge();
+      if (document.getElementById('cartPanel')?.classList.contains('isOpen')) renderCartPanel();
     });
     
     window.addEventListener('yurui:auth-changed', function (event) {

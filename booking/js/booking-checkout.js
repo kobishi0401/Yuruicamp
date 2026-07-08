@@ -17,7 +17,15 @@ $(document).ready(function () {
     return;
   }
 
-  const bookingCart = JSON.parse(stored);
+  let bookingCart;
+  try {
+    bookingCart = normalizeBookingCart(JSON.parse(stored));
+  } catch (error) {
+    console.warn('[booking-checkout] bookingCart 解析失敗:', error);
+    showToast('購物車資料異常，請重新選擇。', 'warning');
+    window.location.href = './booking-cart.html';
+    return;
+  }
 
   renderCheckoutPage(bookingCart);
   initAccordionPanels();
@@ -36,7 +44,7 @@ function renderCheckoutPage(cart) {
   const info = cart.booking_info;
   const zones = cart.selected_zones;
   const rentals = cart.selected_rentals;
-  const summary = cart.summary;
+  const summary = recalcBookingSummary(cart);
 
   // 住宿資訊
   const zoneRowsHTML = zones
@@ -89,17 +97,31 @@ function renderCheckoutPage(cart) {
       <span>住宿費</span>
       <span>NT$${summary.zone_total.toLocaleString()}</span>
     </div>
-    <div class="bookingCostRow">
-      <span>裝備租借費</span>
-      <span>NT$${summary.rental_total.toLocaleString()}</span>
-    </div>
   `;
 
-  if (summary.applied_discount > 0) {
+  if (summary.rental_original_total > 0) {
+    breakdownHTML += `
+      <div class="bookingCostRow">
+        <span>裝備租借原價</span>
+        <span>NT$${summary.rental_original_total.toLocaleString()}</span>
+      </div>
+    `;
+  }
+
+  if (summary.rental_discount_total > 0) {
     breakdownHTML += `
       <div class="bookingCostRow bookingCostRowDiscount">
         <span><i class="bi bi-tag"></i> 租借折扣優惠</span>
-        <span>-NT$${summary.applied_discount.toLocaleString()}</span>
+        <span>-NT$${summary.rental_discount_total.toLocaleString()}</span>
+      </div>
+    `;
+  }
+
+  if (summary.rental_original_total > 0) {
+    breakdownHTML += `
+      <div class="bookingCostRow">
+        <span>裝備租借小計</span>
+        <span>NT$${summary.rental_total.toLocaleString()}</span>
       </div>
     `;
   }
@@ -184,6 +206,13 @@ function initAccordionPanels() {
   });
 }
 
+function openCheckoutPanel(panelId) {
+  const $panel = $('#' + panelId);
+  if (!$panel.length || $panel.hasClass('isOpen')) return;
+  $panel.addClass('isOpen');
+  $panel.find('> .checkoutPanelBodyBooking').slideDown(200);
+}
+
 // ============================================================
 // 付款方式互動
 // ============================================================
@@ -236,15 +265,15 @@ function handleCheckout(cart) {
   const email = $('#contactEmail').val().trim();
 
   if (!name) {
-    highlightError('#contactName', '請填寫訂購人姓名');
+    highlightError('#contactName', '請填寫訂購人姓名', 'panelContact');
     return;
   }
   if (!phone || !/^[0-9]{8,12}$/.test(phone)) {
-    highlightError('#contactPhone', '請填寫正確的手機號碼（8-12 位數字）');
+    highlightError('#contactPhone', '請填寫正確的手機號碼（8-12 位數字）', 'panelContact');
     return;
   }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    highlightError('#contactEmail', '請填寫有效的電子信箱格式');
+    highlightError('#contactEmail', '請填寫有效的電子信箱格式', 'panelContact');
     return;
   }
 
@@ -254,21 +283,24 @@ function handleCheckout(cart) {
     const cardExpiry = $('#cardExpiry').val().trim();
     const cardCvv = $('#cardCvv').val().trim();
     if (cardNum.length < 16) {
-      highlightError('#cardNumber', '請填寫完整的信用卡卡號（16 位）');
+      highlightError('#cardNumber', '請填寫完整的信用卡卡號（16 位）', 'panelPayment');
       return;
     }
     if (!/^\d{2} \/ \d{2}$/.test(cardExpiry)) {
-      highlightError('#cardExpiry', '請填寫正確的到期日格式（MM / YY）');
+      highlightError('#cardExpiry', '請填寫正確的到期日格式（MM / YY）', 'panelPayment');
       return;
     }
     if (cardCvv.length < 3) {
-      highlightError('#cardCvv', '請填寫 CVV（3-4 位數字）');
+      highlightError('#cardCvv', '請填寫 CVV（3-4 位數字）', 'panelPayment');
       return;
     }
   }
 
+  // 送出前再重算一次金額，避免使用者停留期間 localStorage 或數量狀態產生舊資料。
+  const normalizedCart = normalizeBookingCart(cart);
+
   const payload = {
-    ...cart,
+    ...normalizedCart,
     contact: { name, phone, email },
     payment_method: paymentMethod,
     submitted_at: new Date().toISOString(),
@@ -281,7 +313,7 @@ function handleCheckout(cart) {
   console.log('[booking-checkout] 預約送出資料:', payload);
 
   setTimeout(function () {
-    onCheckoutSuccess(cart, payload);
+    onCheckoutSuccess(normalizedCart, payload);
   }, 1000);
 }
 
@@ -295,6 +327,7 @@ function onCheckoutSuccess(cart, payload) {
   localStorage.setItem('lastBookingCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.setItem('lastCheckoutOrder', JSON.stringify(bookingOrder));
   localStorage.removeItem('bookingCart');
+  window.dispatchEvent(new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'checkout-complete' } }));
   console.log('[booking-checkout] bookingCart 已清除');
 
   const orderNum = String(bookingOrder.orderNumber || bookingOrder.id).replace(/^#/, '');
@@ -311,6 +344,67 @@ function syncBookingRentalOrder(order) {
   localStorage.setItem('mockOrders', JSON.stringify(orders));
 }
 
+function recalcBookingSummary(cart) {
+  var zones = cart.selected_zones || [];
+  var rentals = cart.selected_rentals || [];
+  var zoneTotal = zones.reduce(function (sum, zone) {
+    return sum + Number(zone.subtotal || 0);
+  }, 0);
+  var rentalOriginalTotal = rentals.reduce(function (sum, rental) {
+    return sum + getRentalOriginalUnitPrice(rental) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalDiscountTotal = rentals.reduce(function (sum, rental) {
+    return sum + getRentalUnitDiscount(rental) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalTotal = rentals.reduce(function (sum, rental) {
+    return sum + Number(rental.subtotal || 0);
+  }, 0);
+
+  cart.summary = {
+    zone_total: zoneTotal,
+    rental_original_total: rentalOriginalTotal,
+    rental_discount_total: rentalDiscountTotal,
+    rental_total: rentalTotal,
+    applied_discount: rentalDiscountTotal,
+    final_amount: zoneTotal + rentalTotal,
+  };
+  return cart.summary;
+}
+
+function normalizeBookingCart(cart) {
+  // 兼容舊 bookingCart：補齊單件原價/折扣/折扣後單價，讓 checkout 不依賴舊 summary。
+  (cart.selected_rentals || []).forEach(function (rental) {
+    var quantity = Math.max(Number(rental.quantity || 1), 1);
+    var subtotal = Number(rental.subtotal || 0);
+    var finalUnit = Number(rental.unit_final_price || 0);
+
+    if (!finalUnit && subtotal > 0) finalUnit = subtotal / quantity;
+    rental.unit_final_price = Math.max(finalUnit, 0);
+    rental.unit_discount = Math.max(Number(rental.unit_discount || 0), 0);
+    rental.unit_original_price = Math.max(
+      Number(rental.unit_original_price || 0),
+      rental.unit_final_price + rental.unit_discount
+    );
+    rental.subtotal = Math.round(rental.unit_final_price * quantity);
+  });
+  recalcBookingSummary(cart);
+  return cart;
+}
+
+function getRentalOriginalUnitPrice(rental) {
+  return Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental);
+}
+
+function getRentalUnitDiscount(rental) {
+  return Number(rental.unit_discount || 0);
+}
+
+function getRentalFinalUnitPrice(rental) {
+  var stored = Number(rental.unit_final_price || 0);
+  if (stored > 0) return stored;
+  return Number(rental.subtotal || 0) / Math.max(Number(rental.quantity || 1), 1);
+}
+
 function readBookingMockOrders() {
   try {
     const orders = JSON.parse(localStorage.getItem('mockOrders') || '[]');
@@ -323,13 +417,11 @@ function readBookingMockOrders() {
 
 function createBookingOrderSnapshot(cart, payload) {
   const info = cart.booking_info || {};
-  const summary = cart.summary || {};
+  const summary = recalcBookingSummary(cart);
   const rentals = cart.selected_rentals || [];
   const zones = cart.selected_zones || [];
   const now = new Date();
-  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const timePart = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
-  const orderNumber = 'RENT-' + datePart + timePart;
+  const orderNumber = createBookingOrderNumber(now);
 
   // 預約成功快照：共用 checkout-success.html 讀取 lastCheckoutOrder 顯示成立編號。
   return {
@@ -352,17 +444,17 @@ function createBookingOrderSnapshot(cart, payload) {
       }),
       ...rentals.map(function (rental) {
         return {
-          productId: rental.id || rental.rental_id || rental.name,
+          productId: rental.equipment_id || rental.id || rental.rental_id || rental.name,
           name: rental.name,
-          price: Number(rental.subtotal || 0) / Math.max(Number(rental.quantity || 1), 1),
+          price: getRentalFinalUnitPrice(rental),
           quantity: Number(rental.quantity || 1),
           image: rental.image || '',
           subtotal: Number(rental.subtotal || 0),
         };
       }),
     ],
-    subtotal: Number(summary.zone_total || 0) + Number(summary.rental_total || 0),
-    discount: Number(summary.applied_discount || 0),
+    subtotal: Number(summary.zone_total || 0) + Number(summary.rental_original_total || 0),
+    discount: Number(summary.rental_discount_total || summary.applied_discount || 0),
     total: Number(summary.final_amount || 0),
     status: 'confirmed',
     paymentStatus: 'paid',
@@ -375,6 +467,21 @@ function createBookingOrderSnapshot(cart, payload) {
     campgroundName: info.campground_name || '',
     region: info.region || '',
   };
+}
+
+function createBookingOrderNumber(date) {
+  var yyyy = date.getFullYear();
+  var mm = String(date.getMonth() + 1).padStart(2, '0');
+  var dd = String(date.getDate()).padStart(2, '0');
+  var datePart = String(yyyy) + mm + dd;
+  var prefix = '#RENT-' + datePart + '-';
+  var serial = readBookingMockOrders().reduce(function (max, order) {
+    var match = String(order && order.orderNumber || '').match(new RegExp('^#?RENT-' + datePart + '-(\\d{4})$'));
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0) + 1;
+
+  // 預約編號使用日期加流水號，避免同一分鐘建立多筆時撞號。
+  return prefix + String(serial).padStart(4, '0');
 }
 
 function getBookingCheckoutUserId() {
@@ -399,10 +506,14 @@ function readBookingCheckoutUser() {
 // 工具函式
 // ============================================================
 
-function highlightError(selector, message) {
+function highlightError(selector, message, panelId) {
   const $input = $(selector);
+  // 欄位藏在收合面板時，先展開面板再 focus，讓使用者知道錯誤在哪裡。
+  if (panelId) openCheckoutPanel(panelId);
   $input.addClass('isInvalid');
-  $input.focus();
+  setTimeout(function () {
+    $input.focus();
+  }, 220);
   setTimeout(() => $input.removeClass('isInvalid'), 2000);
   showToast(message, 'warning');
 }

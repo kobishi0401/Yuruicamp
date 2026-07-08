@@ -379,6 +379,8 @@ function saveToLocalStorageAndNext() {
     selected_rentals: [], // 下一頁（camp-rental）填入 / Filled by next page
     summary: {
       zone_total: subtotal,
+      rental_original_total: 0,
+      rental_discount_total: 0,
       rental_total: 0,
       applied_discount: 0,
       final_amount: subtotal,
@@ -387,6 +389,7 @@ function saveToLocalStorageAndNext() {
 
   // 寫入 LocalStorage / Write to LocalStorage
   localStorage.setItem('bookingCart', JSON.stringify(bookingCart));
+  window.dispatchEvent(new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'camp-save' } }));
 
   console.log('[camp-detail] 已寫入 LocalStorage bookingCart:', bookingCart);
 

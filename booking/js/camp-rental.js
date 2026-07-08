@@ -18,6 +18,14 @@ let bookingCart = null; // 從 LocalStorage 讀取的預約資料
 let allRentals = []; // 所有裝備原始資料（完整陣列）
 let selectedRentals = {}; // 已選裝備：{ equipment_id: { ...item, quantity } }
 
+function notifyBookingCartChanged(action) {
+  window.dispatchEvent(
+    new CustomEvent('yurui:booking-cart-changed', {
+      detail: { action: action || 'update' },
+    })
+  );
+}
+
 // ============================================================
 // 頁面初始化 / Page Initialization
 // ============================================================
@@ -325,15 +333,8 @@ function updateRentalCartUI() {
   let totalRental = 0;
 
   items.forEach(function (item) {
-    // 單筆小計 = (平日租金 × 平日天數 + 假日租金 × 假日天數 - 折扣) × 數量
-    // Item subtotal = (weekday × wdays + holiday × hdays - discount) × quantity
-    const perUnit = Math.max(
-      0,
-      item.pricing.price_per_day_weekday * info.weekday_count +
-        item.pricing.price_per_day_holiday * info.holiday_count -
-        item.pricing.discount
-    );
-    const subtotal = perUnit * item.quantity;
+    const price = buildRentalPriceSnapshot(item, info);
+    const subtotal = price.unit_final_price * item.quantity;
     totalRental += subtotal;
 
     // 右側租借清單列同樣使用 base + Booking variant，避免樣式綁在結構型 span selector。
@@ -356,6 +357,49 @@ function updateRentalCartUI() {
   });
 }
 
+function buildRentalPriceSnapshot(item, info) {
+  var original =
+    item.pricing.price_per_day_weekday * info.weekday_count +
+    item.pricing.price_per_day_holiday * info.holiday_count;
+  var discount = Number(item.pricing.discount || 0);
+  return {
+    unit_original_price: Math.max(0, original),
+    unit_discount: Math.max(0, Math.min(discount, original)),
+    unit_final_price: Math.max(0, original - discount),
+  };
+}
+
+function calculateBookingSummary(cart) {
+  var zones = cart.selected_zones || [];
+  var rentals = cart.selected_rentals || [];
+  var zoneTotal = zones.reduce(function (sum, zone) {
+    return sum + Number(zone.subtotal || 0);
+  }, 0);
+  var rentalOriginalTotal = rentals.reduce(function (sum, rental) {
+    return sum + getRentalOriginalUnitPrice(rental) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalDiscountTotal = rentals.reduce(function (sum, rental) {
+    return sum + Number(rental.unit_discount || 0) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalTotal = Math.max(rentalOriginalTotal - rentalDiscountTotal, 0);
+
+  return {
+    zone_total: zoneTotal,
+    rental_original_total: rentalOriginalTotal,
+    rental_discount_total: rentalDiscountTotal,
+    rental_total: rentalTotal,
+    // 相容舊欄位：後續既有頁面仍可讀取 applied_discount，但正式語意以 rental_discount_total 為準。
+    applied_discount: rentalDiscountTotal,
+    final_amount: zoneTotal + rentalTotal,
+  };
+}
+
+function getRentalOriginalUnitPrice(rental) {
+  var quantity = Math.max(Number(rental.quantity || 1), 1);
+  var fallbackFinalUnit = Number(rental.subtotal || 0) / quantity;
+  return Number(rental.unit_original_price || 0) || fallbackFinalUnit + Number(rental.unit_discount || 0);
+}
+
 // ============================================================
 // 儲存裝備選擇並前往結帳頁
 // ============================================================
@@ -368,40 +412,28 @@ function saveRentalsAndNext() {
   const info = bookingCart.booking_info;
   const items = Object.values(selectedRentals);
 
-  // 計算每件裝備的小計 / Calculate subtotal for each rental
+  // 金額契約：每件裝備保存原價、折扣、折扣後單價，背包頁調整數量時才能精準重算。
   const rentalList = items.map(function (item) {
-    const perUnit = Math.max(
-      0,
-      item.pricing.price_per_day_weekday * info.weekday_count +
-        item.pricing.price_per_day_holiday * info.holiday_count -
-        item.pricing.discount
-    );
+    const price = buildRentalPriceSnapshot(item, info);
     return {
       equipment_id: item.equipment_id,
       name: item.name,
+      image: item.image_url || item.image || '',
       quantity: item.quantity,
-      subtotal: perUnit * item.quantity,
+      unit_original_price: price.unit_original_price,
+      unit_discount: price.unit_discount,
+      unit_final_price: price.unit_final_price,
+      subtotal: price.unit_final_price * item.quantity,
     };
   });
 
-  const rentalTotal = rentalList.reduce((sum, r) => sum + r.subtotal, 0);
-  const zoneTotal = bookingCart.summary.zone_total;
-
-  // 計算總折扣（各件裝備的 discount × 數量加總）
-  // Total discount across all selected rentals
-  const totalDiscount = items.reduce((sum, i) => sum + i.pricing.discount * i.quantity, 0);
-
   // 更新 bookingCart / Update bookingCart
   bookingCart.selected_rentals = rentalList;
-  bookingCart.summary = {
-    zone_total: zoneTotal,
-    rental_total: rentalTotal,
-    applied_discount: totalDiscount,
-    final_amount: zoneTotal + rentalTotal,
-  };
+  bookingCart.summary = calculateBookingSummary(bookingCart);
 
   // 寫回 LocalStorage / Write back to LocalStorage
   localStorage.setItem('bookingCart', JSON.stringify(bookingCart));
+  notifyBookingCartChanged('rentals-save');
 
   console.log('[camp-rental] 已更新 LocalStorage bookingCart:', bookingCart);
 

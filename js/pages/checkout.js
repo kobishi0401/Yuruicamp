@@ -286,6 +286,24 @@ function _setPanelOpen(trigger, isOpen) {
   if (body) body.hidden = !isOpen;
 }
 
+function _openCheckoutPanelByField(fieldId) {
+  const panelMap = {
+    buyerName: 'panelBuyerBody',
+    buyerPhone: 'panelBuyerBody',
+    buyerEmail: 'panelBuyerBody',
+    deliveryAddress: 'panelShippingBody',
+    cardNumber: 'panelPaymentBody',
+    cardExpiry: 'panelPaymentBody',
+    cardCvv: 'panelPaymentBody',
+  };
+  const bodyId = panelMap[fieldId];
+  if (!bodyId) return;
+
+  const trigger = document.querySelector(`[aria-controls="${bodyId}"]`);
+  // 表單錯誤可能藏在收合面板內，先展開再 focus，避免使用者不知道哪裡需要修正。
+  if (trigger && trigger.getAttribute('aria-expanded') !== 'true') _setPanelOpen(trigger, true);
+}
+
 // Support Enter and Space on accordion triggers.
 function _handlePanelKeydown(event, trigger) {
   if (!['Enter', ' '].includes(event.key)) return;
@@ -522,7 +540,8 @@ function _validateCheckoutForm(data) {
   const failed = rules.find(rule => !rule.valid);
   if (!failed) return true;
   window.showToast(failed.message, 'warning');
-  document.getElementById(failed.field)?.focus();
+  _openCheckoutPanelByField(failed.field);
+  window.setTimeout(() => document.getElementById(failed.field)?.focus(), 50);
   return false;
 }
 
