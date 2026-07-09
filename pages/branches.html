@@ -72,7 +72,7 @@
         <div class="partnersSectionHeader">
           <p class="partnersEyebrow">Camp Partners</p>
           <h2 class="partnersTitle" id="partnersTitle">合作露營地與店家</h2>
-          <p class="partnersDescription">持 Yuruicamp 會員卡，前往合作夥伴可享專屬優惠。</p>
+          <p class="partnersDescription">精選可線上預約與裝備租借的合作露營地，點擊卡片即可查看詳情並前往預約。</p>
         </div>
         <div class="partnersGrid" id="partnersGrid" aria-live="polite"></div>
       </section>
@@ -86,8 +86,8 @@
       >
         <div class="modalContent partnerModalContent">
           <div class="partnerModalHeader">
-            <h2 class="partnerModalTitle" id="partnerModalTitle">合作店家詳情</h2>
-            <button class="modalClose partnerModalClose" type="button" aria-label="關閉合作店家詳情視窗">
+            <h2 class="partnerModalTitle" id="partnerModalTitle">合作露營地詳情</h2>
+            <button class="modalClose partnerModalClose" type="button" aria-label="關閉合作露營地詳情視窗">
               <span aria-hidden="true">×</span>
             </button>
           </div>
@@ -97,15 +97,18 @@
             </div>
             <div class="partnerModalTags" id="partnerModalTags"></div>
             <p class="partnerModalDescription" id="partnerModalDesc"></p>
-            <div class="partnerModalCoupon">
-              <span class="partnerModalCouponLabel">Yuruicamp 會員專屬優惠</span>
-              <span class="partnerModalCouponValue" id="partnerModalDiscount"></span>
-            </div>
-            <div class="partnerModalActions">
-              <button class="partnerModalAction" type="button" data-action="use-partner-discount">
-                使用此優惠
-              </button>
-            </div>
+            <!-- 地區資訊 + 前往預約連結（整塊可點） / Region meta + booking link -->
+            <a
+              class="partnerModalBookingLink"
+              id="partnerModalBookingLink"
+              href="../booking/pages/camp-search.html"
+            >
+              <span class="partnerModalBookingMeta">
+                <span class="partnerModalBookingLabel">地區</span>
+                <span class="partnerModalBookingRegion" id="partnerModalRegion">—</span>
+              </span>
+              <span class="partnerModalBookingCta">前往預約</span>
+            </a>
           </div>
         </div>
       </div>
@@ -116,6 +119,7 @@
     <script src="../js/storage.js" defer></script>
     <script src="../js/state.js" defer></script>
     <script src="../js/formatters.js" defer></script>
+  <script src="../js/data-paths.js" defer></script>
     <script src="../js/validators.js" defer></script>
     <script src="../js/cart-service.js" defer></script>
     <script src="../js/api-mock.js" defer></script>

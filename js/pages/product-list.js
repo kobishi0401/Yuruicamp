@@ -88,50 +88,100 @@ function _shuffleProducts(products) {
   return shuffled;
 }
 
-// Select ad carousel products by matching saved surveyTags with products.interest_tags.
+// Select ad carousel products by matching saved surveyTags with products.interestTags.
 function _selectAdCarouselProducts() {
   const selectedTags = new Set(_getSavedSurveyTags());
   const matchedProducts =
     selectedTags.size === 0
       ? []
       : _state.allProducts.filter((product) => {
-          const interestTags = Array.isArray(product.interest_tags) ? product.interest_tags : [];
+          const interestTags = Array.isArray(product.interestTags) ? product.interestTags : [];
           return interestTags.some((tag) => selectedTags.has(tag));
         });
-  const fallbackProducts = _state.allProducts.filter((product) => product.isNew);
+  const fallbackProducts = _state.allProducts.slice(0, 12);
   return _shuffleProducts(matchedProducts.length > 0 ? matchedProducts : fallbackProducts);
+}
+
+// Build compact spec option chips for product cards.
+function _buildCardSpecChips(product, defaultSel) {
+  const colors = product.colors || [];
+  const sizes = product.sizes || [];
+  const parts = [];
+
+  if (colors.length) {
+    parts.push(`
+      <div class="productCardSpecGroup" data-spec-type="color">
+        ${colors.map((value, index) => {
+          const active = value === defaultSel.color ? ' isSelected' : '';
+          return `<button type="button" class="productCardSpecChip${active}" data-spec-type="color" data-spec-value="${value}">${value}</button>`;
+        }).join('')}
+      </div>
+    `);
+  }
+  if (sizes.length) {
+    parts.push(`
+      <div class="productCardSpecGroup" data-spec-type="size">
+        ${sizes.map((value) => {
+          const active = value === defaultSel.size ? ' isSelected' : '';
+          return `<button type="button" class="productCardSpecChip${active}" data-spec-type="size" data-spec-value="${value}">${value}</button>`;
+        }).join('')}
+      </div>
+    `);
+  }
+
+  // 多規格時才顯示 preview，避免單一規格與 chip 重複 / Preview only when multiple spec options
+  const hasMultipleSpecs = colors.length > 1 || sizes.length > 1;
+  const preview = hasMultipleSpecs && defaultSel.specLabel
+    ? `<p class="productCardSpecPreview">${defaultSel.specLabel}</p>`
+    : '';
+  return parts.length ? `<div class="productCardSpecs">${parts.join('')}${preview}</div>` : preview;
+}
+
+// Read selected specs from card dataset.
+function _readCardSpecSelection(card) {
+  return {
+    color: card.dataset.selectedColor || '',
+    size: card.dataset.selectedSize || '',
+  };
 }
 
 // Build product card HTML for the products grid.
 function _buildCard(product) {
-  const discount = _calcDiscount(product.originalPrice, product.price);
-  const badgeHTML = product.isNew
-    ? '<span class="productCardBadge badgeNew">NEW</span>'
-    : product.isBestSeller
-      ? '<span class="productCardBadge badgeHot">\u71b1\u92b7</span>'
-      : '';
   const priceFormatted = product.price.toLocaleString('zh-TW');
-  const originalPrice = product.originalPrice ? product.originalPrice.toLocaleString('zh-TW') : null;
+  const reviewCount = product.reviewCount ?? product.reviews ?? 0;
+  const starRating = Number(product.rating) || 0;
+  const ratingText = product.ratingDisplay ?? starRating.toFixed(1);
+  const defaultSel = window.getDefaultCardSpecSelection
+    ? window.getDefaultCardSpecSelection(product)
+    : { color: '', size: '', specLabel: '' };
+
+  // Multi-image gallery: Swiper swipe + GLightbox zoom / 多圖輪播 + 點擊放大
+  const images = window.getItemImages ? window.getItemImages(product) : [product.image].filter(Boolean);
+  const imageHtml = window.buildCardGalleryHtml
+    ? window.buildCardGalleryHtml({
+        images,
+        alt: product.name,
+        galleryId: `product-${product.id}`,
+        wrapClass: 'productCardImageWrap',
+        fallbackSrc: `https://placehold.co/400x300/f2f2f2/999?text=${encodeURIComponent(product.name)}`,
+      })
+    : `<div class="productCardImageWrap"><img src="${product.image}" alt="${product.name}" loading="lazy"></div>`;
 
   return `
-    <div class="productCard" data-product-id="${product.id}" role="article">
-      <div class="productCardImageWrap">
-        <img src="${product.image}" alt="${product.name}" loading="lazy" onerror="this.src='https://placehold.co/400x300/f2f2f2/999?text=${encodeURIComponent(product.name)}'">
-        ${badgeHTML}
-      </div>
+    <div class="productCard" data-product-id="${product.id}" data-selected-color="${defaultSel.color}" data-selected-size="${defaultSel.size}" role="article">
+      ${imageHtml}
       <div class="productCardBody">
         <p class="productCardBrand">${product.brand}</p>
         <h3 class="productCardName">${product.name}</h3>
+        ${_buildCardSpecChips(product, defaultSel)}
         <div class="productCardRating">
-          ${_renderStars(product.rating)}
-          <span>${product.rating}</span>
-          <span>(${product.reviews})</span>
+          ${_renderStars(starRating)}
+          <span>${ratingText}</span>
+          <span>(${reviewCount})</span>
         </div>
         <div class="productCardPrice">
           <span class="priceCurrent">NT$ ${priceFormatted}</span>
-          ${originalPrice ? `<span class="priceOriginal">NT$ ${originalPrice}</span>` : ''}
         </div>
-        ${discount ? `<span class="priceDiscount">${discount}</span>` : ''}
         <button class="productCardAddBtn" data-product-id="${product.id}">\u52a0\u5165\u8cfc\u7269\u8eca</button>
       </div>
     </div>
@@ -164,6 +214,8 @@ function _renderGrid() {
   grid.innerHTML = paginated.map((product) => _buildCard(product)).join('');
   _renderPagination();
   _bindCardEvents();
+  // Init after cloneNode in _bindCardEvents / 必須在 cloneNode 之後再初始化 Swiper
+  window.initCardGalleries?.(document.getElementById('productsGrid') || document);
 }
 
 // Return pagination item descriptors for the current page window.
@@ -245,7 +297,7 @@ function _filterBySelectedOptions(products) {
       product.category,
       product.description,
       ...(Array.isArray(product.tags) ? product.tags : []),
-      ...(Array.isArray(product.interest_tags) ? product.interest_tags : []),
+      ...(Array.isArray(product.interestTags) ? product.interestTags : []),
     ]
       .join(' ')
       .toLowerCase();
@@ -254,7 +306,11 @@ function _filterBySelectedOptions(products) {
     const matchBrand = filters.brands.length === 0 || filters.brands.includes(product.brand);
     const matchMin = filters.minPrice === null || product.price >= filters.minPrice;
     const matchMax = filters.maxPrice === null || product.price <= filters.maxPrice;
-    const matchTag = !filters.tag || (filters.tag === 'new' ? product.isNew : product.isBestSeller);
+    const matchTag = !filters.tag || (
+      filters.tag === 'new'
+        ? _state.allProducts.slice(0, 12).some((p) => p.id === product.id)
+        : product.salesCount > 0
+    );
     return matchKeyword && matchCategory && matchBrand && matchMin && matchMax && matchTag;
   });
 }
@@ -266,7 +322,7 @@ function _sortProducts(products) {
     'price-asc': (a, b) => a.price - b.price,
     'price-desc': (a, b) => b.price - a.price,
     rating: (a, b) => b.rating - a.rating,
-    reviews: (a, b) => b.reviews - a.reviews,
+    reviews: (a, b) => (b.reviewCount ?? b.reviews ?? 0) - (a.reviewCount ?? a.reviews ?? 0),
   };
   if (sorters[_state.sortBy]) sorted.sort(sorters[_state.sortBy]);
   return sorted;
@@ -459,9 +515,50 @@ function _bindCardEvents() {
   const newGrid = grid.cloneNode(true);
   grid.parentNode.replaceChild(newGrid, grid);
   newGrid.addEventListener('click', async (event) => {
+    // Gallery nav / lightbox should not open product detail / 切圖或放大時不要進詳情
+    if (window.isCardGalleryInteractiveTarget?.(event.target)) {
+      event.stopPropagation();
+      return;
+    }
+
+    const specChip = event.target.closest('.productCardSpecChip');
+    if (specChip) {
+      event.stopPropagation();
+      const card = specChip.closest('.productCard');
+      const group = specChip.closest('.productCardSpecGroup');
+      if (!card || !group) return;
+      group.querySelectorAll('.productCardSpecChip').forEach((chip) => chip.classList.remove('isSelected'));
+      specChip.classList.add('isSelected');
+      const type = specChip.dataset.specType;
+      if (type === 'color') card.dataset.selectedColor = specChip.dataset.specValue || '';
+      if (type === 'size') card.dataset.selectedSize = specChip.dataset.specValue || '';
+      const product = _state.allProducts.find((item) => item.id === card.dataset.productId);
+      if (product && window.findProductVariant) {
+        const specs = _readCardSpecSelection(card);
+        const variant = window.findProductVariant(product, specs.color, specs.size);
+        const label = window.buildVariantLabel ? window.buildVariantLabel(variant) : '';
+        const colors = product.colors || [];
+        const sizes = product.sizes || [];
+        const hasMultipleSpecs = colors.length > 1 || sizes.length > 1;
+        let preview = card.querySelector('.productCardSpecPreview');
+        if (hasMultipleSpecs) {
+          if (!preview && label) {
+            preview = document.createElement('p');
+            preview.className = 'productCardSpecPreview';
+            card.querySelector('.productCardSpecs')?.appendChild(preview);
+          }
+          if (preview) preview.textContent = label;
+        } else if (preview) {
+          preview.remove();
+        }
+      }
+      return;
+    }
+
     if (event.target.classList.contains('productCardAddBtn')) {
       event.stopPropagation();
-      await _handleAddToCart(event.target.dataset.productId);
+      const card = event.target.closest('.productCard');
+      await _handleAddToCart(event.target.dataset.productId, card);
       return;
     }
     const card = event.target.closest('.productCard');
@@ -470,21 +567,20 @@ function _bindCardEvents() {
 }
 
 // Add the selected product to cart and animate the cart badge.
-async function _handleAddToCart(productId) {
+async function _handleAddToCart(productId, cardEl) {
   try {
     const product = _state.allProducts.find((item) => item.id === productId);
     if (!product) return;
 
-    window.addToCart(
-      {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        brand: product.brand,
-      },
-      1
-    );
+    const specs = cardEl ? _readCardSpecSelection(cardEl) : { color: '', size: '' };
+    const variant = window.findProductVariant
+      ? window.findProductVariant(product, specs.color, specs.size)
+      : window.getProductVariants(product)[0];
+    const line = window.buildCartLineFromProduct
+      ? window.buildCartLineFromProduct(product, variant)
+      : { id: product.id, name: product.name, price: product.price, image: product.image, brand: product.brand };
+
+    window.addToCart(line, 1);
 
     const badge = document.querySelector('.cartBadge');
     if (badge) {
@@ -502,7 +598,7 @@ async function _handleAddToCart(productId) {
 
 // Build one ad carousel slide.
 function _buildAdCarouselSlide(product) {
-  const badge = product.isNew ? 'NEW' : '\u63a8\u85a6';
+  const badge = product.interestTags?.length ? '推薦' : '';
   return `
     <div class="adCarouselSlide" data-product-id="${product.id}">
       <div class="adCarouselContent">

@@ -186,36 +186,6 @@ button[data-permission-disabled="true"] {
   color: #ffffff;
 }
 
-/* ===== 商品庫存數量控制 ===== */
-.admin-stock-control {
-  width: 100px;
-  min-width: 100px;
-}
-
-.admin-stock-control .btn {
-  width: 24px;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.admin-stock-control .stock-input {
-  min-width: 40px;
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-}
-
-.admin-stock-control .stock-input.stock-input-increase {
-  background-color: #d1e7dd;
-  border-color: #198754;
-  color: #0f5132;
-}
-
-.admin-stock-control .stock-input.stock-input-decrease {
-  background-color: #f8d7da;
-  border-color: #dc3545;
-  color: #842029;
-}
-
 /* ===== 租借商品營地欄位 ===== */
 .rental-camp-row .rental-camp-quantity-input {
   flex: 0 0 80px;
@@ -473,6 +443,25 @@ button[data-permission-disabled="true"] {
   grid-column: 1 / -1;
 }
 
+/* 露營喜好：唯讀 chip（後台不可編輯，樣式對齊會員中心已選標籤） */
+.customer-pref-tag {
+  display: inline-block;
+  margin: 0 0.25rem 0.25rem 0;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  background: #e8f0e8;
+  border: 1px solid #b8cdb8;
+  color: #244d4d;
+  white-space: nowrap;
+}
+
+.preferences-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+}
+
 .customer-mobile-detail {
   background: #f0f2f5;
   border-bottom: 1px solid #eee;
@@ -645,12 +634,14 @@ button[data-permission-disabled="true"] {
 }
 
 .sticky-col-stock-edit {
-  width: 72px;
-  min-width: 72px;
+  width: 48px;
+  min-width: 48px;
   text-align: center;
   font-size: 0.72rem;
   line-height: 1.2;
   white-space: nowrap;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
 
@@ -667,7 +658,7 @@ button[data-permission-disabled="true"] {
 
 .sticky-col-stock-edit .stock-edit-actions {
   display: inline-flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
@@ -699,12 +690,22 @@ button[data-permission-disabled="true"] {
 .sticky-col-img          { left: 0;     width: 28px;  min-width: 28px; }
 .sticky-col-name         { left: 28px;  width: 120px; min-width: 120px; }
 .sticky-col-category     { left: 148px; width: 80px;  min-width: 80px; }
-.sticky-col-action       { left: 228px; width: 64px;  min-width: 64px; }
-.sticky-col-total-stock  { left: 292px; width: 72px; min-width: 72px; text-align: center; }
+.sticky-col-brand        { left: 228px; width: 72px;  min-width: 72px; }
+.sticky-col-action       { left: 300px; width: 64px;  min-width: 64px; }
+.sticky-col-total-stock  { left: 364px; width: 80px; min-width: 80px; text-align: center; }
 
-/* 商店表已移除「操作」欄，總庫存 sticky 左移對齊分類欄後方（28 + 120 + 80 = 228） */
+/* 品牌欄文字過長時省略 / Truncate long brand names in narrow column */
+.sticky-col-brand .product-brand-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* 商店表已移除「操作」欄，總庫存 sticky 對齊品牌欄後方（28 + 120 + 80 + 72 = 300） */
 #productsTable .sticky-col-total-stock {
-  left: 228px;
+  left: 300px;
 }
 
 /* 商品表分類篩選 dropdown 需高於 sticky 表頭 */
@@ -736,19 +737,6 @@ button[data-permission-disabled="true"] {
   padding-right: 0.35rem;
 }
 
-/* 最低庫存模式：步進器寬度限制在欄寬內 / Min-stock stepper fits column width */
-.admin-data-table.product-table-fixed .admin-stock-control {
-  width: 100%;
-  min-width: 0;
-  max-width: 72px;
-  margin: 0 auto;
-}
-
-.admin-data-table.product-table-fixed .admin-stock-control .stock-input {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 /* 商品表 sticky 欄：縮小左右 padding，避免 admin-data-table 大 padding 擠爆窄欄 */
 .admin-data-table.product-table-fixed .sticky-col {
   padding-left: 0.5rem;
@@ -770,7 +758,6 @@ button[data-permission-disabled="true"] {
    數字以 text-danger 顯示紅色；編輯模式 input 保留橘色邊框提示。
    ──────────────────────────────────────────────────────────────────────────── */
 
-.stock-cell-below-min .admin-stock-control .stock-input,
 .stock-cell-below-min .stock-input-inline {
   border-color: #fd7e14;
   background-color: #fff3e0;
@@ -785,13 +772,6 @@ button[data-permission-disabled="true"] {
 #productsTable thead.min-stock-mode-header,
 #rentalProductsTable thead.min-stock-mode-header {
   background-color: #fff3cd !important;  /* Bootstrap warning 淺黃色 */
-}
-
-/* 最低庫存模式下步進器按鈕改為黃色外框，與正常模式視覺區分 */
-/* Min-stock mode steppers use yellow outline to distinguish from normal mode */
-.min-stock-mode .admin-stock-control .stock-step-btn {
-  border-color: #ffc107;
-  color: #856404;
 }
 
 /* ===== 商品名稱截斷（超過欄寬顯示 ...，hover 透過 title 屬性顯示完整名稱） ===== */
@@ -1051,25 +1031,57 @@ button[data-permission-disabled="true"] {
   gap: 0.5rem;
 }
 
-.product-image-preview-main {
-  display: block;
-  max-width: 100%;
-  max-height: 7.5rem;
-  object-fit: contain;
-  border-radius: 0.25rem;
-}
-
 .product-image-preview-thumb {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
   object-fit: cover;
   border-radius: 0.375rem;
   border: 2px solid #dee2e6;
+  display: block;
 }
 
 .product-image-preview-item {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
   line-height: 0;
+  vertical-align: top;
+}
+
+.product-image-preview-item.is-main .product-image-preview-thumb {
+  border-color: var(--admin-brand-accent, #0d6efd);
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+}
+
+.product-image-main-badge {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  z-index: 2;
+  font-size: 0.65rem;
+}
+
+.product-image-drag-handle {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  line-height: 1;
+  border-radius: 999px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.product-image-drag-handle:active {
+  cursor: grabbing;
+}
+
+.product-image-sortable-ghost {
+  opacity: 0.45;
+}
+
+.product-image-sortable {
+  width: 100%;
 }
 
 .product-image-preview-item .product-glightbox {
@@ -1111,6 +1123,32 @@ button[data-permission-disabled="true"] {
   z-index: 2000 !important;
 }
 
+/* GLightbox：放大預覽時整圖等比例縮放至視窗內（避免出現捲軸） */
+.glightbox-container .ginner-container,
+.glightbox-container .gslide-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+.glightbox-container .gslide-image img {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 48px) !important;
+  max-height: calc(100vh - 48px) !important;
+  object-fit: contain !important;
+}
+
+/* blob 等若仍被誤判為 external 時的保險 / Fallback if slide is external */
+.glightbox-container .gslide-external {
+  overflow: hidden !important;
+  max-height: calc(100vh - 48px) !important;
+}
+
 /* 隱藏 GLightbox 下方標題/說明白底區塊 */
 .glightbox-container .gslide-description,
 .glightbox-container .gdesc {
@@ -1121,4 +1159,359 @@ button[data-permission-disabled="true"] {
 .note-editor .dropdown-menu,
 .note-popover {
   z-index: 1060;
+}
+
+/* ── 規格庫存卡片（Variant Stock Cards）──────────────────────────────────── */
+.variant-card-grid > .variant-card-col {
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+  /* 每欄高度獨立，不收合同列另一張卡片牽制 / Independent column height per card */
+  align-self: flex-start;
+}
+
+.variant-stock-card,
+.rental-variant-stock-card {
+  background: #fff;
+  border-color: #dee2e6 !important;
+}
+
+.variant-stock-card__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.variant-card-index {
+  font-size: 0.68rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.variant-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-product-variant-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.variant-stock-card .form-label-sm,
+.rental-variant-stock-card .form-label-sm {
+  font-size: 0.72rem;
+  margin-bottom: 0.15rem;
+}
+
+.variant-branch-grid .form-control,
+.variant-camp-grid .form-control,
+.variant-branch-list .variant-branch-qty-input,
+.variant-camp-list .variant-camp-qty-input {
+  text-align: center;
+}
+
+.variant-stock-card .input-group-text.branch-label,
+.rental-variant-stock-card .input-group-text.camp-label {
+  min-width: 4.5rem;
+  max-width: 4.5rem;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variant-branch-list .variant-branch-qty-input,
+.variant-camp-list .variant-camp-qty-input {
+  max-width: 3.5rem;
+  flex: 0 0 3.5rem;
+  padding: 0.2rem 0.25rem;
+}
+
+.variant-stock-card .input-group-sm > .form-control,
+.rental-variant-stock-card .input-group-sm > .form-control {
+  min-height: calc(1.5em + 0.4rem);
+}
+
+.variant-qty-input-narrow {
+  max-width: 5rem;
+}
+
+.variant-stock-split .branch-label,
+.variant-stock-split .camp-label {
+  min-width: 4.5rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.variant-stock-split .variant-spec-col .form-label-sm {
+  margin-bottom: 0.2rem;
+}
+
+.rental-variant-label-display {
+  min-height: 1.75rem;
+  padding-top: 0.15rem;
+}
+
+.rental-variant-stock-card .variant-camp-list {
+  max-width: 100%;
+}
+
+.min-stock-mode .variant-total-cell {
+  justify-content: center;
+}
+
+.variant-stock-card-collapsed .variant-stock-card__body,
+.rental-variant-stock-card-collapsed .rental-variant-stock-card__body {
+  display: none !important;
+}
+
+/* 收合後只留 toolbar，視覺更緊湊 / Collapsed: toolbar-only compact look */
+.variant-stock-card-collapsed .variant-stock-card__toolbar,
+.rental-variant-stock-card-collapsed .variant-stock-card__toolbar {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.variant-total-summary-bar {
+  background: #f0f7f4;
+  border: 1px solid #d8ebe3;
+}
+
+#editProductTotalStock {
+  color: var(--admin-brand-accent, #2d6a4f);
+}
+
+/* ── 列表規格展開子列（Variant detail rows）──────────────────────────────── */
+tr.variant-detail-row td {
+  background: #f8f9fa;
+  border-top: none;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  vertical-align: middle;
+}
+
+tr.variant-detail-row + tr.variant-detail-row td {
+  padding-top: 0.1rem;
+}
+
+.variant-detail-label {
+  text-align: left !important;
+  padding-left: 0.35rem !important;
+  font-size: 0.78rem;
+  color: #495057;
+}
+
+.variant-detail-row .variant-name-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: #495057;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.variant-detail-row .variant-total-sum {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+
+.variant-detail-qty-cell .variant-qty-display {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+
+.variant-expand-chip {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #f8f9fa;
+  font-size: 0.65rem;
+  line-height: 1.3;
+  color: #6c757d;
+  cursor: pointer;
+}
+
+.variant-expand-chip:hover {
+  border-color: var(--admin-brand-accent, #2d6a4f);
+  color: var(--admin-brand-accent, #2d6a4f);
+  background: #f0f7f4;
+}
+
+/* 總庫存儲存格：數字永遠置中，展開徽章固定右側不推擠數字
+   Total stock cell: number stays centered; expand chip pinned right */
+.variant-total-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 1.5rem;
+}
+
+.total-stock-value {
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  text-align: center;
+}
+
+.variant-expand-chip i {
+  font-size: 0.55rem;
+}
+
+tr.variant-rows-expanded > td {
+  border-bottom: none;
+}
+
+/* ==========================================================
+   預約排程面板 — Zone 可用性月曆
+   Booking calendar — zone availability grid
+   ========================================================== */
+
+.booking-calendar-card .bc-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.bc-legend-dot.bc-status-available { background: #d8f3dc; border: 1px solid #95d5b2; }
+.bc-legend-dot.bc-status-low { background: #fff3cd; border: 1px solid #ffc107; }
+.bc-legend-dot.bc-status-full { background: #f8d7da; border: 1px solid #f5c2c7; }
+.bc-legend-dot.bc-status-closed { background: #e2d9f3; border: 1px solid #c5b3e6; }
+.bc-legend-dot.bc-status-out_of_window { background: #e9ecef; border: 1px solid #ced4da; }
+
+.bc-calendar-grid {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bc-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.bc-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+  padding: 0.5rem 0.25rem;
+}
+
+.bc-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.bc-day-cell {
+  min-height: 88px;
+  border: none;
+  border-right: 1px solid #f1f3f5;
+  border-bottom: 1px solid #f1f3f5;
+  background: #fff;
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: box-shadow 0.15s ease;
+}
+
+.bc-day-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.bc-day-cell--empty {
+  background: #fafbfc;
+  min-height: 88px;
+}
+
+.bc-day-cell.isInteractive {
+  cursor: pointer;
+}
+
+.bc-day-cell.isInteractive:hover {
+  box-shadow: inset 0 0 0 2px var(--admin-brand-accent, #2d6a4f);
+}
+
+.bc-day-cell.isSelected {
+  box-shadow: inset 0 0 0 2px var(--admin-brand-accent, #2d6a4f);
+}
+
+.bc-day-cell:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.bc-day-cell.bc-status-available { background: #f1faf4; }
+.bc-day-cell.bc-status-low { background: #fffbeb; }
+.bc-day-cell.bc-status-full { background: #fff5f5; }
+.bc-day-cell.bc-status-closed { background: #f3effa; color: #5a3d8a; }
+.bc-day-cell.bc-status-out_of_window { background: #f8f9fa; color: #adb5bd; }
+
+.bc-day-num {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #212529;
+}
+
+.bc-day-remain {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: #495057;
+}
+
+.bc-day-status {
+  font-size: 0.68rem;
+  color: #6c757d;
+}
+
+/* 分析報表：趨勢圖總額與上期比較 */
+.analytics-line-total {
+  line-height: 1.3;
+}
+.analytics-total-delta.is-up {
+  color: #198754;
+}
+.analytics-total-delta.is-down {
+  color: #dc3545;
+}
+.analytics-total-delta.is-flat {
+  color: #6c757d;
+}
+
+@media (max-width: 767.98px) {
+  .bc-day-cell {
+    min-height: 72px;
+    padding: 0.25rem;
+  }
+
+  .bc-day-remain,
+  .bc-day-status {
+    font-size: 0.62rem;
+  }
 }

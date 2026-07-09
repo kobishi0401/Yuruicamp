@@ -122,7 +122,22 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--yc-sage-action);
+  margin-bottom: 0.25rem;
+}
+
+.rentalItemCardSpecBooking,
+.rentalCartItemSpecBooking {
+  display: block;
+  color: var(--yc-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
   margin-bottom: 0.4rem;
+}
+
+.rentalCartItemTextBooking {
+  display: grid;
+  gap: 0.15rem;
+  flex: 1;
 }
 
 .rentalItemCardTagBooking {

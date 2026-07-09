@@ -4,19 +4,77 @@ let checkoutCouponCatalogPromise = null;
 let checkoutCouponCatalog = [];
 let appliedCheckoutCouponCodes = [];
 let selectedShippingMethod = 'delivery';
+let checkoutShippingUi = null;
 
-const DEFAULT_CHECKOUT_USER_ID = 'user-001';
-const STORE_PICKUP_ADDRESS = '\u53f0\u5317\u9580\u5e02';
+const DEFAULT_CHECKOUT_USER_ID = 'U001';
+const STORE_PICKUP_ADDRESS = '台北門市';
 const CHECKOUT_MOCK_ORDERS_STORAGE_KEY = 'mockOrders';
 const CHECKOUT_LAST_ORDER_STORAGE_KEY = 'lastCheckoutOrder';
 
+// Load shared shipping address modal partial.
+async function _loadShippingAddressModal() {
+  const mount = document.getElementById('shippingAddressModalMount');
+  if (!mount || mount.dataset.loaded === 'true') return;
+  try {
+    const response = await fetch('../components/shipping-address-modal.partial', { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    mount.innerHTML = await response.text();
+    mount.dataset.loaded = 'true';
+    window.YuruiShippingAddressUI?.bindModal?.();
+  } catch (error) {
+    console.error('Failed to load shipping address modal', error);
+  }
+}
+
+// Initialize checkout shipping address display + modal.
+function _initCheckoutShippingAddress() {
+  if (!window.YuruiShippingAddressUI || !window.YuruiShippingAddress) return;
+
+  const user = window.AppState?.currentUser;
+  let initial = window.YuruiShippingAddress.empty();
+  if (user) {
+    initial = window.YuruiShippingAddress.resolve(user, _readLocalProfile());
+  }
+
+  checkoutShippingUi = window.YuruiShippingAddressUI.init({
+    displayEl: document.getElementById('checkoutShippingAddressDisplay'),
+    editBtn: document.getElementById('checkoutShippingAddressEditBtn'),
+    initialAddress: initial,
+    persist: Boolean(window.AppState?.isLoggedIn && user?.id),
+    getAddress: () => window.YuruiShippingAddressUI.getAddress(),
+    onSave: (addr) => {
+      if (window.AppState?.currentUser) {
+        window.AppState.currentUser.shippingAddress = addr;
+      }
+    },
+  });
+}
+
+function _readLocalProfile() {
+  try {
+    return JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function _getCheckoutShippingAddress() {
+  if (window.YuruiShippingAddressUI) {
+    return window.YuruiShippingAddressUI.getAddress();
+  }
+  return window.YuruiShippingAddress?.empty() || null;
+}
+
 // Initialize checkout page.
-window.initCheckoutPage = () => {
+window.initCheckoutPage = async () => {
   if (!window.AppState.cart || window.AppState.cart.length === 0) {
-    window.showToast('\u8cfc\u7269\u8eca\u662f\u7a7a\u7684\uff0c\u8acb\u5148\u9078\u8cfc\u5546\u54c1', 'warning');
+    window.showToast('購物車是空的，請先選購商品', 'warning');
     window.setTimeout(() => { window.location.href = 'products.html'; }, 1500);
     return;
   }
+
+  await _loadShippingAddressModal();
+  _initCheckoutShippingAddress();
 
   _renderCheckoutItems();
   _updateCheckoutSummary();
@@ -27,6 +85,10 @@ window.initCheckoutPage = () => {
   _initConfirmOrderBtn();
   _initCheckoutCoupon();
   _initSharedComponents();
+
+  if (window.AppState?.isLoggedIn && window.AppState?.currentUser) {
+    _fillBuyerFields(window.AppState.currentUser);
+  }
 };
 
 // Initialize shared header, modal, cart, and personalization components.
@@ -60,8 +122,7 @@ function _getSelectedPaymentCode() {
 
 // Return payment status for the selected payment method.
 function _getCheckoutPaymentStatus() {
-  // 貨到付款尚未實際收款，不能標示 paid；所有付款方式在 mock 建單時先以 unpaid 表示待收款。
-  return 'unpaid';
+  return _getSelectedPaymentCode() === 'cod' ? 'cod' : 'paid';
 }
 
 // Build coupon snapshots for the order payload.
@@ -101,95 +162,8 @@ function _getCheckoutTodayString() {
 
 // Get the current checkout user id.
 function _getCheckoutUserId() {
-  const currentUser = _getCheckoutCurrentUser() || {};
-  return currentUser.id || currentUser.userId || DEFAULT_CHECKOUT_USER_ID;
-}
-
-// Return coupon validation options tied to the current logged-in member.
-function _getCheckoutCouponValidationOptions() {
-  const user = _getCheckoutCurrentUser();
-  return { userId: user && (user.id || user.userId) ? user.id || user.userId : '' };
-}
-
-// Read the current authenticated user through the shared auth service.
-function _getCheckoutCurrentUser() {
-  if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') return window.YuruiAuth.getUser();
-  if (window.AppState?.isLoggedIn && window.AppState.currentUser) return window.AppState.currentUser;
-  return null;
-}
-
-// Read locally stored mock orders.
-function _readCheckoutStoredOrders() {
-  try {
-    const orders = JSON.parse(localStorage.getItem(CHECKOUT_MOCK_ORDERS_STORAGE_KEY) || '[]');
-    return Array.isArray(orders) ? orders : [];
-  } catch (error) {
-    console.warn('Failed to read stored checkout orders', error);
-    return [];
-  }
-}
-
-// Persist locally stored mock orders.
-function _writeCheckoutStoredOrders(orders) {
-  localStorage.setItem(CHECKOUT_MOCK_ORDERS_STORAGE_KEY, JSON.stringify(Array.isArray(orders) ? orders : []));
-}
-
-// Extract a numeric serial from an order id or number.
-function _getCheckoutOrderSerial(order) {
-  const idMatch = String(order?.id || '').match(/^ord-(\d+)$/);
-  if (idMatch) return Number(idMatch[1]);
-  const numberMatch = String(order?.orderNumber || '').match(/(\d{3,4})$/);
-  return numberMatch ? Number(numberMatch[1]) : 0;
-}
-
-// Format order id from serial.
-function _formatCheckoutOrderId(serial) {
-  return `ord-${String(serial).padStart(3, '0')}`;
-}
-
-// Format display order number from date and serial.
-function _formatCheckoutOrderNumber(dateString, serial) {
-  return `#ORD-${String(dateString).replace(/-/g, '')}-${String(serial).padStart(4, '0')}`;
-}
-
-// Create a unique checkout order id and order number.
-async function _createCheckoutOrderIdentity() {
-  let existingOrders = _readCheckoutStoredOrders();
-  if (window.API?.orders?.getAll) {
-    try {
-      existingOrders = await window.API.orders.getAll();
-    } catch (error) {
-      console.warn('Failed to read remote mock orders; using local orders', error);
-    }
-  }
-
-  const usedOrderNumbers = new Set(existingOrders.map(order => String(order?.orderNumber || '').replace(/^#/, '').toUpperCase()).filter(Boolean));
-  let serial = Math.max(0, ...existingOrders.map(_getCheckoutOrderSerial)) + 1;
-  const today = _getCheckoutTodayString();
-  let orderNumber = _formatCheckoutOrderNumber(today, serial);
-
-  while (usedOrderNumbers.has(orderNumber.replace(/^#/, '').toUpperCase())) {
-    serial += 1;
-    orderNumber = _formatCheckoutOrderNumber(today, serial);
-  }
-  return { id: _formatCheckoutOrderId(serial), orderNumber };
-}
-
-// Store a checkout order snapshot locally.
-function _syncCheckoutOrderSnapshot(order) {
-  const syncedOrder = {
-    ...order,
-    userNote: order.userNote || order.buyerNote || '',
-    deliveredAt: order.deliveredAt || '',
-    trackingNumber: order.trackingNumber || '',
-  };
-  const nextOrders = _readCheckoutStoredOrders()
-    .filter(item => item.id !== syncedOrder.id && item.orderNumber !== syncedOrder.orderNumber)
-    .concat(syncedOrder);
-
-  _writeCheckoutStoredOrders(nextOrders);
-  localStorage.setItem(CHECKOUT_LAST_ORDER_STORAGE_KEY, JSON.stringify(syncedOrder));
-  return syncedOrder;
+  const currentUser = window.AppState?.currentUser || {};
+  return currentUser.id || DEFAULT_CHECKOUT_USER_ID;
 }
 
 // Load shared coupon catalog for checkout.
@@ -240,6 +214,9 @@ function _renderCheckoutItems() {
 
 // Build one checkout summary item.
 function _buildCheckoutItem(item) {
+  const specHtml = window.renderSpecLabelHtml
+    ? window.renderSpecLabelHtml(item.specLabel, 'checkoutSummaryItemSpec')
+    : '';
   return `
     <article class="checkoutSummaryItem">
       <div class="checkoutSummaryItemImageWrap">
@@ -248,6 +225,7 @@ function _buildCheckoutItem(item) {
       </div>
       <div class="checkoutSummaryItemDetails">
         <h3 class="checkoutSummaryItemName" title="${item.name}">${item.name}</h3>
+        ${specHtml}
         ${item.brand ? `<p class="checkoutSummaryItemBrand">${item.brand}</p>` : ''}
       </div>
       <p class="checkoutSummaryItemSubtotal">${window.formatCurrency(item.price * item.quantity)}</p>
@@ -428,6 +406,11 @@ function _fillBuyerFields(user) {
   if (user.name) document.getElementById('buyerName').value = user.name;
   if (user.phone) document.getElementById('buyerPhone').value = user.phone;
   if (user.email) document.getElementById('buyerEmail').value = user.email;
+
+  if (window.YuruiShippingAddressUI && window.YuruiShippingAddress) {
+    const addr = window.YuruiShippingAddress.resolve(user, _readLocalProfile());
+    window.YuruiShippingAddressUI.setAddress(addr);
+  }
 }
 
 // Initialize coupon controls.
@@ -460,7 +443,8 @@ async function _applyCheckoutCouponCode({ showToast = true } = {}) {
   const code = couponInput.value.trim().toUpperCase();
   const coupons = await _loadCheckoutCouponCatalog();
   const subtotal = window.calculateCartTotal(window.AppState.cart);
-  const result = window.YuruiCoupons.validateCoupon(coupons, code, subtotal, _getCheckoutCouponValidationOptions());
+  const customerId = _getCheckoutUserId();
+  const result = await window.YuruiCoupons.validateCoupon(coupons, code, subtotal, customerId);
 
   if (!result.valid) {
     _showCouponMessage(result.message || '\u6298\u6263\u78bc\u7121\u6cd5\u4f7f\u7528', 'error');
@@ -539,8 +523,11 @@ async function _handleConfirmOrder(confirmBtn) {
   try {
     const orderData = await _buildOrderData(formData, pricingSnapshot);
     const newOrder = await window.API.orders.create(orderData);
-    const syncedOrder = _syncCheckoutOrderSnapshot(newOrder);
-    _completeOrder(syncedOrder);
+    if (appliedCheckoutCouponCodes.includes('YRUIFIRST')) {
+      await window.API.customers.markFirstPurchaseUsed(_getCheckoutUserId());
+    }
+    localStorage.setItem(CHECKOUT_LAST_ORDER_STORAGE_KEY, JSON.stringify(newOrder));
+    _completeOrder(newOrder);
   } catch (error) {
     console.error('Checkout order failed', error);
     window.showToast('\u8a02\u55ae\u5efa\u7acb\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66', 'error');
@@ -550,11 +537,15 @@ async function _handleConfirmOrder(confirmBtn) {
 
 // Read checkout form field values.
 function _readCheckoutFormData() {
+  const shippingAddress = _getCheckoutShippingAddress();
   return {
     buyerName: document.getElementById('buyerName')?.value.trim() || '',
     buyerPhone: document.getElementById('buyerPhone')?.value.trim() || '',
     buyerEmail: document.getElementById('buyerEmail')?.value.trim() || '',
-    deliveryAddress: document.getElementById('deliveryAddress')?.value.trim() || '',
+    shippingAddress,
+    deliveryAddress: window.formatShippingAddressLine
+      ? window.formatShippingAddressLine(shippingAddress)
+      : '',
     userNote: document.getElementById('buyerNote')?.value.trim() || '',
   };
 }
@@ -562,13 +553,26 @@ function _readCheckoutFormData() {
 // Validate checkout form and focus the first invalid field.
 function _validateCheckoutForm(data) {
   const rules = [
-    { valid: data.buyerName, field: 'buyerName', message: '\u8acb\u8f38\u5165\u59d3\u540d' },
-    { valid: data.buyerPhone, field: 'buyerPhone', message: '\u8acb\u8f38\u5165\u96fb\u8a71' },
-    { valid: window.isValidPhone(data.buyerPhone), field: 'buyerPhone', message: '\u96fb\u8a71\u683c\u5f0f\u4e0d\u6b63\u78ba' },
-    { valid: data.buyerEmail, field: 'buyerEmail', message: '\u8acb\u8f38\u5165 Email' },
-    { valid: window.isValidEmail(data.buyerEmail), field: 'buyerEmail', message: 'Email \u683c\u5f0f\u4e0d\u6b63\u78ba' },
-    { valid: selectedShippingMethod !== 'delivery' || data.deliveryAddress, field: 'deliveryAddress', message: '\u8acb\u8f38\u5165\u9001\u9054\u5730\u5740' },
+    { valid: data.buyerName, field: 'buyerName', message: '請輸入姓名' },
+    { valid: data.buyerPhone, field: 'buyerPhone', message: '請輸入手機' },
+    {
+      valid: window.isValidMobile ? window.isValidMobile(data.buyerPhone) : window.isValidPhone(data.buyerPhone),
+      field: 'buyerPhone',
+      message: '手機須為 09 開頭的 10 碼數字（例：0988744144）',
+    },
+    { valid: data.buyerEmail, field: 'buyerEmail', message: '請輸入 Email' },
+    { valid: window.isValidEmail(data.buyerEmail), field: 'buyerEmail', message: 'Email 格式不正確' },
   ];
+
+  if (selectedShippingMethod === 'delivery') {
+    const addrResult = window.YuruiShippingAddress?.validate(data.shippingAddress);
+    if (!addrResult?.ok) {
+      window.showToast(addrResult?.errors?.[0] || '請設定送達地址', 'warning');
+      document.getElementById('checkoutShippingAddressEditBtn')?.focus();
+      return false;
+    }
+  }
+
   const failed = rules.find(rule => !rule.valid);
   if (!failed) return true;
   window.showToast(failed.message, 'warning');
@@ -663,29 +667,26 @@ function _buildCheckoutPricingSnapshot(cart) {
 function _setConfirmButtonLoading(button, isLoading) {
   button.disabled = isLoading;
   button.classList.toggle('isLoading', isLoading);
-  button.textContent = isLoading ? '\u8a02\u55ae\u5efa\u7acb\u4e2d...' : '\u78ba\u8a8d\u7d50\u5e33';
+  button.textContent = isLoading ? '訂單建立中...' : '確認結帳';
 }
 
 // Build order payload from current checkout state.
-async function _buildOrderData(formData, pricingSnapshot) {
-  const cart = pricingSnapshot.cart;
-  const subtotal = pricingSnapshot.subtotal;
-  const shipping = pricingSnapshot.shipping;
-  const discount = pricingSnapshot.discount;
-  const total = pricingSnapshot.total;
-  const orderIdentity = await _createCheckoutOrderIdentity();
+async function _buildOrderData(formData) {
+  const cart = window.AppState.cart;
+  const subtotal = _readCheckoutMoney('checkoutSubtotal', window.calculateCartTotal(cart));
+  const shipping = _readCheckoutMoney('checkoutShipping', window.calculateShippingFee(subtotal, selectedShippingMethod));
+  const discount = _readCheckoutMoney('checkoutDiscount', checkoutDiscount);
+  const total = _readCheckoutMoney('checkoutTotal', Math.max(subtotal - discount + shipping, 0));
 
   return {
-    id: orderIdentity.id,
-    orderNumber: orderIdentity.orderNumber,
-    userId: _getCheckoutUserId(),
+    customerId: _getCheckoutUserId(),
     buyerName: formData.buyerName,
     buyerPhone: formData.buyerPhone,
     buyerEmail: formData.buyerEmail,
     userNote: formData.userNote,
     buyerNote: formData.userNote,
     shippingMethod: selectedShippingMethod,
-    shippingAddress: selectedShippingMethod === 'delivery' ? formData.deliveryAddress : STORE_PICKUP_ADDRESS,
+    address: selectedShippingMethod === 'delivery' ? formData.deliveryAddress : STORE_PICKUP_ADDRESS,
     payment: _getSelectedPaymentCode(),
     paymentStatus: _getCheckoutPaymentStatus(),
     paymentLabel: _getSelectedPaymentCode() === 'cod' ? '貨到付款' : '',
@@ -698,10 +699,6 @@ async function _buildOrderData(formData, pricingSnapshot) {
     total,
     status: 'unshipped',
     createdAt: _getCheckoutDateTimeString(),
-    deliveredAt: '',
-    trackingNumber: '',
-    canReview: false,
-    review: false,
     reviewed: false,
   };
 }
@@ -710,7 +707,12 @@ async function _buildOrderData(formData, pricingSnapshot) {
 function _buildOrderItems(cart) {
   return cart.map(item => ({
     productId: item.id || item.productId,
+    variantId: item.variantId,
+    sku: item.sku || item.variantId,
     name: item.name,
+    color: item.color || '',
+    size: item.size || '',
+    specLabel: item.specLabel || '',
     brand: item.brand,
     price: item.price,
     quantity: item.quantity,
@@ -724,8 +726,8 @@ function _completeOrder(order) {
   window.clearCart();
   appliedCheckoutCouponCodes = [];
   window.YuruiCoupons.clearAppliedCouponCode();
-  const orderNum = String(order.orderNumber || order.id).replace(/^#/, '');
-  window.location.href = `checkout-success.html?orderNum=${orderNum}`;
+  const orderNum = window.formatOrderDisplayId(order.id);
+  window.location.href = `checkout-success.html?orderNum=${encodeURIComponent(orderNum)}`;
 }
 
 if (document.readyState === 'loading') {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * admin/js/analytics.js
  * 分析報表模組 v2 — 裝備商城 / 預約・租借 雙 Tab 分析
  *
@@ -87,64 +87,37 @@ window.initAnalytics = function () {
  */
 function loadAllAnalyticsData(callback) {
   var loaded = 0;
-  var total  = 5; // orders + products + min_stock + bookings + reantal
+  var total  = 5;
 
-  // 每份完成時 +1，全部完成才 callback
   function onDone() {
     loaded++;
     if (loaded >= total) callback();
   }
 
-  // orders.json
-  if (window.analyticsOrdersCache && window.analyticsOrdersCache.length) {
-    onDone();
-  } else {
-    $.getJSON('data/orders.json')
-      .done(function (data) { window.analyticsOrdersCache = data; })
-      .fail(function ()     { window.analyticsOrdersCache = []; })
+  /** 單一資料源：後端啟用走 AdminAPI，否則讀 DataPaths JSON */
+  function fetchOne(cacheKey, adminListFn, jsonPath, emptyValue) {
+    if (window[cacheKey] && (Array.isArray(window[cacheKey]) ? window[cacheKey].length : Object.keys(window[cacheKey]).length)) {
+      onDone();
+      return;
+    }
+    if (typeof AdminAPI !== 'undefined' && AdminAPI.isBackendEnabled && AdminAPI.isBackendEnabled() && adminListFn) {
+      adminListFn()
+        .then(function (res) { window[cacheKey] = (res && res.data) || emptyValue; })
+        .catch(function () { window[cacheKey] = emptyValue; })
+        .finally(onDone);
+      return;
+    }
+    $.getJSON(jsonPath)
+      .done(function (data) { window[cacheKey] = data; })
+      .fail(function () { window[cacheKey] = emptyValue; })
       .always(onDone);
   }
 
-  // products.json
-  if (window.analyticsProductsCache && window.analyticsProductsCache.length) {
-    onDone();
-  } else {
-    $.getJSON('data/products.json')
-      .done(function (data) { window.analyticsProductsCache = data; })
-      .fail(function ()     { window.analyticsProductsCache = []; })
-      .always(onDone);
-  }
-
-  // min_stock.json：最低庫存設定，失敗時降級為空物件（全用預設值 5）
-  // min_stock.json: min-stock thresholds; fall back to {} on failure (uses default 5)
-  if (window.analyticsMinStockCache && typeof window.analyticsMinStockCache === 'object') {
-    onDone();
-  } else {
-    $.getJSON('data/min_stock.json')
-      .done(function (data) { window.analyticsMinStockCache = data; })
-      .fail(function ()     { window.analyticsMinStockCache = {}; })
-      .always(onDone);
-  }
-
-  // bookings.json
-  if (window.analyticsBookingsCache && window.analyticsBookingsCache.length) {
-    onDone();
-  } else {
-    $.getJSON('data/bookings.json')
-      .done(function (data) { window.analyticsBookingsCache = data; })
-      .fail(function ()     { window.analyticsBookingsCache = []; })
-      .always(onDone);
-  }
-
-  // reantal.json（注意：檔名有拼字錯誤 reantal，保持與現有一致）
-  if (window.analyticsRentalCache && window.analyticsRentalCache.length) {
-    onDone();
-  } else {
-    $.getJSON('data/reantal.json')
-      .done(function (data) { window.analyticsRentalCache = data; })
-      .fail(function ()     { window.analyticsRentalCache = []; })
-      .always(onDone);
-  }
+  fetchOne('analyticsOrdersCache', AdminAPI && AdminAPI.orders && AdminAPI.orders.list, DataPaths.orders, []);
+  fetchOne('analyticsProductsCache', AdminAPI && AdminAPI.products && AdminAPI.products.list, DataPaths.products, []);
+  fetchOne('analyticsMinStockCache', null, DataPaths.minStock, {});
+  fetchOne('analyticsBookingsCache', AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list, DataPaths.campBookings, []);
+  fetchOne('analyticsRentalCache', null, DataPaths.rentalSkus, []);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -386,6 +359,237 @@ function fmtLabel(dateStr) {
 }
 
 /**
+ * 依本期 start/end 算出等長上期區間（緊接在本期之前）
+ * Previous period of same length immediately before current range
+ */
+function getPreviousPeriodRange(startDate, endDate) {
+  var len = generateDateRange(startDate, endDate).length;
+  var prevEnd = new Date(startDate.getTime());
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  var prevStart = new Date(prevEnd.getTime());
+  prevStart.setDate(prevStart.getDate() - (len - 1));
+  return {
+    startDate: prevStart,
+    endDate: prevEnd,
+    dateRange: generateDateRange(prevStart, prevEnd),
+  };
+}
+
+/**
+ * 計算與上期的差額與百分比（標題 badge 用）
+ */
+function calcPeriodComparison(currentTotal, previousTotal) {
+  var delta = currentTotal - previousTotal;
+  var direction = 'flat';
+  var pct = 0;
+
+  if (previousTotal > 0) {
+    pct = Math.round((delta / previousTotal) * 100);
+    direction = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+  } else if (currentTotal > 0) {
+    pct = 100;
+    direction = 'new';
+  }
+
+  return {
+    current: currentTotal,
+    previous: previousTotal,
+    delta: delta,
+    pct: pct,
+    direction: direction,
+  };
+}
+
+/**
+ * 格式化成「 +755 (+12%)」字串與 CSS class
+ */
+function formatComparisonDelta(comp) {
+  if (comp.previous === 0 && comp.current === 0) {
+    return { text: '—', className: 'is-flat' };
+  }
+  // 上期為 0 無法算成長%，顯示 —（與兩期皆 0 相同）
+  // Previous period is 0 → no meaningful %; show em dash
+  if (comp.previous === 0 && comp.current > 0) {
+    return { text: '—', className: 'is-flat' };
+  }
+
+  var sign = comp.delta > 0 ? '+' : '';
+  var pctSign = comp.pct > 0 ? '+' : '';
+  var text = sign + comp.delta.toLocaleString() + ' (' + pctSign + comp.pct + '%)';
+  var className = comp.delta > 0 ? 'is-up' : comp.delta < 0 ? 'is-down' : 'is-flat';
+  return { text: text, className: className };
+}
+
+/** 更新折線圖標題：本期總額 + 上期比較 */
+function renderLineTotalBadge(badgeId, deltaId, currentTotal, previousTotal) {
+  var comp = calcPeriodComparison(currentTotal, previousTotal);
+  var fmt = formatComparisonDelta(comp);
+
+  $('#' + badgeId).text('NT$ ' + comp.current.toLocaleString());
+  $('#' + deltaId)
+    .text(fmt.text)
+    .removeClass('is-up is-down is-flat')
+    .addClass(fmt.className);
+}
+
+/**
+ * 依日期區間加總（日或週）
+ */
+function aggregateLineChartData(items, startDate, endDate, filterFn, valueFn) {
+  var dateRange = generateDateRange(startDate, endDate);
+  var isoDates = dateRange.slice();
+
+  if (dateRange.length > 60) {
+    var grouped = groupByWeek(items, dateRange, filterFn, valueFn);
+    return {
+      labels: grouped.labels,
+      data: grouped.data,
+      isoDates: isoDates,
+      byWeek: true,
+    };
+  }
+
+  return {
+    labels: dateRange.map(fmtLabel),
+    data: dateRange.map(function (d) {
+      return items
+        .filter(function (item) { return filterFn(item, d); })
+        .reduce(function (sum, item) { return sum + valueFn(item); }, 0);
+    }),
+    isoDates: isoDates,
+    byWeek: false,
+  };
+}
+
+/**
+ * 繪製雙線收入折線圖（本期實線 + 上期虛線）
+ */
+function renderDualPeriodLineChart(config) {
+  var current = aggregateLineChartData(
+    config.items,
+    config.startDate,
+    config.endDate,
+    config.filterFn,
+    config.valueFn
+  );
+  var prev = getPreviousPeriodRange(config.startDate, config.endDate);
+  var previous = aggregateLineChartData(
+    config.items,
+    prev.startDate,
+    prev.endDate,
+    config.filterFn,
+    config.valueFn
+  );
+
+  // 週模式：對齊索引長度
+  if (current.byWeek && previous.data.length !== current.data.length) {
+    while (previous.data.length < current.data.length) previous.data.push(0);
+    while (previous.data.length > current.data.length) previous.data.pop();
+  }
+
+  var currentTotal = current.data.reduce(function (s, v) { return s + v; }, 0);
+  var previousTotal = previous.data.reduce(function (s, v) { return s + v; }, 0);
+
+  renderLineTotalBadge(config.badgeId, config.deltaId, currentTotal, previousTotal);
+
+  var hasData = current.data.some(function (v) { return v > 0; }) ||
+    previous.data.some(function (v) { return v > 0; });
+
+  if (!hasData) {
+    showChartEmpty(config.emptyId, config.canvasId);
+    if (config.chartInstance) {
+      config.chartInstance.destroy();
+    }
+    return null;
+  }
+
+  hideChartEmpty(config.emptyId, config.canvasId);
+  if (config.chartInstance) config.chartInstance.destroy();
+
+  var prevIso = prev.dateRange.slice();
+  return new Chart(document.getElementById(config.canvasId), {
+    type: 'line',
+    data: {
+      labels: current.labels,
+      datasets: [
+        {
+          label: config.currentLabel || '本期',
+          data: current.data,
+          borderColor: config.currentColor || '#244d4d',
+          backgroundColor: config.currentFill || 'rgba(36,77,77,0.08)',
+          borderWidth: 2.5,
+          pointBackgroundColor: config.currentColor || '#244d4d',
+          pointRadius: 1.25,
+          pointHoverRadius: 4,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: config.previousLabel || '上期',
+          data: previous.data,
+          borderColor: config.previousColor || '#aabbaa',
+          borderDash: [6, 6],
+          borderWidth: 2,
+          pointBackgroundColor: config.previousColor || '#aabbaa',
+          pointRadius: 1,
+          pointHoverRadius: 3,
+          tension: 0.4,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            title: function (items) {
+              if (!items.length) return '';
+              var idx = items[0].dataIndex;
+              var curIso = current.isoDates[idx];
+              var prevDate = prevIso[idx];
+              if (current.byWeek) {
+                return '本期 ' + (current.labels[idx] || '') +
+                  (prevIso.length > idx ? '\n上期 ' + fmtLabel(prevIso[idx]) + '~' + fmtLabel(prevIso[Math.min(idx + 6, prevIso.length - 1)]) : '');
+              }
+              return '本期 ' + (curIso || '') +
+                (prevDate ? '\n上期 ' + prevDate : '');
+            },
+            label: function (ctx) {
+              var prefix = ctx.datasetIndex === 0 ? '本期' : '上期';
+              return prefix + ' NT$ ' + ctx.parsed.y.toLocaleString();
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function (val) {
+              return val >= 1000
+                ? 'NT$ ' + (val / 1000).toFixed(0) + 'K'
+                : 'NT$ ' + val;
+            },
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { maxTicksLimit: 12 },
+        },
+      },
+    },
+  });
+}
+
+/**
  * 顯示圖表空狀態
  * @param {string} emptyId  - 空狀態提示 div 的 id
  * @param {string} targetId - 要隱藏的元素 id（canvas 或 canvas wrapper div）
@@ -414,6 +618,7 @@ function refreshShopSection() {
   renderShopKpis();
   renderShopLineChart();
   renderShopDonut();
+  renderShopTopProducts(); // 熱銷商品金額（跟 shopState 期間連動）
 }
 
 /**
@@ -439,25 +644,25 @@ function renderShopKpis() {
 
   // ── 卡片 3：待出貨（不受期間限制，永遠顯示全部 unshipped）──
   var pendingCount = orders.filter(function (o) {
-    return o.orderStatus === 'unshipped';
+    return o.status === 'unshipped';
   }).length;
   $('#shopKpiPending').text(pendingCount);
 
   // ── 卡片 4：退貨/退款（期間內 returned 訂單）──
   var refundCount = periodOrders.filter(function (o) {
-    return o.orderStatus === 'returned';
+    return o.status === 'returned';
   }).length;
   var refundRate = orderCount > 0
     ? Math.round(refundCount / orderCount * 100) : 0;
   $('#shopKpiRefund').text(refundCount);
   $('#shopKpiRefundNote').text('退款率 ' + refundRate + '%');
 
-  // ── 卡片 5：已售商品件數（已出貨訂單的 items.qty 加總）──
+  // ── 卡片 5：已售商品件數（已出貨訂單的 items.quantity 加總）──
   var soldQty = periodOrders
-    .filter(function (o) { return o.orderStatus === 'shipped'; })
+    .filter(function (o) { return o.status === 'shipped'; })
     .reduce(function (sum, o) {
       return sum + (o.items || []).reduce(function (s2, item) {
-        return s2 + (item.qty || 0);
+        return s2 + (item.quantity || 0);
       }, 0);
     }, 0);
   $('#shopKpiSoldQty').text(soldQty);
@@ -475,116 +680,45 @@ function renderShopKpis() {
  * 超過 60 天時改為週分組，避免 X 軸過密
  */
 function renderShopLineChart() {
-  var orders = window.analyticsOrdersCache || [];
-  var s = shopState.startDate;
-  var e = shopState.endDate;
-  var dateRange = generateDateRange(s, e);
-  var labels, data;
-
-  if (dateRange.length > 60) {
-    // 超過 60 天 → 按週分組
-    var grouped = groupByWeek(
-      orders, dateRange,
-      function (o, d) {
-        return o.orderStatus === 'shipped' && (o.createdAt || '').slice(0, 10) === d;
-      },
-      function (o) { return o.total || 0; }
-    );
-    labels = grouped.labels;
-    data   = grouped.data;
-  } else {
-    // 60 天以內 → 按日
-    labels = dateRange.map(fmtLabel);
-    data   = dateRange.map(function (d) {
-      return orders
-        .filter(function (o) {
-          return o.orderStatus === 'shipped' && (o.createdAt || '').slice(0, 10) === d;
-        })
-        .reduce(function (sum, o) { return sum + (o.total || 0); }, 0);
-    });
-  }
-
-  var hasData = data.some(function (v) { return v > 0; });
-  if (!hasData) {
-    showChartEmpty('shopLineChartEmpty', 'shopSalesLineChart');
-    if (_shopLineChart) { _shopLineChart.destroy(); _shopLineChart = null; }
-    updateShopLineTotal(); // 無資料時仍更新合計（顯示 NT$ 0）
-    return;
-  }
-  hideChartEmpty('shopLineChartEmpty', 'shopSalesLineChart');
-  if (_shopLineChart) { _shopLineChart.destroy(); }
-
-  _shopLineChart = new Chart(document.getElementById('shopSalesLineChart'), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: '銷售額 (NT$)',
-        data: data,
-        borderColor: '#244d4d',
-        backgroundColor: 'rgba(36,77,77,0.08)',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#244d4d',
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        tension: 0.4,
-        fill: true
-      }]
+  _shopLineChart = renderDualPeriodLineChart({
+    items: window.analyticsOrdersCache || [],
+    startDate: shopState.startDate,
+    endDate: shopState.endDate,
+    filterFn: function (o, d) {
+      return o.status === 'shipped' && (o.createdAt || '').slice(0, 10) === d;
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function (ctx) {
-              return 'NT$ ' + ctx.parsed.y.toLocaleString();
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function (val) {
-              return val >= 1000
-                ? 'NT$ ' + (val / 1000).toFixed(0) + 'K'
-                : 'NT$ ' + val;
-            }
-          },
-          grid: { color: 'rgba(0,0,0,0.05)' }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { maxTicksLimit: 12 }
-        }
-      }
-    }
+    valueFn: function (o) { return o.total || 0; },
+    emptyId: 'shopLineChartEmpty',
+    canvasId: 'shopSalesLineChart',
+    badgeId: 'shopLineTotalBadge',
+    deltaId: 'shopLineTotalDelta',
+    chartInstance: _shopLineChart,
+    currentLabel: '本期銷售額',
+    previousLabel: '上期銷售額',
+    currentColor: '#244d4d',
+    currentFill: 'rgba(36,77,77,0.08)',
+    previousColor: '#aabbaa',
   });
-
-  updateShopLineTotal(); // 有資料時更新合計 badge
 }
 
 /**
- * 計算商城期間銷售總額並更新折線圖標題右側的合計 badge
- * 計算邏輯：已出貨（shipped）且在篩選期間內的訂單 total 加總
- * 觸發時機：renderShopLineChart() 的有資料和無資料兩個分支皆會呼叫
+ * 計算商城期間銷售總額（由 renderShopLineChart 內 renderLineTotalBadge 更新）
  */
 function updateShopLineTotal() {
   var orders = window.analyticsOrdersCache || [];
   var s = shopState.startDate;
   var e = shopState.endDate;
+  var prev = getPreviousPeriodRange(s, e);
 
-  var total = orders
-    .filter(function (o) {
-      return o.orderStatus === 'shipped' && isInRange(o.createdAt, s, e);
-    })
-    .reduce(function (sum, o) { return sum + (o.total || 0); }, 0);
+  function sumInRange(start, end) {
+    return orders
+      .filter(function (o) {
+        return o.status === 'shipped' && isInRange(o.createdAt, start, end);
+      })
+      .reduce(function (sum, o) { return sum + (o.total || 0); }, 0);
+  }
 
-  // 更新 DOM，格式例：NT$ 16,800
-  $('#shopLineTotalBadge').text('NT$ ' + total.toLocaleString());
+  renderLineTotalBadge('shopLineTotalBadge', 'shopLineTotalDelta', sumInRange(s, e), sumInRange(prev.startDate, prev.endDate));
 }
 
 /**
@@ -607,13 +741,13 @@ function renderShopDonut() {
   var categoryRevenue = {};
   orders
     .filter(function (o) {
-      return o.orderStatus === 'shipped' && isInRange(o.createdAt, s, e);
+      return o.status === 'shipped' && isInRange(o.createdAt, s, e);
     })
     .forEach(function (o) {
       (o.items || []).forEach(function (item) {
         // 若商品名稱在 products 找不到對應，歸入「其他」
         var cat = nameToCategory[item.name] || '其他';
-        var amt = (item.qty || 0) * (item.price || 0);
+        var amt = (item.quantity || 0) * (item.price || 0);
         categoryRevenue[cat] = (categoryRevenue[cat] || 0) + amt;
       });
     });
@@ -664,6 +798,116 @@ function renderShopDonut() {
   });
 }
 
+/**
+ * 熱銷商品金額 Top 10（GA4 Item revenue 風格）
+ *
+ * 規則說明（給新手）：
+ *   1. 期間：直接用 shopState（跟上方「近 7 天 / 30 天…」同一個篩選）
+ *   2. 合併：用 productId 當鍵；同商品不同規格（variant）加總成一列
+ *   3. 金額：quantity × price（只算 status === 'shipped'）
+ *   4. 成長：等長上期（getPreviousPeriodRange）+ 現成 formatComparisonDelta
+ */
+function renderShopTopProducts() {
+  var orders = window.analyticsOrdersCache || [];
+  var s = shopState.startDate;
+  var e = shopState.endDate;
+  var prev = getPreviousPeriodRange(s, e);
+
+  /**
+   * 把某段期間的已出貨訂單，依 productId 加總營收
+   * @returns {Object} map[productId] = { name, revenue, qty }
+   */
+  function aggregateByProduct(start, end) {
+    var map = {};
+    orders
+      .filter(function (o) {
+        return o.status === 'shipped' && isInRange(o.createdAt, start, end);
+      })
+      .forEach(function (o) {
+        (o.items || []).forEach(function (item) {
+          // Merge key: productId first; fall back to name for legacy rows
+          // 合併鍵優先 productId；舊資料沒有時才用 name
+          var key = item.productId || item.name;
+          if (!key) return;
+          if (!map[key]) {
+            map[key] = { name: item.name || String(key), revenue: 0, qty: 0 };
+          }
+          map[key].revenue += (item.quantity || 0) * (item.price || 0);
+          map[key].qty += (item.quantity || 0);
+          if (item.name) map[key].name = item.name;
+        });
+      });
+    return map;
+  }
+
+  var currentMap = aggregateByProduct(s, e);
+  var previousMap = aggregateByProduct(prev.startDate, prev.endDate);
+
+  // Rank by current-period revenue only（排名只看本期金額）
+  var ranked = Object.keys(currentMap)
+    .map(function (id) {
+      var cur = currentMap[id];
+      var prevRow = previousMap[id] || { revenue: 0, qty: 0 };
+      return {
+        name: cur.name,
+        revenue: cur.revenue,
+        qty: cur.qty,
+        // 金額成長 / 件數成長（上期 0 時 formatComparisonDelta 會顯示 —）
+        revenueComp: calcPeriodComparison(cur.revenue, prevRow.revenue || 0),
+        qtyComp: calcPeriodComparison(cur.qty, prevRow.qty || 0),
+      };
+    })
+    .sort(function (a, b) { return b.revenue - a.revenue; })
+    .slice(0, 10);
+
+  var $body = $('#shopTopProductsBody');
+  var $table = $('#shopTopProductsTable');
+  var $empty = $('#shopTopProductsEmpty');
+  $body.empty();
+
+  if (ranked.length === 0) {
+    $empty.removeClass('d-none');
+    $table.addClass('d-none');
+    return;
+  }
+  $empty.addClass('d-none');
+  $table.removeClass('d-none');
+
+  ranked.forEach(function (row, i) {
+    var qtyFmt = formatComparisonDelta(row.qtyComp);
+    var revFmt = formatComparisonDelta(row.revenueComp);
+    $body.append(
+      '<tr>' +
+        '<td class="text-muted">' + (i + 1) + '</td>' +
+        '<td>' + escapeAnalyticsHtml(row.name) + '</td>' +
+        '<td class="text-end">' + row.qty + '</td>' +
+        '<td class="text-end">' +
+          '<span class="analytics-total-delta ' + qtyFmt.className + '">' +
+            escapeAnalyticsHtml(qtyFmt.text) +
+          '</span>' +
+        '</td>' +
+        '<td class="text-end fw-semibold">NT$ ' +
+          row.revenue.toLocaleString() +
+        '</td>' +
+        '<td class="text-end">' +
+          '<span class="analytics-total-delta ' + revFmt.className + '">' +
+            escapeAnalyticsHtml(revFmt.text) +
+          '</span>' +
+        '</td>' +
+      '</tr>'
+    );
+  });
+}
+
+/** Escape HTML for safe table cell text（避免商品名特殊字元弄壞 HTML） */
+function escapeAnalyticsHtml(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // ═══ 預約/租借 Tab ═══════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════
@@ -686,17 +930,17 @@ function renderBookingKpis() {
   var s = bookingState.startDate;
   var e = bookingState.endDate;
 
-  // 期間內預約（依 submitted_at 篩選）
+  // 期間內預約（依 submittedAt 篩選）
   var periodBookings = bookings.filter(function (b) {
-    return isInRange(b.submitted_at, s, e);
+    return isInRange(b.submittedAt, s, e);
   });
 
   // 預約收入總額（供卡片 6「租借費佔比」計算使用）
   // 注意：此值不再顯示在 KPI 卡片，改由 updateBookingLineTotal() 更新折線圖標題
   var revenue = periodBookings
-    .filter(function (b) { return b.payment_status === 'paid'; })
+    .filter(function (b) { return b.paymentStatus === 'paid'; })
     .reduce(function (sum, b) {
-      return sum + ((b.summary && b.summary.final_amount) || 0);
+      return sum + ((b.summary && b.summary.finalAmount) || 0);
     }, 0);
 
   // ── 卡片 1：待確認預約（不受期間限制，永遠顯示全部 pending）──
@@ -721,142 +965,75 @@ function renderBookingKpis() {
   }).length;
   $('#bookKpiCompleted').text(completedCount);
 
-  // ── 卡片 5：裝備租借費（已付款預約的 rental_total 加總）──
+  // ── 卡片 5：裝備租借費（已付款預約的 rentalTotal 加總）──
   var rentalAmt = periodBookings
-    .filter(function (b) { return b.payment_status === 'paid'; })
+    .filter(function (b) { return b.paymentStatus === 'paid'; })
     .reduce(function (sum, b) {
-      return sum + ((b.summary && b.summary.rental_total) || 0);
+      return sum + ((b.summary && b.summary.rentalTotal) || 0);
     }, 0);
   $('#bookKpiRentalAmt').text('NT$ ' + rentalAmt.toLocaleString());
 
-  // ── 卡片 6：租借費佔比（rental_total / final_amount × 100%）──
+  // ── 卡片 6：租借費佔比（rentalTotal / finalAmount × 100%）──
   var rentalRatio = revenue > 0
     ? Math.round(rentalAmt / revenue * 100) : 0;
   $('#bookKpiRentalRatio').text(rentalRatio + '%');
 }
 
 /**
- * 繪製預約收入折線圖（依 submitted_at 日期分組統計 final_amount）
+ * 繪製預約收入折線圖（依 submittedAt 日期分組統計 finalAmount）
  */
 function renderBookingLineChart() {
-  var bookings  = window.analyticsBookingsCache || [];
-  var s = bookingState.startDate;
-  var e = bookingState.endDate;
-  var dateRange = generateDateRange(s, e);
-  var labels, data;
-
-  if (dateRange.length > 60) {
-    var grouped = groupByWeek(
-      bookings, dateRange,
-      function (b, d) {
-        return b.payment_status === 'paid' && (b.submitted_at || '').slice(0, 10) === d;
-      },
-      function (b) { return (b.summary && b.summary.final_amount) || 0; }
-    );
-    labels = grouped.labels;
-    data   = grouped.data;
-  } else {
-    labels = dateRange.map(fmtLabel);
-    data   = dateRange.map(function (d) {
-      return bookings
-        .filter(function (b) {
-          return b.payment_status === 'paid' &&
-                 (b.submitted_at || '').slice(0, 10) === d;
-        })
-        .reduce(function (sum, b) {
-          return sum + ((b.summary && b.summary.final_amount) || 0);
-        }, 0);
-    });
-  }
-
-  var hasData = data.some(function (v) { return v > 0; });
-  if (!hasData) {
-    showChartEmpty('bookLineChartEmpty', 'bookingRevenueLineChart');
-    if (_bookLineChart) { _bookLineChart.destroy(); _bookLineChart = null; }
-    updateBookingLineTotal(); // 無資料時仍更新合計（顯示 NT$ 0）
-    return;
-  }
-  hideChartEmpty('bookLineChartEmpty', 'bookingRevenueLineChart');
-  if (_bookLineChart) { _bookLineChart.destroy(); }
-
-  _bookLineChart = new Chart(document.getElementById('bookingRevenueLineChart'), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: '預約收入 (NT$)',
-        data: data,
-        borderColor: '#3d7d7d',
-        backgroundColor: 'rgba(61,125,125,0.08)',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#3d7d7d',
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        tension: 0.4,
-        fill: true
-      }]
+  _bookLineChart = renderDualPeriodLineChart({
+    items: window.analyticsBookingsCache || [],
+    startDate: bookingState.startDate,
+    endDate: bookingState.endDate,
+    filterFn: function (b, d) {
+      return b.paymentStatus === 'paid' && (b.submittedAt || '').slice(0, 10) === d;
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function (ctx) {
-              return 'NT$ ' + ctx.parsed.y.toLocaleString();
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function (val) {
-              return val >= 1000
-                ? 'NT$ ' + (val / 1000).toFixed(0) + 'K'
-                : 'NT$ ' + val;
-            }
-          },
-          grid: { color: 'rgba(0,0,0,0.05)' }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { maxTicksLimit: 12 }
-        }
-      }
-    }
+    valueFn: function (b) { return (b.summary && b.summary.finalAmount) || 0; },
+    emptyId: 'bookLineChartEmpty',
+    canvasId: 'bookingRevenueLineChart',
+    badgeId: 'bookingLineTotalBadge',
+    deltaId: 'bookingLineTotalDelta',
+    chartInstance: _bookLineChart,
+    currentLabel: '本期預約收入',
+    previousLabel: '上期預約收入',
+    currentColor: '#3d7d7d',
+    currentFill: 'rgba(61,125,125,0.08)',
+    previousColor: '#aabbaa',
   });
-
-  updateBookingLineTotal(); // 有資料時更新合計 badge
 }
 
 /**
- * 計算預約期間收入總額並更新折線圖標題右側的合計 badge
- * 計算邏輯：已付款（paid）且在篩選期間內的預約 final_amount 加總
- * 觸發時機：renderBookingLineChart() 的有資料和無資料兩個分支皆會呼叫
+ * 計算預約期間收入總額（由 renderBookingLineChart 內 renderLineTotalBadge 更新）
  */
 function updateBookingLineTotal() {
   var bookings = window.analyticsBookingsCache || [];
   var s = bookingState.startDate;
   var e = bookingState.endDate;
+  var prev = getPreviousPeriodRange(s, e);
 
-  var total = bookings
-    .filter(function (b) {
-      return b.payment_status === 'paid' && isInRange(b.submitted_at, s, e);
-    })
-    .reduce(function (sum, b) {
-      return sum + ((b.summary && b.summary.final_amount) || 0);
-    }, 0);
+  function sumInRange(start, end) {
+    return bookings
+      .filter(function (b) {
+        return b.paymentStatus === 'paid' && isInRange(b.submittedAt, start, end);
+      })
+      .reduce(function (sum, b) {
+        return sum + ((b.summary && b.summary.finalAmount) || 0);
+      }, 0);
+  }
 
-  // 更新 DOM，格式例：NT$ 9,600
-  $('#bookingLineTotalBadge').text('NT$ ' + total.toLocaleString());
+  renderLineTotalBadge(
+    'bookingLineTotalBadge',
+    'bookingLineTotalDelta',
+    sumInRange(s, e),
+    sumInRange(prev.startDate, prev.endDate)
+  );
 }
 
 /**
  * 繪製租借裝備類別甜甜圈
- * 用 selected_rentals[].name 對照 reantal.json 取得 category，統計使用次數
+ * 用 selectedRentals[].name 對照 rental-skus.json 取得 category，統計使用次數
  */
 function renderRentalDonut() {
   var bookings = window.analyticsBookingsCache || [];
@@ -864,20 +1041,20 @@ function renderRentalDonut() {
   var s = bookingState.startDate;
   var e = bookingState.endDate;
 
-  // 建立「裝備名稱 → 類別」的 Map（來自 reantal.json）
+  // 建立「裝備名稱 → 類別」的 Map（來自 rental-skus.json / DataPaths.rentalSkus）
   var nameToCategory = {};
   rentals.forEach(function (r) {
     if (r.name && r.category) nameToCategory[r.name] = r.category;
   });
 
-  // 期間內已付款預約的 selected_rentals，按類別加總 quantity
+  // 期間內已付款預約的 selectedRentals，按類別加總 quantity
   var categoryCount = {};
   bookings
     .filter(function (b) {
-      return b.payment_status === 'paid' && isInRange(b.submitted_at, s, e);
+      return b.paymentStatus === 'paid' && isInRange(b.submittedAt, s, e);
     })
     .forEach(function (b) {
-      (b.selected_rentals || []).forEach(function (item) {
+      (b.selectedRentals || []).forEach(function (item) {
         var cat = nameToCategory[item.name] || '其他';
         categoryCount[cat] = (categoryCount[cat] || 0) + (item.quantity || 1);
       });
@@ -937,9 +1114,9 @@ function renderCampgroundBar() {
   // 依營地名稱分組計數
   var campCount = {};
   bookings
-    .filter(function (b) { return isInRange(b.submitted_at, s, e); })
+    .filter(function (b) { return isInRange(b.submittedAt, s, e); })
     .forEach(function (b) {
-      var name = b.booking_info && b.booking_info.campground_name;
+      var name = b.bookingInfo && b.bookingInfo.campgroundName;
       if (name) campCount[name] = (campCount[name] || 0) + 1;
     });
 
@@ -1006,13 +1183,13 @@ function renderRegionBar() {
 
   bookings
     .filter(function (b) {
-      return b.payment_status === 'paid' && isInRange(b.submitted_at, s, e);
+      return b.paymentStatus === 'paid' && isInRange(b.submittedAt, s, e);
     })
     .forEach(function (b) {
-      var region = b.booking_info && b.booking_info.region;
+      var region = b.bookingInfo && b.bookingInfo.region;
       if (region) {
         regionRevenue[region] = (regionRevenue[region] || 0) +
-          ((b.summary && b.summary.final_amount) || 0);
+          ((b.summary && b.summary.finalAmount) || 0);
       }
     });
 
@@ -1193,8 +1370,15 @@ function isAnalyticsProductLowStock(product) {
   if (!product) { return false; }
 
   var branch = product.branch || {};
+  var branchKeys = ANALYTICS_BRANCH_IDS.slice();
 
-  return ANALYTICS_BRANCH_IDS.some(function (branchId) {
+  Object.keys(branch).forEach(function (branchKey) {
+    if (ANALYTICS_BRANCH_IDS.indexOf(branchKey) === -1 && branchKeys.indexOf(branchKey) === -1) {
+      branchKeys.push(branchKey);
+    }
+  });
+
+  return branchKeys.some(function (branchId) {
     var actual  = parseInt(branch[branchId], 10);
     actual      = isNaN(actual) ? 0 : Math.max(actual, 0);
     var minimum = getAnalyticsMinStockValue(product.id, branchId);
@@ -1209,14 +1393,14 @@ function isAnalyticsProductLowStock(product) {
 /**
  * 計算商品的總庫存數量
  * 相容三種可能的 JSON 結構：
- *   1. product["total-stock"]（數字欄位）
+ *   1. product.totalStock（數字欄位）
  *   2. product.branch（物件，各分店庫存加總）
  *   3. product.stock（簡易庫存欄位）
  * @param {Object} product - products.json 中的單一商品物件
  * @returns {number}
  */
 function getAnalyticsProductTotalStock(product) {
-  var totalStock = parseInt(product && product['total-stock'], 10);
+  var totalStock = parseInt(product && product.totalStock, 10);
   if (!isNaN(totalStock)) return totalStock;
 
   if (product && product.branch && typeof product.branch === 'object') {
@@ -1286,25 +1470,25 @@ function buildNavFilter(kpiId) {
     // 本期訂單數：當前期間所有狀態訂單
     shopKpiOrders: {
       section: 'orders',
-      orderStatus: [], paymentStatus: [],
+      status: [], paymentStatus: [],
       dateStart: shopStart, dateEnd: shopEnd
     },
     // 待出貨訂單：全部未出貨，不帶日期
     shopKpiPending: {
       section: 'orders',
-      orderStatus: ['unshipped'], paymentStatus: [],
+      status: ['unshipped'], paymentStatus: [],
       dateStart: null, dateEnd: null
     },
     // 退貨/退款：當前期間 returned 訂單
     shopKpiRefund: {
       section: 'orders',
-      orderStatus: ['returned'], paymentStatus: [],
+      status: ['returned'], paymentStatus: [],
       dateStart: shopStart, dateEnd: shopEnd
     },
     // 已售商品件數：當前期間 shipped 訂單
     shopKpiSoldQty: {
       section: 'orders',
-      orderStatus: ['shipped'], paymentStatus: [],
+      status: ['shipped'], paymentStatus: [],
       dateStart: shopStart, dateEnd: shopEnd
     },
     // 低庫存商品：跳商品頁，顯示低庫存提示

@@ -1,0 +1,122 @@
+<!-- 配送地址編輯 Modal（會員中心、商城結帳共用） -->
+<div class="shippingAddressModal" id="shippingAddressModal" aria-hidden="true" role="presentation">
+  <section
+    class="shippingAddressModalDialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="shippingAddressModalTitle"
+    tabindex="-1"
+  >
+    <header class="shippingAddressModalHeader">
+      <h2 class="shippingAddressModalTitle" id="shippingAddressModalTitle">
+        <i class="bi bi-truck" aria-hidden="true"></i>
+        編輯配送地址
+      </h2>
+      <button type="button" class="shippingAddressModalClose" id="shippingAddressModalClose" aria-label="關閉">
+        &times;
+      </button>
+    </header>
+
+    <form class="shippingAddressModalForm" id="shippingAddressForm" novalidate>
+      <div class="shippingAddressFormRow shippingAddressFormRowSplit">
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipLastName">姓 <span class="requiredMark">*</span></label>
+          <input class="shippingAddressFormInput" type="text" id="shipLastName" placeholder="例：周" required />
+        </div>
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipFirstName">名字 <span class="requiredMark">*</span></label>
+          <input class="shippingAddressFormInput" type="text" id="shipFirstName" placeholder="例：佩君" required />
+        </div>
+      </div>
+
+      <div class="shippingAddressFormRow shippingAddressFormRowSplit shippingAddressFormRowPostal">
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipPostalCode">郵遞區號 <span class="requiredMark">*</span></label>
+          <input
+            class="shippingAddressFormInput"
+            type="text"
+            id="shipPostalCode"
+            maxlength="5"
+            minlength="3"
+            inputmode="numeric"
+            pattern="\d{3}|\d{5}"
+            placeholder="701 或 70156"
+            required
+          />
+        </div>
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipCity">縣/市 <span class="requiredMark">*</span></label>
+          <select class="shippingAddressFormInput" id="shipCity" required>
+            <option value="">請選擇縣/市</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="shippingAddressFormRow shippingAddressFormRowSplit">
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipDistrict">區 <span class="requiredMark">*</span></label>
+          <select class="shippingAddressFormInput" id="shipDistrict" disabled required>
+            <option value="">請先選擇縣/市</option>
+          </select>
+        </div>
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipTownship">鄉/鎮/市/區</label>
+          <input class="shippingAddressFormInput" type="text" id="shipTownship" placeholder="選填" />
+        </div>
+      </div>
+
+      <div class="shippingAddressFormRow">
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipAddressLine1">地址 <span class="requiredMark">*</span></label>
+          <input
+            class="shippingAddressFormInput"
+            type="text"
+            id="shipAddressLine1"
+            placeholder="例：中山路一段66號"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="shippingAddressFormRow">
+        <div class="shippingAddressFormField">
+          <input
+            class="shippingAddressFormInput"
+            type="text"
+            id="shipAddressLine2"
+            placeholder="單位、套房、樓層、大樓 (選填)"
+            aria-label="地址補充（選填）"
+          />
+        </div>
+      </div>
+
+      <div class="shippingAddressFormRow shippingAddressFormRowSplit">
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipEmail">電子郵件 <span class="requiredMark">*</span></label>
+          <input class="shippingAddressFormInput" type="email" id="shipEmail" placeholder="your@email.com" required />
+        </div>
+        <div class="shippingAddressFormField">
+          <label class="shippingAddressFormLabel" for="shipPhone">手機 <span class="requiredMark">*</span></label>
+          <input
+            class="shippingAddressFormInput"
+            type="tel"
+            id="shipPhone"
+            maxlength="10"
+            inputmode="numeric"
+            pattern="09\d{8}"
+            placeholder="0988744144"
+            required
+          />
+        </div>
+      </div>
+    </form>
+
+    <footer class="shippingAddressModalFooter">
+      <button type="button" class="btn btnSecondary" id="cancelShippingAddressBtn">取消</button>
+      <button type="button" class="btn btnPrimary" id="saveShippingAddressBtn">
+        <i class="bi bi-check-lg" aria-hidden="true"></i>
+        儲存地址
+      </button>
+    </footer>
+  </section>
+</div>

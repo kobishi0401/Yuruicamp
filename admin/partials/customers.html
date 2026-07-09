@@ -46,9 +46,9 @@
               <i class="fas fa-filter filter-icon ms-1"></i>
               <span class="filter-dot d-none"></span>
               <div class="filter-dropdown d-none">
-                <label><input type="checkbox" value="一般"> 一般</label>
-                <label><input type="checkbox" value="VIP"> VIP</label>
-                <label><input type="checkbox" value="SVIP"> SVIP</label>
+                <label><input type="checkbox" value="探險家"> 探險家</label>
+                <label><input type="checkbox" value="嚮導"> 嚮導</label>
+                <label><input type="checkbox" value="大師"> 大師</label>
               </div>
             </th>
             <!-- 消費總額：三段式排序 -->
@@ -89,9 +89,9 @@
       <div class="mb-2">
         <label class="form-label small text-muted mb-1">會員等級</label>
         <div class="d-flex flex-wrap gap-2" id="mobileTierFilters">
-          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="一般"> 一般</label>
-          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="VIP"> VIP</label>
-          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="SVIP"> SVIP</label>
+          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="探險家"> 探險家</label>
+          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="嚮導"> 嚮導</label>
+          <label class="small"><input type="checkbox" class="mobile-tier-cb" value="大師"> 大師</label>
         </div>
       </div>
       <div class="mb-2">
@@ -182,12 +182,10 @@
 
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label class="form-label fw-semibold" for="newCustomerTier">會員等級</label>
-              <select class="form-select" id="newCustomerTier">
-                <option value="一般">一般</option>
-                <option value="VIP">VIP</option>
-                <option value="SVIP">SVIP</option>
-              </select>
+              <label class="form-label fw-semibold" for="newCustomerTierDisplay">會員等級</label>
+              <input type="text" class="form-control" id="newCustomerTierDisplay"
+                     value="探險家" readonly aria-readonly="true">
+              <input type="hidden" id="newCustomerTier" value="explorer">
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label fw-semibold" for="newCustomerPoints">點數餘額</label>

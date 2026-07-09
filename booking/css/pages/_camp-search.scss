@@ -344,10 +344,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+// Hover zoom only for plain single-image cards (not Swiper gallery)
+.campCardImageBooking:not(.cardGallery) img {
   transition: transform 0.4s ease;
 }
 
-.campCardBooking:hover .campCardImageBooking img {
+.campCardBooking:hover .campCardImageBooking:not(.cardGallery) img {
   transform: scale(1.05);
 }
 
@@ -361,6 +365,29 @@
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 20px;
+}
+
+.campCardBadgeFull {
+  top: auto;
+  bottom: 0.75rem;
+  left: auto;
+  right: 0.75rem;
+  background: #f8d7da;
+  color: #842029;
+}
+
+.campCardBadgeClosed {
+  top: auto;
+  bottom: 0.75rem;
+  left: auto;
+  right: 0.75rem;
+  background: #e2d9f3;
+  color: #5a3d8a;
+}
+
+.campCardBooking.isDateFull,
+.campCardBooking.isDateClosed {
+  opacity: 0.85;
 }
 
 .campCardBodyBooking {

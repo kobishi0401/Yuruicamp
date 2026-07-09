@@ -1,15 +1,17 @@
-﻿/**
+/**
  * admin/js/customers.js
  * 客戶管理模組
  * 使用 jQuery Event Namespace (.customers) 防止重複導覽時事件堆疊
  *
  * window.tagColorMap 的鍵值必須與 customers.json 的 tags 陣列完全一致（含中文）
  * inline editing 支援：
- *   - phone / email / birthday / tier / points / tags：可連續編輯多欄，面板底部「確認變更」一次提交（Bootstrap Modal 預覽，不用 alert）
+ *   - phone / email / birthday / points / tags：可連續編輯多欄，面板底部「確認變更」一次提交（Bootstrap Modal 預覽，不用 alert）
+ *   - 會員等級：依消費總額自動計算，詳情面板唯讀顯示（不可手動修改）
  *   - 手機 / Email / 生日：必填；手機須 09 開頭 10 碼；Email 格式由 validators.js 驗證
  *   - 標籤庫：新增 / 刪除標籤（刪除仍用 confirm）
  *   - 新增客戶：Modal 表單一次填完所有欄位，寫入 customersCache 後重渲染列表
  *   - 配送地址：展開區標籤下方顯示，鉛筆開 Modal 編輯（與會員姓名/手機獨立）
+ *   - 露營喜好：會員前台填寫的 preferences，僅在展開詳情卡片唯讀顯示（不可編輯）
  * 主列為唯讀摘要（桌面 table / 手機卡片）；展開後才可編輯，儲存後同步更新主列
  * 篩選：會員等級/標籤（欄內 OR，兩欄 AND 疊加）；排序：註冊日期/消費總額（三段式）
  */
@@ -26,6 +28,35 @@ var customerFilterState = {
   tier: [],
   tags: []
 };
+
+/** 取得會員等級顯示名稱（優先 tierName）/ Get tier display label */
+function getCustomerTierDisplay(customer) {
+  if (!customer) { return '探險家'; }
+  if (customer.tierName) { return customer.tierName; }
+  if (typeof window.computeTier === 'function') {
+    return window.computeTier(customer.totalSpent).tierName;
+  }
+  return customer.tier || '探險家';
+}
+
+/** 依消費總額計算等級代碼與顯示名 / Resolve tier from totalSpent */
+function resolveTierFromSpent(totalSpent) {
+  if (typeof window.computeTier === 'function') {
+    return window.computeTier(totalSpent);
+  }
+  var spent = Number(totalSpent) || 0;
+  if (spent >= 28000) { return { tier: 'master', tierName: '大師' }; }
+  if (spent >= 12000) { return { tier: 'guide', tierName: '嚮導' }; }
+  return { tier: 'explorer', tierName: '探險家' };
+}
+
+/** 同步新增客戶 Modal 的等級顯示（依消費總額）/ Sync new-customer tier UI */
+function syncNewCustomerTierFromSpent() {
+  var spent = parseInt($('#newCustomerTotalSpent').val(), 10) || 0;
+  var tierInfo = resolveTierFromSpent(spent);
+  $('#newCustomerTierDisplay').val(tierInfo.tierName);
+  $('#newCustomerTier').val(tierInfo.tier);
+}
 
 // ==========================================================================
 // Step 1 — 全域標籤顏色對應表
@@ -49,6 +80,50 @@ function getTagBadge(tag) {
   return '<span class="badge ' + cls + ' me-1">' + tag + '</span>';
 }
 
+/** 露營喜好 key → 中文（與會員中心 data-value 一致）/ Camping preference labels */
+var CAMPING_PREFERENCE_LABELS = {
+  glamping: 'Glamping',
+  backpacking: '背包旅行',
+  family: '家庭露營',
+  solo: '獨旅',
+  hiking: '登山健行',
+  'car-camping': '車宿',
+  ultralight: '輕量化',
+  'base-camp': '基地營',
+  tent: '帳篷',
+  'sleeping-bag': '睡袋',
+  backpack: '背包',
+  cooking: '炊具',
+  lighting: '照明',
+  clothing: '服飾',
+  chair: '椅凳',
+  navigation: '導航',
+  safety: '安全用品',
+  photography: '攝影'
+};
+
+/** 將 preferences 物件攤平成陣列 / Flatten preferences object to array */
+function normalizeCustomerPreferences(prefs) {
+  if (Array.isArray(prefs)) { return prefs.filter(Boolean); }
+  if (!prefs || typeof prefs !== 'object') { return []; }
+  return []
+    .concat(prefs.styles || [])
+    .concat(prefs.equipment || [])
+    .filter(Boolean);
+}
+
+/** 露營喜好 → 唯讀 chip HTML（後台不可編輯）/ Read-only preference chips */
+function preferencesToHtml(prefs) {
+  var values = normalizeCustomerPreferences(prefs);
+  if (!values.length) {
+    return '<span class="text-muted small">尚未填寫</span>';
+  }
+  return values.map(function (key) {
+    var label = CAMPING_PREFERENCE_LABELS[key] || key;
+    return '<span class="customer-pref-tag">' + label + '</span>';
+  }).join('');
+}
+
 /**
  * 手機顯示格式：去掉 dash 和空格
  * Display phone without dashes or spaces — e.g. "0912-345-678" → "0912345678"
@@ -69,6 +144,22 @@ function formatPhoneDisplay(phone) {
 function formatDateDisplay(isoDate) {
   if (!isoDate) { return '—'; }
   return String(isoDate).slice(0, 10);
+}
+
+/** 登入方式代碼 → 中文顯示 / Auth provider code → display label */
+var AUTH_PROVIDER_LABELS = {
+  google: 'Google',
+  facebook: 'Facebook',
+  line: 'LINE',
+  admin: '後台新增'
+};
+
+/** 取得顧客登入方式顯示文字 / Get login method display text */
+function getCustomerAuthProviderDisplay(customer) {
+  if (!customer) { return '—'; }
+  var code = String(customer.authProvider || customer.provider || '').toLowerCase();
+  if (!code) { return '—'; }
+  return AUTH_PROVIDER_LABELS[code] || code;
 }
 
 // ==========================================================================
@@ -485,7 +576,7 @@ function getCustomerIdFromDetail($el) {
 /**
  * 編輯儲存後，同步更新主列（桌面 table 列 + 手機卡片）的唯讀顯示
  * @param {string} customerId
- * @param {Object} fields - { phone, email, birthday, tier, tagsHtml }
+ * @param {Object} fields - { phone, email, birthday, tierName, tagsHtml }
  */
 function syncCustomerMainRow(customerId, fields) {
   var $summary = $('.customer-summary-row[data-customer-id="' + customerId + '"]');
@@ -514,8 +605,8 @@ function syncCustomerMainRow(customerId, fields) {
     var birthdayText = formatDateDisplay(fields.birthday);
     $details.find('.birthday-display').text(birthdayText);
   }
-  if (fields.tier !== undefined) {
-    var tierText = fields.tier || '一般';
+  if (fields.tierName !== undefined) {
+    var tierText = fields.tierName || '探險家';
     $summary.find('.cell-tier').text(tierText);
     $card.find('.card-field-tier .card-value').text(tierText);
     $details.find('.tier-display').text(tierText);
@@ -624,6 +715,8 @@ function readNewCustomerFromModal() {
     tags.push($(this).val());
   });
 
+  var tierInfo = resolveTierFromSpent(parseInt($('#newCustomerTotalSpent').val(), 10) || 0);
+
   return {
     id: $('#newCustomerId').val().trim(),
     name: $('#newCustomerName').val().trim(),
@@ -631,7 +724,8 @@ function readNewCustomerFromModal() {
     email: $('#newCustomerEmail').val().trim(),
     birthday: normalizeBirthdayValue($('#newCustomerBirthday').val()),
     registeredAt: normalizeBirthdayValue($('#newCustomerRegisteredAt').val()),
-    tier: $('#newCustomerTier').val() || '一般',
+    tier: tierInfo.tier,
+    tierName: tierInfo.tierName,
     points: parseInt($('#newCustomerPoints').val(), 10) || 0,
     totalSpent: parseInt($('#newCustomerTotalSpent').val(), 10) || 0,
     tags: tags
@@ -674,7 +768,7 @@ function validateNewCustomerForm(data) {
 function resetAddCustomerModal() {
   var form = document.getElementById('addCustomerForm');
   if (form) { form.reset(); }
-  $('#newCustomerTier').val('一般');
+  syncNewCustomerTierFromSpent();
   $('#newCustomerPoints').val(0);
   $('#newCustomerTotalSpent').val(0);
   $('#newCustomerTagsList').html(buildTagsDropdown([]));
@@ -699,6 +793,8 @@ function saveCustomerFromModal() {
     return;
   }
 
+  var tierInfo = resolveTierFromSpent(data.totalSpent);
+
   var newCustomer = {
     id: data.id,
     avatar: '../assets/images/avatar-01.jpg',
@@ -708,12 +804,13 @@ function saveCustomerFromModal() {
     birthday: data.birthday,
     registeredAt: data.registeredAt,
     totalSpent: data.totalSpent,
-    tier: data.tier,
+    tier: tierInfo.tier,
+    tierName: tierInfo.tierName,
     points: data.points,
     coupons: 0,
     tags: data.tags,
-    orders: [],
-    rentals: [],
+    authProvider: 'admin',
+    // 訂單 / 預約改由 commerce JSON 的 customerId FK 查詢，不再寫入白名單陣列
     shippingAddress: emptyShippingAddress()
   };
 
@@ -756,7 +853,7 @@ function captureCustomerSnapshot(customerId) {
     phone: normalizePhoneValue(customer.phone),
     email: customer.email || '',
     birthday: normalizeBirthdayValue(customer.birthday),
-    tier: customer.tier || '一般',
+    tierName: getCustomerTierDisplay(customer),
     points: customer.points || 0,
     tags: (customer.tags || []).slice(),
     shippingAddress: cloneShippingAddress(customer.shippingAddress)
@@ -802,9 +899,6 @@ function readCustomerDraftFromPanel($panel) {
     birthday: $panel.find('.birthday-input').length
       ? normalizeBirthdayValue($panel.find('.birthday-input').val())
       : normalizeBirthdayValue($panel.find('.birthday-display').text()),
-    tier: $panel.find('.tier-select').length
-      ? $panel.find('.tier-select').val()
-      : ($panel.find('.tier-display').text().trim() || '一般'),
     points: $panel.find('.points-input').length
       ? parseInt($panel.find('.points-input').val(), 10) || 0
       : parseInt($panel.find('.points-display').text().trim(), 10) || 0,
@@ -822,7 +916,6 @@ function diffCustomerDraft(original, draft) {
   var draftBirthday = normalizeBirthdayValue(draft.birthday);
   var originalBirthday = normalizeBirthdayValue(original.birthday);
   if (draftBirthday !== originalBirthday) { changes.birthday = draftBirthday; }
-  if (draft.tier !== original.tier) { changes.tier = draft.tier; }
   if (draft.points !== original.points) { changes.points = draft.points; }
   if (!tagsEqual(draft.tags, original.tags)) {
     changes.tags = draft.tags.slice();
@@ -838,7 +931,7 @@ function formatFieldForSummary(key, value) {
   if (key === 'phone') { return formatPhoneDisplay(value); }
   if (key === 'email') { return value || '—'; }
   if (key === 'birthday') { return formatDateDisplay(value); }
-  if (key === 'tier') { return value || '一般'; }
+  if (key === 'tierName') { return value || '探險家'; }
   if (key === 'points') { return String(value); }
   if (key === 'tags') { return tagsToHtml(value || []); }
   if (key === 'shippingAddress') { return formatShippingAddressSummaryHtml(value); }
@@ -924,9 +1017,9 @@ function applyPanelFieldDisplays($panel, draft, options) {
     '.birthday-edit-btn'
   );
   restoreInlineFieldDisplay(
-    $panel, '.tier-wrap', '.tier-select', 'tier-display',
-    '<span class="tier-display">' + (draft.tier || '一般') + '</span>',
-    '.tier-edit-btn'
+    $panel, '.tier-wrap', null, 'tier-display',
+    '<span class="tier-display">' + (draft.tierName || '探險家') + '</span>',
+    null
   );
   restoreInlineFieldDisplay(
     $panel, '.points-wrap', '.points-input', 'points-display',
@@ -1014,7 +1107,6 @@ function commitCustomerDraft(customerId, draft, changes) {
   if (changes.phone) { syncFields.phone = draft.phone; }
   if (changes.email) { syncFields.email = draft.email; }
   if (changes.birthday) { syncFields.birthday = draft.birthday; }
-  if (changes.tier) { syncFields.tier = draft.tier; }
   if (changes.points) { syncFields.points = draft.points; }
   if (changes.tags) { syncFields.tagsHtml = tagsToHtml(draft.tags); }
 
@@ -1029,7 +1121,7 @@ function commitCustomerDraft(customerId, draft, changes) {
   updateCustomerEditActions(customerId);
   window.showAdminToast('客戶 ' + customerId + ' 資料已更新');
 
-  if (changes.tier || changes.tags) {
+  if (changes.tags) {
     applyCustomerFiltersAndSort();
   }
 
@@ -1221,8 +1313,8 @@ function applyCustomerFiltersAndSort() {
   // 會員等級 OR
   if (customerFilterState.tier.length > 0) {
     data = data.filter(function (c) {
-      var tier = c.tier || '一般';
-      return customerFilterState.tier.indexOf(tier) !== -1;
+      var tierName = getCustomerTierDisplay(c);
+      return customerFilterState.tier.indexOf(tierName) !== -1;
     });
   }
 
@@ -1348,15 +1440,54 @@ window.initCustomers = function () {
   });
 
   // 載入客戶資料並渲染列表
-  $.getJSON('data/customers.json', function (customers) {
-    window.customersCache = customers;
-    applyCustomerFiltersAndSort();
-  }).fail(function () {
-    var errHtml = '<i class="fas fa-exclamation-triangle me-2"></i>載入客戶數據失敗';
-    $('#customersTableBody').html(
-      '<tr><td colspan="9" class="text-center py-4 text-danger">' + errHtml + '</td></tr>'
-    );
-    $('#customersCardList').html('<div class="alert alert-danger m-3">' + errHtml + '</div>');
+  // 同時預載訂單 / 預約，詳情面板改用 customerId FK（不再讀 customers.orders[] / rentals[]）
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.customers && AdminAPI.customers.list,
+    jsonPath: DataPaths.customers,
+    emptyValue: [],
+    errorMessage: '載入客戶失敗',
+    onSuccess: function (customers) {
+      window.customersCache = customers;
+
+      // 預載訂單（失敗不擋列表）
+      loadAdminJsonResource({
+        adminList: AdminAPI && AdminAPI.orders && AdminAPI.orders.list,
+        jsonPath: DataPaths.orders,
+        emptyValue: [],
+        onSuccess: function (orders) {
+          window.ordersCache = orders;
+          applyCustomerFiltersAndSort();
+        },
+        onError: function () {
+          window.ordersCache = window.ordersCache || [];
+          applyCustomerFiltersAndSort();
+        }
+      });
+
+      // 預載預約（失敗不擋列表）
+      loadAdminJsonResource({
+        adminList: AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list,
+        jsonPath: DataPaths.campBookings,
+        emptyValue: [],
+        onSuccess: function (bookings) {
+          window.bookingsCache = bookings;
+          applyCustomerFiltersAndSort();
+        },
+        onError: function () {
+          window.bookingsCache = window.bookingsCache || [];
+          applyCustomerFiltersAndSort();
+        }
+      });
+
+      applyCustomerFiltersAndSort();
+    },
+    onError: function () {
+      var errHtml = '<i class="fas fa-exclamation-triangle me-2"></i>載入客戶數據失敗';
+      $('#customersTableBody').html(
+        '<tr><td colspan="9" class="text-center py-4 text-danger">' + errHtml + '</td></tr>'
+      );
+      $('#customersCardList').html('<div class="alert alert-danger m-3">' + errHtml + '</div>');
+    }
   });
 
   // ── 排序：點擊消費總額表頭（三段式 asc → desc → 取消）──
@@ -1430,7 +1561,11 @@ window.initCustomers = function () {
   });
 
   // === Enter 鍵 → 開啟確認變更（批次提交）===
-  $(document).on('keydown.customers', '.phone-input, .email-input, .birthday-input, .tier-select, .points-input', function (e) {
+  $(document).on('input.customers change.customers', '#newCustomerTotalSpent', function () {
+    syncNewCustomerTierFromSpent();
+  });
+
+  $(document).on('keydown.customers', '.phone-input, .email-input, .birthday-input, .points-input', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       $(this).closest('.customer-detail-panel').find('.customer-edit-confirm-btn').trigger('click');
@@ -1440,8 +1575,7 @@ window.initCustomers = function () {
   // 欄位值變更 → 更新「確認變更」按鈕顯示
   $(document).on('input change.customers',
     '.customer-detail-panel .phone-input, .customer-detail-panel .email-input, ' +
-    '.customer-detail-panel .birthday-input, .customer-detail-panel .tier-select, ' +
-    '.customer-detail-panel .points-input, .customer-detail-panel .tag-checkbox',
+    '.customer-detail-panel .birthday-input, .customer-detail-panel .points-input, .customer-detail-panel .tag-checkbox',
     function () {
       updateCustomerEditActions($(this).closest('.customer-detail-panel'));
     }
@@ -1491,23 +1625,6 @@ window.initCustomers = function () {
     );
     $(this).hide();
     $wrap.find('.birthday-input').focus();
-    updateCustomerEditActions($panel);
-  });
-
-  // === 會員等級 inline 編輯 ===
-  $(document).on('click.customers', '.tier-edit-btn', function () {
-    var $wrap = $(this).closest('.tier-wrap');
-    var $panel = $(this).closest('.customer-detail-panel');
-    var $span = $(this).siblings('.tier-display');
-    var currentTier = $span.text().trim();
-    $span.replaceWith(
-      '<select class="form-select form-select-sm tier-select d-inline-block" style="width:auto">' +
-      '<option value="一般"' + (currentTier === '一般' ? ' selected' : '') + '>一般</option>' +
-      '<option value="VIP"'  + (currentTier === 'VIP'  ? ' selected' : '') + '>VIP</option>'  +
-      '<option value="SVIP"' + (currentTier === 'SVIP' ? ' selected' : '') + '>SVIP</option>' +
-      '</select>'
-    );
-    $(this).hide();
     updateCustomerEditActions($panel);
   });
 
@@ -1752,11 +1869,17 @@ window.initCustomers = function () {
     if (window.ordersCache && window.ordersCache.length > 0) {
       openModal(window.ordersCache);
     } else {
-      $.getJSON('data/orders.json', function (orders) {
-        window.ordersCache = orders; // 存入全域快取，後續不需重複 fetch
-        openModal(orders);
-      }).fail(function () {
-        window.showAdminToast('載入訂單資料失敗，請稍後再試');
+      loadAdminJsonResource({
+        adminList: AdminAPI && AdminAPI.orders && AdminAPI.orders.list,
+        jsonPath: DataPaths.orders,
+        emptyValue: [],
+        onSuccess: function (orders) {
+          window.ordersCache = orders;
+          openModal(orders);
+        },
+        onError: function () {
+          window.showAdminToast('載入訂單資料失敗，請稍後再試');
+        }
       });
     }
   });
@@ -1772,7 +1895,7 @@ window.initCustomers = function () {
         window.showAdminToast('找不到預約單 ' + window.formatBookingId(bookingId) + ' 的資料');
         return;
       }
-      if (!booking.selected_rentals || booking.selected_rentals.length === 0) {
+      if (!booking.selectedRentals || booking.selectedRentals.length === 0) {
         window.showAdminToast('此預約單沒有租借裝備');
         return;
       }
@@ -1782,11 +1905,17 @@ window.initCustomers = function () {
     if (window.bookingsCache && window.bookingsCache.length > 0) {
       openModal(window.bookingsCache);
     } else {
-      $.getJSON('data/bookings.json', function (bookings) {
-        window.bookingsCache = bookings;
-        openModal(bookings);
-      }).fail(function () {
-        window.showAdminToast('載入預約資料失敗，請稍後再試');
+      loadAdminJsonResource({
+        adminList: AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list,
+        jsonPath: DataPaths.campBookings,
+        emptyValue: [],
+        onSuccess: function (bookings) {
+          window.bookingsCache = bookings;
+          openModal(bookings);
+        },
+        onError: function () {
+          window.showAdminToast('載入預約資料失敗，請稍後再試');
+        }
       });
     }
   });
@@ -1874,7 +2003,7 @@ function buildShippingAddressRowHtml(shippingAddressHtml) {
 /**
  * 產生展開區完整 HTML（手機/Email/生日/註冊日期/等級/點數/標籤/配送地址/購買紀錄/租借紀錄）
  */
-function buildDetailPanelHtml(c, phoneDisplay, emailDisplay, birthdayDisplay, registeredDisplay, tierDisplay, tagsHtml, shippingAddressHtml, ordersHtml, rentalsHtml) {
+function buildDetailPanelHtml(c, phoneDisplay, emailDisplay, birthdayDisplay, registeredDisplay, tierDisplay, tagsHtml, preferencesHtml, shippingAddressHtml, ordersHtml, rentalsHtml) {
   return (
     '<div class="customer-detail-panel" data-customer-id="' + c.id + '">' +
       '<table class="table table-sm mb-0 customer-detail-table"><tbody>' +
@@ -1910,11 +2039,14 @@ function buildDetailPanelHtml(c, phoneDisplay, emailDisplay, birthdayDisplay, re
           '<td><span class="registered-display">' + registeredDisplay + '</span></td>' +
         '</tr>' +
         '<tr>' +
+          '<th class="text-muted">登入方式</th>' +
+          '<td><span class="auth-provider-display">' + getCustomerAuthProviderDisplay(c) + '</span></td>' +
+        '</tr>' +
+        '<tr>' +
           '<th class="text-muted">會員等級</th>' +
           '<td>' +
             '<div class="tier-wrap d-flex align-items-center gap-1">' +
               '<span class="tier-display">' + tierDisplay + '</span>' +
-              '<button class="btn btn-link btn-sm p-0 tier-edit-btn">' + EDIT_BTN_ICON + '</button>' +
             '</div>' +
           '</td>' +
         '</tr>' +
@@ -1926,6 +2058,10 @@ function buildDetailPanelHtml(c, phoneDisplay, emailDisplay, birthdayDisplay, re
               '<button class="btn btn-link btn-sm p-0 points-edit-btn">' + EDIT_BTN_ICON + '</button>' +
             '</div>' +
           '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<th class="text-muted">露營喜好</th>' +
+          '<td><span class="preferences-display">' + preferencesHtml + '</span></td>' +
         '</tr>' +
         buildTagsRowHtml(c.id, tagsHtml) +
         buildShippingAddressRowHtml(shippingAddressHtml) +
@@ -2057,7 +2193,7 @@ function renderCustomersList(customers) {
     var collapseId       = 'collapse-' + c.id;
     var mobileCollapseId = 'collapse-mobile-' + c.id;
     var phoneDisplay     = formatPhoneDisplay(c.phone);
-    var tierDisplay      = c.tier || '一般';
+    var tierDisplay      = getCustomerTierDisplay(c);
     var spentDisplay     = 'NT$ ' + c.totalSpent.toLocaleString();
     var pointsDisplay    = (c.points || 0).toLocaleString();
     var emailDisplay      = c.email || '—';
@@ -2066,24 +2202,33 @@ function renderCustomersList(customers) {
     var tagsHtml         = (c.tags && c.tags.length > 0)
       ? c.tags.map(getTagBadge).join('')
       : '<span class="text-muted small">無標籤</span>';
+    var preferencesHtml  = preferencesToHtml(c.preferences);
 
-    var ordersHtml = (c.orders && c.orders.length > 0)
-      ? c.orders.map(function (orderId) {
+    // 依 customerId FK 從 commerce cache 取訂單 / 預約（不再讀 c.orders / c.rentals）
+    var customerOrders = (window.ordersCache || []).filter(function (o) {
+      return o && o.customerId === c.id;
+    });
+    var customerBookings = (window.bookingsCache || []).filter(function (b) {
+      return b && b.customerId === c.id;
+    });
+
+    var ordersHtml = customerOrders.length > 0
+      ? customerOrders.map(function (order) {
           return '<li class="list-group-item list-group-item-action py-1 small">' +
             '<i class="fas fa-receipt me-2 text-muted"></i>' +
             '<span class="admin-cell-link customer-order-link" ' +
-            'data-order-id="' + orderId + '" ' +
-            'title="點擊查看訂單明細">' + window.formatOrderId(orderId) + '</span></li>';
+            'data-order-id="' + order.id + '" ' +
+            'title="點擊查看訂單明細">' + window.formatOrderId(order.id) + '</span></li>';
         }).join('')
       : '<li class="list-group-item text-muted small">無購買記錄</li>';
 
-    var rentalsHtml = (c.rentals && c.rentals.length > 0)
-      ? c.rentals.map(function (bookingId) {
+    var rentalsHtml = customerBookings.length > 0
+      ? customerBookings.map(function (booking) {
           return '<li class="list-group-item list-group-item-action py-1 small">' +
             '<i class="fas fa-campground me-2 text-muted"></i>' +
             '<span class="admin-cell-link customer-rental-link" ' +
-            'data-booking-id="' + bookingId + '" ' +
-            'title="點擊查看租借明細">' + window.formatBookingId(bookingId) + '</span></li>';
+            'data-booking-id="' + booking.id + '" ' +
+            'title="點擊查看租借明細">' + window.formatBookingId(booking.id) + '</span></li>';
         }).join('')
       : '<li class="list-group-item text-muted small">無租借紀錄</li>';
 
@@ -2091,7 +2236,7 @@ function renderCustomersList(customers) {
 
     var detailHtml = buildDetailPanelHtml(
       c, phoneDisplay, emailDisplay, birthdayDisplay, registeredDisplay,
-      tierDisplay, tagsHtml, shippingAddressHtml, ordersHtml, rentalsHtml
+      tierDisplay, tagsHtml, preferencesHtml, shippingAddressHtml, ordersHtml, rentalsHtml
     );
 
     // 桌面：摘要列 + 展開列

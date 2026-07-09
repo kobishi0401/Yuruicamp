@@ -1,0 +1,2264 @@
+[
+  {
+    "id": "R001",
+    "productId": "P001",
+    "image": "/assets/images/products/P001-1.jpg",
+    "name": "Coleman 六人帳篷",
+    "category": "帳篷",
+    "brand": "Coleman",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P001-0",
+        "color": "深橄欖綠",
+        "size": "",
+        "label": "深橄欖綠",
+        "camp": {
+          "C001": 0,
+          "C002": 0,
+          "C003": 1,
+          "C004": 2,
+          "C005": 1,
+          "C006": 2,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 6
+      },
+      {
+        "id": "v-P001-1",
+        "color": "沙漠棕",
+        "size": "",
+        "label": "沙漠棕",
+        "camp": {
+          "C001": 0,
+          "C002": 0,
+          "C003": 1,
+          "C004": 1,
+          "C005": 1,
+          "C006": 1,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 4
+      },
+      {
+        "id": "v-P001-2",
+        "color": "太空灰",
+        "size": "",
+        "label": "太空灰",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 1,
+          "C005": 1,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 8
+      }
+    ]
+  },
+  {
+    "id": "R002",
+    "productId": "P002",
+    "image": "/assets/images/products/P002-1.jpg",
+    "name": "MSR 超輕量帳篷",
+    "category": "帳篷",
+    "brand": "MSR",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P002-0",
+        "color": "沙漠卡其",
+        "size": "",
+        "label": "沙漠卡其",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 5,
+          "C004": 2,
+          "C005": 3,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 22
+      }
+    ]
+  },
+  {
+    "id": "R018",
+    "productId": "P003",
+    "image": "/assets/images/products/P003-1.jpg",
+    "name": "充氣式睡墊",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P003-0",
+        "color": "",
+        "size": "S",
+        "label": "S",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 0,
+          "C005": 2,
+          "C006": 1,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 7
+      },
+      {
+        "id": "v-P003-1",
+        "color": "",
+        "size": "M",
+        "label": "M",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 0,
+          "C005": 2,
+          "C006": 1,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 7
+      },
+      {
+        "id": "v-P003-2",
+        "color": "",
+        "size": "L",
+        "label": "L",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 1,
+          "C005": 1,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 9
+      }
+    ]
+  },
+  {
+    "id": "R005",
+    "productId": "P004",
+    "image": "/assets/images/products/P004-1.jpg",
+    "name": "羽絨睡袋",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P004-0",
+        "color": "",
+        "size": "-10°C",
+        "label": "-10°C",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 1,
+          "C005": 1,
+          "C006": 2,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 6
+      },
+      {
+        "id": "v-P004-1",
+        "color": "",
+        "size": "-5°C",
+        "label": "-5°C",
+        "camp": {
+          "C001": 0,
+          "C002": 0,
+          "C003": 1,
+          "C004": 1,
+          "C005": 0,
+          "C006": 1,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 3
+      },
+      {
+        "id": "v-P004-2",
+        "color": "",
+        "size": "0°C",
+        "label": "0°C",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 1,
+          "C005": 1,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 8
+      }
+    ]
+  },
+  {
+    "id": "R006",
+    "productId": "P005",
+    "image": "/assets/images/products/P005-1.jpg",
+    "name": "Coleman 氣化爐",
+    "category": "炊具",
+    "brand": "Coleman",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P005-0",
+        "color": "標準版",
+        "size": "",
+        "label": "標準版",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 4,
+          "C004": 5,
+          "C005": 4,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 25
+      }
+    ]
+  },
+  {
+    "id": "R007",
+    "productId": "P006",
+    "image": "/assets/images/products/P006-1.jpg",
+    "name": "Snow Peak 鈦合金杯組",
+    "category": "炊具",
+    "brand": "Snow Peak",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P006-0",
+        "color": "鈦金屬原色",
+        "size": "",
+        "label": "鈦金屬原色",
+        "camp": {
+          "C001": 0,
+          "C002": 3,
+          "C003": 4,
+          "C004": 4,
+          "C005": 2,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 17
+      }
+    ]
+  },
+  {
+    "id": "R011",
+    "productId": "P007",
+    "image": "/assets/images/products/P007-1.jpg",
+    "name": "LED 露營燈",
+    "category": "燈具",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P007-0",
+        "color": "暖白光",
+        "size": "",
+        "label": "暖白光",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 0,
+          "C005": 1,
+          "C006": 1,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 4
+      },
+      {
+        "id": "v-P007-1",
+        "color": "冷白光",
+        "size": "",
+        "label": "冷白光",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 2,
+          "C004": 1,
+          "C005": 2,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 10
+      }
+    ]
+  },
+  {
+    "id": "R013",
+    "productId": "P008",
+    "image": "/assets/images/products/P008-1.jpg",
+    "name": "防水登山背包",
+    "category": "背包",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P008-0",
+        "color": "森林綠",
+        "size": "35L",
+        "label": "森林綠 / 35L",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 0,
+          "C005": 1,
+          "C006": 0,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 3
+      },
+      {
+        "id": "v-P008-1",
+        "color": "森林綠",
+        "size": "45L",
+        "label": "森林綠 / 45L",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 1,
+          "C005": 3,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 12
+      }
+    ]
+  },
+  {
+    "id": "R008",
+    "productId": "P009",
+    "image": "/assets/images/products/P009-1.jpg",
+    "name": "折疊桌椅組",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P009-0",
+        "color": "鋁合金輕量版",
+        "size": "",
+        "label": "鋁合金輕量版",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 5,
+          "C004": 1,
+          "C005": 5,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 19
+      }
+    ]
+  },
+  {
+    "id": "R003",
+    "productId": "P011",
+    "image": "/assets/images/products/P011-1.jpg",
+    "name": "Snow Peak 客廳帳",
+    "category": "帳篷",
+    "brand": "Snow Peak",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P011-0",
+        "color": "象牙白",
+        "size": "",
+        "label": "象牙白",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 3,
+          "C004": 4,
+          "C005": 2,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 15
+      }
+    ]
+  },
+  {
+    "id": "R004",
+    "productId": "P012",
+    "image": "/assets/images/products/P012-1.jpg",
+    "name": "四季保暖睡袋",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P012-0",
+        "color": "深藍",
+        "size": "M",
+        "label": "深藍 / M",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 0,
+          "C005": 0,
+          "C006": 2,
+          "C007": 0,
+          "C008": 0,
+          "C009": 0
+        },
+        "total": 6
+      },
+      {
+        "id": "v-P012-1",
+        "color": "深藍",
+        "size": "L",
+        "label": "深藍 / L",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 1,
+          "C005": 1,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 11
+      }
+    ]
+  },
+  {
+    "id": "R009",
+    "productId": "P013",
+    "image": "/assets/images/products/P013-1.jpg",
+    "name": "折疊蛋捲桌",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P013-0",
+        "color": "胡桃木紋",
+        "size": "",
+        "label": "胡桃木紋",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 5,
+          "C004": 3,
+          "C005": 4,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 24
+      }
+    ]
+  },
+  {
+    "id": "R010",
+    "productId": "P014",
+    "image": "/assets/images/products/P014-1.jpg",
+    "name": "高背月亮椅",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P014-0",
+        "color": "軍綠",
+        "size": "",
+        "label": "軍綠",
+        "camp": {
+          "C001": 0,
+          "C002": 3,
+          "C003": 1,
+          "C004": 5,
+          "C005": 1,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 18
+      }
+    ]
+  },
+  {
+    "id": "R012",
+    "productId": "P015",
+    "image": "/assets/images/products/P015-1.jpg",
+    "name": "充電式頭燈",
+    "category": "燈具",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P015-0",
+        "color": "USB-C",
+        "size": "",
+        "label": "USB-C",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 1,
+          "C004": 5,
+          "C005": 4,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 22
+      }
+    ]
+  },
+  {
+    "id": "R014",
+    "productId": "P016",
+    "image": "/assets/images/products/P016-1.jpg",
+    "name": "65L 重裝背包",
+    "category": "背包",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P016-0",
+        "color": "岩石灰",
+        "size": "",
+        "label": "岩石灰",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 5,
+          "C004": 2,
+          "C005": 2,
+          "C006": 3,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 19
+      }
+    ]
+  },
+  {
+    "id": "R015",
+    "productId": "P017",
+    "image": "/assets/images/products/P017-1.jpg",
+    "name": "露營拖車",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P017-0",
+        "color": "折疊式",
+        "size": "",
+        "label": "折疊式",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 1,
+          "C004": 4,
+          "C005": 1,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 18
+      }
+    ]
+  },
+  {
+    "id": "R016",
+    "productId": "P018",
+    "image": "/assets/images/products/P018-1.jpg",
+    "name": "大型天幕",
+    "category": "帳篷",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P018-0",
+        "color": "4x4m",
+        "size": "",
+        "label": "4x4m",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 4,
+          "C004": 3,
+          "C005": 5,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 22
+      }
+    ]
+  },
+  {
+    "id": "R017",
+    "productId": "P019",
+    "image": "/assets/images/products/P019-1.jpg",
+    "name": "營柱與營繩組",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P019-0",
+        "color": "標準套組",
+        "size": "",
+        "label": "標準套組",
+        "camp": {
+          "C001": 0,
+          "C002": 3,
+          "C003": 4,
+          "C004": 4,
+          "C005": 2,
+          "C006": 3,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 19
+      }
+    ]
+  },
+  {
+    "id": "R019",
+    "productId": "P020",
+    "image": "/assets/images/products/P020-1.jpg",
+    "name": "行動電源站",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P020-0",
+        "color": "500Wh",
+        "size": "",
+        "label": "500Wh",
+        "camp": {
+          "C001": 0,
+          "C002": 1,
+          "C003": 1,
+          "C004": 4,
+          "C005": 5,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 15
+      }
+    ]
+  },
+  {
+    "id": "R020",
+    "productId": "P021",
+    "image": "/assets/images/products/P021-1.jpg",
+    "name": "保冷冰桶 45L",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P021-0",
+        "color": "深藍",
+        "size": "",
+        "label": "深藍",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 1,
+          "C004": 3,
+          "C005": 4,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 16
+      }
+    ]
+  },
+  {
+    "id": "R021",
+    "productId": "P022",
+    "image": "/assets/images/products/P022-1.jpg",
+    "name": "雙層防風外套",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P022-0",
+        "color": "L號",
+        "size": "",
+        "label": "L號",
+        "camp": {
+          "C001": 0,
+          "C002": 5,
+          "C003": 1,
+          "C004": 1,
+          "C005": 5,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 20
+      }
+    ]
+  },
+  {
+    "id": "R022",
+    "productId": "P023",
+    "image": "/assets/images/products/P023-1.jpg",
+    "name": "快煮鍋 1.5L",
+    "category": "炊具",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P023-0",
+        "color": "不鏽鋼",
+        "size": "",
+        "label": "不鏽鋼",
+        "camp": {
+          "C001": 0,
+          "C002": 4,
+          "C003": 2,
+          "C004": 5,
+          "C005": 5,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 21
+      }
+    ]
+  },
+  {
+    "id": "R023",
+    "productId": "P024",
+    "image": "/assets/images/products/P024-1.jpg",
+    "name": "碳纖維登山杖",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P024-0",
+        "color": "一對",
+        "size": "",
+        "label": "一對",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 4,
+          "C004": 2,
+          "C005": 4,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 17
+      }
+    ]
+  },
+  {
+    "id": "R024",
+    "productId": "P025",
+    "image": "/assets/images/products/P025-1.jpg",
+    "name": "防水戶外手錶",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P025-0",
+        "color": "GPS版",
+        "size": "",
+        "label": "GPS版",
+        "camp": {
+          "C001": 0,
+          "C002": 2,
+          "C003": 2,
+          "C004": 3,
+          "C005": 3,
+          "C006": 2,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 15
+      }
+    ]
+  },
+  {
+    "id": "R025",
+    "productId": "P026",
+    "image": "/assets/images/products/P026-1.jpg",
+    "name": "輕量吊床",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 6
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P026-0",
+        "color": "雙人",
+        "size": "",
+        "label": "雙人",
+        "camp": {
+          "C001": 0,
+          "C002": 5,
+          "C003": 5,
+          "C004": 3,
+          "C005": 5,
+          "C006": 6,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 27
+      }
+    ]
+  },
+  {
+    "id": "R026",
+    "productId": "P027",
+    "image": "/assets/images/products/P027-1.jpg",
+    "name": "戶外淋浴袋",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P027-0",
+        "color": "20L",
+        "size": "",
+        "label": "20L",
+        "camp": {
+          "C001": 0,
+          "C002": 5,
+          "C003": 3,
+          "C004": 5,
+          "C005": 1,
+          "C006": 1,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 18
+      }
+    ]
+  },
+  {
+    "id": "R027",
+    "productId": "P028",
+    "image": "/assets/images/products/P028-1.jpg",
+    "name": "折疊式焚火台",
+    "category": "炊具",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 4
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P028-0",
+        "color": "不鏽鋼",
+        "size": "",
+        "label": "不鏽鋼",
+        "camp": {
+          "C001": 0,
+          "C002": 3,
+          "C003": 2,
+          "C004": 1,
+          "C005": 4,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 18
+      }
+    ]
+  },
+  {
+    "id": "R028",
+    "productId": "P029",
+    "image": "/assets/images/products/P029-1.jpg",
+    "name": "防蚊帳篷內帳",
+    "category": "帳篷",
+    "brand": "Yuruicamp",
+    "camp": [
+      {
+        "campgroundId": "C001",
+        "name": "租借主倉",
+        "quantity": 0
+      },
+      {
+        "campgroundId": "C002",
+        "name": "雲海仙境露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C003",
+        "name": "溪谷秘境野營地",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C004",
+        "name": "太平山森林豪華露營",
+        "quantity": 3
+      },
+      {
+        "campgroundId": "C005",
+        "name": "南台灣星空草原營地",
+        "quantity": 2
+      },
+      {
+        "campgroundId": "C006",
+        "name": "花蓮海岸風露營區",
+        "quantity": 5
+      },
+      {
+        "campgroundId": "C007",
+        "name": "阿里山雲霧繚繞營地",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C008",
+        "name": "宜蘭礁溪湯泉露營",
+        "quantity": 1
+      },
+      {
+        "campgroundId": "C009",
+        "name": "台中武陵溪流野營",
+        "quantity": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "v-P029-0",
+        "color": "通用型",
+        "size": "",
+        "label": "通用型",
+        "camp": {
+          "C001": 0,
+          "C002": 5,
+          "C003": 5,
+          "C004": 3,
+          "C005": 2,
+          "C006": 5,
+          "C007": 1,
+          "C008": 1,
+          "C009": 1
+        },
+        "total": 23
+      }
+    ]
+  }
+]

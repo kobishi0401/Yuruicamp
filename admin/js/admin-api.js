@@ -150,6 +150,18 @@
       }
     },
 
+    // ── 預約 / Bookings ──
+    bookings: {
+      /** GET /api/admin/bookings */
+      list: function () {
+        return request('GET', '/bookings');
+      },
+      /** PATCH /api/admin/bookings/:id — 狀態、備註等 */
+      update: function (bookingId, payload) {
+        return request('PATCH', '/bookings/' + encodeURIComponent(bookingId), payload);
+      }
+    },
+
     // ── 商品 / Products ──
     products: {
       /** GET /api/admin/products */
@@ -180,13 +192,9 @@
       saveAll: function (reviews) {
         return request('PUT', '/reviews', { reviews: reviews });
       },
-      /** PATCH /api/admin/reviews/:id/reply */
-      reply: function (reviewId, payload) {
-        return request('PATCH', '/reviews/' + encodeURIComponent(reviewId) + '/reply', payload);
-      },
-      /** DELETE /api/admin/reviews/:id/reply */
-      deleteReply: function (reviewId) {
-        return request('DELETE', '/reviews/' + encodeURIComponent(reviewId) + '/reply');
+      /** DELETE /api/admin/reviews/:id — 刪除整則評論 */
+      remove: function (reviewId) {
+        return request('DELETE', '/reviews/' + encodeURIComponent(reviewId));
       }
     },
 
@@ -213,6 +221,22 @@
       },
       create: function (record) {
         return request('POST', '/movement', record);
+      }
+    },
+
+    // ── 營區公休 / Campground closures ──
+    closures: {
+      list: function () {
+        return request('GET', '/campground-closures');
+      },
+      create: function (closure) {
+        return request('POST', '/campground-closures', closure);
+      },
+      update: function (id, closure) {
+        return request('PUT', '/campground-closures/' + encodeURIComponent(id), closure);
+      },
+      remove: function (id) {
+        return request('DELETE', '/campground-closures/' + encodeURIComponent(id));
       }
     }
   };

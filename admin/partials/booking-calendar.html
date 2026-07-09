@@ -1,0 +1,105 @@
+<!-- partials/booking-calendar.html
+     預約排程面板 — Zone 級可用性月曆 + 公休設定
+-->
+
+<div class="card shadow-sm border-0 booking-calendar-card">
+
+  <div class="card-header bg-white border-0 py-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <h5 class="mb-1 fw-semibold">預約排程面板</h5>
+        <p class="text-muted small mb-0" id="bcWindowLabel">載入預約窗口中…</p>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="small text-muted mb-0" for="bcCampgroundSelect">營區</label>
+        <select id="bcCampgroundSelect" class="form-select form-select-sm" style="min-width: 200px;">
+          <option value="">載入中…</option>
+        </select>
+
+        <label class="small text-muted mb-0" for="bcZoneSelect">營位類型</label>
+        <select id="bcZoneSelect" class="form-select form-select-sm" style="min-width: 180px;">
+          <option value="">—</option>
+        </select>
+
+        <button type="button" class="btn btn-sm btn-outline-primary" id="bcBtnClosureSettings">
+          <i class="fas fa-calendar-xmark me-1"></i>公休設定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body pt-0">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="bcPrevMonth" aria-label="上個月">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <h6 class="mb-0 fw-semibold" id="bcMonthLabel">—</h6>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="bcNextMonth" aria-label="下個月">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <div class="bc-legend d-flex flex-wrap gap-3 mb-3 small text-muted">
+      <span><span class="bc-legend-dot bc-status-available"></span> 充足</span>
+      <span><span class="bc-legend-dot bc-status-low"></span> 少量</span>
+      <span><span class="bc-legend-dot bc-status-full"></span> 滿位</span>
+      <span><span class="bc-legend-dot bc-status-closed"></span> 公休</span>
+      <span><span class="bc-legend-dot bc-status-out_of_window"></span> 不可預約</span>
+    </div>
+
+    <div class="bc-calendar-grid" id="bcCalendarGrid" aria-label="營位可用性月曆">
+      <div class="text-center py-4 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" style="color: var(--admin-brand-accent);"></div>
+        載入排程資料中…
+      </div>
+    </div>
+
+    <div class="bc-day-detail mt-4 d-none" id="bcDayDetail">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h6 class="fw-semibold mb-0" id="bcDayDetailTitle">當日佔用明細</h6>
+        <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="bcBtnCloseSingleDay">
+          將此日設為公休
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 admin-data-table">
+          <thead class="table-light">
+            <tr>
+              <th>預約單號</th>
+              <th>營位類型</th>
+              <th>顧客</th>
+              <th>數量</th>
+              <th>狀態</th>
+              <th>入住～退房</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="bcDayDetailBody"></tbody>
+        </table>
+      </div>
+      <p class="text-muted small mb-0 d-none" id="bcDayDetailEmpty">此日無佔用預約。</p>
+      <p class="text-muted small mb-0 d-none" id="bcDayDetailClosed"></p>
+    </div>
+
+    <div class="mt-4">
+      <h6 class="fw-semibold mb-2">本營區公休規則</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 admin-data-table" id="bcClosureTable">
+          <thead class="table-light">
+            <tr>
+              <th>類型</th>
+              <th>期間／星期</th>
+              <th>原因</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="bcClosureTableBody">
+            <tr><td colspan="4" class="text-muted text-center py-2">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>

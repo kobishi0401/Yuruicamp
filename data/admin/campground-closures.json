@@ -1,0 +1,23 @@
+[
+  {
+    "id": "CL001",
+    "campgroundId": "C002",
+    "type": "date_range",
+    "startDate": "2026-07-28",
+    "endDate": "2026-07-29",
+    "reason": "設施年度檢修",
+    "createdBy": "admin",
+    "createdAt": "2026-07-01 09:00:00"
+  },
+  {
+    "id": "CL002",
+    "campgroundId": "C003",
+    "type": "weekly",
+    "dayOfWeek": 2,
+    "effectiveFrom": "2026-07-09",
+    "effectiveTo": "2026-09-30",
+    "reason": "每週二公休",
+    "createdBy": "admin",
+    "createdAt": "2026-07-01 09:00:00"
+  }
+]

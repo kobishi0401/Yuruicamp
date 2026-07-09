@@ -7,7 +7,7 @@
  */
 
 // ==========================================================
-// === 9 個後台頁面定義（Sidebar 順序）===
+// === 10 個後台頁面定義（Sidebar 順序）===
 // ==========================================================
 /** @type {Array<{key: string, label: string}>} */
 window.ADMIN_SECTIONS = [
@@ -18,6 +18,7 @@ window.ADMIN_SECTIONS = [
   { key: 'customers',   label: '客戶管理' },
   { key: 'discounts',   label: '折扣管理' },
   { key: 'reviews',     label: '評論管理' },
+  { key: 'booking-calendar', label: '預約排程面板' },
   { key: 'bookings',    label: '預約/租借管理' },
   { key: 'permissions', label: '權限管理' },
 ];
@@ -32,7 +33,7 @@ var EMPLOYEE_STORAGE_KEY = 'adminEmployees';
 // POST   /api/admin/login
 
 /**
- * 建立預設權限物件（9 頁 view/edit）
+ * 建立預設權限物件（10 頁 view/edit）
  * Build default permissions object for all 9 sections
  * @param {boolean} allTrue - true = 全部開放；false = 全部關閉
  */
@@ -77,8 +78,9 @@ function initEmployeeStore() {
         customers:   { view: true,  edit: false },
         discounts:   { view: false, edit: false },
         reviews:     { view: false, edit: false },
-        permissions: { view: false, edit: false },
+        'booking-calendar': { view: false, edit: false },
         bookings:    { view: false, edit: false },
+        permissions: { view: false, edit: false },
       },
     },
   ];
@@ -86,11 +88,30 @@ function initEmployeeStore() {
   saveEmployees(employees);
 }
 
+/** 補齊員工權限中缺少的新 section key / Backfill missing section permissions */
+function migrateEmployeePermissions(permissions) {
+  permissions = permissions || {};
+  window.ADMIN_SECTIONS.forEach(function (sec) {
+    if (!permissions[sec.key]) {
+      permissions[sec.key] = { view: false, edit: false };
+    }
+  });
+  return permissions;
+}
+
 /** 從 localStorage 讀取員工列表 / Fetch employees from localStorage */
 function fetchEmployees() {
   initEmployeeStore();
   try {
-    return JSON.parse(localStorage.getItem(EMPLOYEE_STORAGE_KEY) || '[]');
+    var list = JSON.parse(localStorage.getItem(EMPLOYEE_STORAGE_KEY) || '[]');
+    var changed = false;
+    list.forEach(function (emp) {
+      var before = JSON.stringify(emp.permissions || {});
+      emp.permissions = migrateEmployeePermissions(emp.permissions);
+      if (JSON.stringify(emp.permissions) !== before) changed = true;
+    });
+    if (changed) saveEmployees(list);
+    return list;
   } catch (e) {
     return [];
   }

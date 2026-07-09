@@ -31,7 +31,7 @@
 
     <!-- 右側按鈕群組：清除篩選 | 產生異動紀錄 | 設定最低庫存 | 新增商品 -->
     <div class="d-flex flex-row flex-wrap align-items-center gap-2">
-      <!-- 有分類篩選時才顯示，由 products.js 控制 -->
+      <!-- 有分類 / 品牌篩選時才顯示，由 products.js 控制 -->
       <button type="button"
               class="btn btn-sm btn-outline-secondary d-none"
               id="btnClearProductFilters">
@@ -60,6 +60,12 @@
     </div>
   </div>
 
+  <!-- 最低庫存設定模式提示：由 products.js 的 updateMinStockModeUI() 控制顯示 -->
+  <div id="minStockModeHint" class="d-none px-3 py-2 bg-warning bg-opacity-10 border-bottom small text-muted">
+    <i class="fas fa-info-circle me-1"></i>
+    最低庫存設定模式：點各列右側 <i class="fas fa-pencil-alt"></i> 可編輯各分店／營地的庫存閾值；多規格商品請先展開規格。
+  </div>
+
   <!-- 商店表格容器 -->
   <div class="card-body p-0 admin-products-panel" data-products-panel="store">
     <div class="table-responsive">
@@ -75,28 +81,27 @@
               分類
               <i class="fas fa-filter filter-icon ms-1"></i>
               <span class="filter-dot d-none"></span>
-              <div class="filter-dropdown d-none">
-                <label><input type="checkbox" value="帳篷"> 帳篷</label>
-                <label><input type="checkbox" value="睡袋"> 睡袋</label>
-                <label><input type="checkbox" value="炊具"> 炊具</label>
-                <label><input type="checkbox" value="燈具"> 燈具</label>
-                <label><input type="checkbox" value="背包"> 背包</label>
-                <label><input type="checkbox" value="配件"> 配件</label>
-                <label><input type="checkbox" value="其他"> 其他</label>
-              </div>
+              <div class="filter-dropdown d-none" data-product-category-filter-options></div>
+            </th>
+            <!-- 品牌：多選篩選（欄內 OR，商店 / 租借共用 productFilterState） -->
+            <th class="sticky-col sticky-col-brand filter-th" data-filter-key="brand">
+              品牌
+              <i class="fas fa-filter filter-icon ms-1"></i>
+              <span class="filter-dot d-none"></span>
+              <div class="filter-dropdown d-none" data-product-brand-filter-options></div>
             </th>
             <th class="sticky-col sticky-col-total-stock">總庫存量</th>
             <!-- 可水平捲動欄位：商店主倉 + 各分店庫存（明確指定欄寬）-->
             <th class="scrollable-stock-col">商店主倉</th>
-            <th class="scrollable-stock-col">分店 A</th>
-            <th class="scrollable-stock-col">分店 B</th>
-            <th class="scrollable-stock-col">分店 C</th>
-            <!-- 最後一欄：右側 sticky，整列庫存編輯入口（鉛筆 / 勾 / X）-->
-            <th class="sticky-col sticky-col-right sticky-col-stock-edit">修改</th>
+            <th class="scrollable-stock-col">台北旗艦店</th>
+            <th class="scrollable-stock-col">台中中港店</th>
+            <th class="scrollable-stock-col">高雄左營店</th>
+            <!-- 最低庫存模式才顯示：右側 sticky 編輯入口（鉛筆 / 勾 / X）-->
+            <th class="sticky-col sticky-col-right sticky-col-stock-edit min-stock-edit-col d-none">修改</th>
           </tr>
         </thead>
         <!-- tbody 由 products.js 的 renderProductsTable() 動態填入；不足格庫存數字顯示紅色 -->
-        <!-- colspan=9：圖片、名稱、分類、總庫存(唯讀)、主倉、分店A、分店B、分店C、修改庫存數量 -->
+        <!-- colspan：一般 9 欄；最低庫存模式 10 欄（多「修改」）-->
         <tbody id="productsTableBody">
           <tr>
             <td colspan="9" class="text-center py-4">
@@ -110,13 +115,13 @@
     </div>
   </div><!-- end card-body -->
 
-  <!-- 租借表格容器：點擊租借頁籤後由 products.js 載入 admin/data/reantal.json -->
+  <!-- 租借表格容器：點擊租借頁籤後由 products.js 載入 /data/admin/rental-skus.json -->
   <div class="card-body p-0 admin-products-panel d-none" data-products-panel="rental">
     <div class="table-responsive">
       <!-- product-table-fixed：啟用 table-layout: fixed，讓欄寬精確對齊 sticky left 值 -->
       <table class="table table-hover mb-0 admin-data-table product-table-fixed" id="rentalProductsTable">
         <thead class="table-light">
-          <tr>
+          <tr id="rentalProductsTableHeadRow">
             <!-- 固定欄位（sticky）：圖片、名稱、分類、操作、總租借庫存（唯讀，自動計算）-->
             <th class="sticky-col sticky-col-img">圖片</th>
             <th class="sticky-col sticky-col-name">商品名稱</th>
@@ -125,33 +130,26 @@
               分類
               <i class="fas fa-filter filter-icon ms-1"></i>
               <span class="filter-dot d-none"></span>
-              <div class="filter-dropdown d-none">
-                <label><input type="checkbox" value="帳篷"> 帳篷</label>
-                <label><input type="checkbox" value="睡袋"> 睡袋</label>
-                <label><input type="checkbox" value="炊具"> 炊具</label>
-                <label><input type="checkbox" value="燈具"> 燈具</label>
-                <label><input type="checkbox" value="背包"> 背包</label>
-                <label><input type="checkbox" value="配件"> 配件</label>
-                <label><input type="checkbox" value="其他"> 其他</label>
-              </div>
+              <div class="filter-dropdown d-none" data-product-category-filter-options></div>
+            </th>
+            <!-- 品牌：多選篩選（與商店表共用 productFilterState） -->
+            <th class="sticky-col sticky-col-brand filter-th" data-filter-key="brand">
+              品牌
+              <i class="fas fa-filter filter-icon ms-1"></i>
+              <span class="filter-dot d-none"></span>
+              <div class="filter-dropdown d-none" data-product-brand-filter-options></div>
             </th>
             <th class="sticky-col sticky-col-action">操作</th>
             <th class="sticky-col sticky-col-total-stock">總租借庫存</th>
-            <!-- 可水平捲動欄位：租借主倉 + 各營區庫存（明確指定欄寬）/ scrollable camp columns -->
-            <th class="scrollable-stock-col">租借主倉</th>
-            <th class="scrollable-stock-col">湖畔星空</th>
-            <th class="scrollable-stock-col">松林野營</th>
-            <th class="scrollable-stock-col">溪谷森林</th>
-            <th class="scrollable-stock-col">雲海高原</th>
-            <th class="scrollable-stock-col">海岸微風</th>
-            <!-- 最後一欄：右側 sticky，整列庫存編輯入口（鉛筆 / 勾 / X）-->
-            <th class="sticky-col sticky-col-right sticky-col-stock-edit">修改</th>
+            <!-- 營區庫存欄表頭由 products.js 的 renderRentalCampTableHeadCells() 動態插入 -->
+            <!-- 最低庫存模式才顯示：右側 sticky 編輯入口（鉛筆 / 勾 / X）-->
+            <th class="sticky-col sticky-col-right sticky-col-stock-edit min-stock-edit-col d-none">修改</th>
           </tr>
         </thead>
-        <!-- colspan=12：圖片、名稱、分類、操作、總租借庫存(唯讀)、主倉、五營區、修改庫存數量 -->
+        <!-- colspan 由 products.js getRentalTableColspan() 動態計算（6 sticky + 營區欄 + 可選「修改」）-->
         <tbody id="rentalProductsTableBody">
           <tr>
-            <td colspan="12" class="text-center py-4">
+            <td colspan="15" class="text-center py-4">
               <div class="spinner-border spinner-border-sm me-2"
                    style="color: var(--admin-brand-accent);"></div>
               <span class="text-muted">請切換至租借頁籤載入資料</span>

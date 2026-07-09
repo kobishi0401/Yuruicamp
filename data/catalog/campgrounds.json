@@ -1,0 +1,245 @@
+[
+  {
+    "campgroundId": "C002",
+    "name": "雲海仙境露營區",
+    "region": "北部",
+    "description": "坐落於海拔 1,800 公尺的山頂，每逢清晨雲海翻騰，是北台灣最壯觀的高山露營地。夜晚氣溫涼爽，星空清晰可見，是追求自然療癒的首選。",
+    "environmentTags": [
+      "高海拔",
+      "有雲海",
+      "森林系"
+    ],
+    "facilityTags": [
+      "獨立衛浴",
+      "裝備租借",
+      "有雨棚"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z001",
+        "type": "草皮區",
+        "capacityPerSite": 4,
+        "priceWeekday": 1000,
+        "priceHoliday": 1500,
+        "totalSites": 10
+      },
+      {
+        "zoneId": "Z002",
+        "type": "雨棚區",
+        "capacityPerSite": 6,
+        "priceWeekday": 1200,
+        "priceHoliday": 1800,
+        "totalSites": 5
+      }
+    ]
+  },
+  {
+    "campgroundId": "C003",
+    "name": "溪谷秘境野營地",
+    "region": "中部",
+    "description": "緊鄰清澈溪流，水聲潺潺，夏日親水露營的不二之選。夜晚可觀星，營地旁設有天然戲水區，全家出遊的完美選擇。",
+    "environmentTags": [
+      "低海拔",
+      "有溪流",
+      "森林系"
+    ],
+    "facilityTags": [
+      "兒童遊樂設施",
+      "寵物友善",
+      "裝備租借"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z003",
+        "type": "碎石區",
+        "capacityPerSite": 4,
+        "priceWeekday": 800,
+        "priceHoliday": 1200,
+        "totalSites": 15
+      },
+      {
+        "zoneId": "Z004",
+        "type": "棧板區",
+        "capacityPerSite": 4,
+        "priceWeekday": 900,
+        "priceHoliday": 1300,
+        "totalSites": 8
+      }
+    ]
+  },
+  {
+    "campgroundId": "C004",
+    "name": "太平山森林豪華露營",
+    "region": "北部",
+    "description": "台灣頂級 Glamping 體驗，免搭帳篷，入住配備空調與獨立洗手間的豪華帳型，享受森林芬多精與雲海美景，是犒賞自己的奢華選擇。",
+    "environmentTags": [
+      "高海拔",
+      "森林系"
+    ],
+    "facilityTags": [
+      "小木屋",
+      "獨立衛浴",
+      "可包區"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z005",
+        "type": "免搭帳／豪華露營 (Glamping)",
+        "capacityPerSite": 2,
+        "priceWeekday": 3500,
+        "priceHoliday": 5000,
+        "totalSites": 4
+      }
+    ]
+  },
+  {
+    "campgroundId": "C005",
+    "name": "南台灣星空草原營地",
+    "region": "南部",
+    "description": "位於屏東平原，視野開闊，光害極低，是南台灣最佳觀星露營勝地。廣闊草地讓孩子盡情奔跑，寵物也歡迎入住。",
+    "environmentTags": [
+      "低海拔"
+    ],
+    "facilityTags": [
+      "寵物友善",
+      "裝備租借"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z006",
+        "type": "草皮區",
+        "capacityPerSite": 6,
+        "priceWeekday": 700,
+        "priceHoliday": 1100,
+        "totalSites": 20
+      }
+    ]
+  },
+  {
+    "campgroundId": "C006",
+    "name": "花蓮海岸風露營區",
+    "region": "東部",
+    "description": "緊鄰太平洋，清晨可見日出從海面升起，聆聽浪濤聲入睡，提供有雨棚遮蔽，無論晴雨都能盡情享受海岸露營。",
+    "environmentTags": [
+      "低海拔",
+      "有溪流"
+    ],
+    "facilityTags": [
+      "獨立衛浴",
+      "有雨棚",
+      "裝備租借"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z007",
+        "type": "草皮區",
+        "capacityPerSite": 4,
+        "priceWeekday": 900,
+        "priceHoliday": 1400,
+        "totalSites": 12
+      },
+      {
+        "zoneId": "Z008",
+        "type": "雨棚區",
+        "capacityPerSite": 4,
+        "priceWeekday": 1100,
+        "priceHoliday": 1600,
+        "totalSites": 6
+      }
+    ]
+  },
+  {
+    "campgroundId": "C007",
+    "name": "阿里山雲霧繚繞營地",
+    "region": "南部",
+    "description": "海拔 2,200 公尺，阿里山林道旁，終年雲霧繚繞，日出與神木相伴。全區設有完善雨棚，是愛雨族的最愛。",
+    "environmentTags": [
+      "高海拔",
+      "有雲海",
+      "森林系"
+    ],
+    "facilityTags": [
+      "有雨棚",
+      "裝備租借",
+      "獨立衛浴"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z009",
+        "type": "棧板區",
+        "capacityPerSite": 4,
+        "priceWeekday": 1100,
+        "priceHoliday": 1700,
+        "totalSites": 10
+      }
+    ]
+  },
+  {
+    "campgroundId": "C008",
+    "name": "宜蘭礁溪湯泉露營",
+    "region": "北部",
+    "description": "全台唯一溫泉露營體驗，帳篷旁設有私人泡湯池，泡完湯直接鑽進睡袋。溪邊環境清幽，可攜帶寵物同行。",
+    "environmentTags": [
+      "低海拔",
+      "有溪流"
+    ],
+    "facilityTags": [
+      "獨立衛浴",
+      "可包區",
+      "寵物友善",
+      "裝備租借"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z010",
+        "type": "草皮區",
+        "capacityPerSite": 4,
+        "priceWeekday": 1500,
+        "priceHoliday": 2200,
+        "totalSites": 8
+      },
+      {
+        "zoneId": "Z011",
+        "type": "免搭帳／豪華露營 (Glamping)",
+        "capacityPerSite": 2,
+        "priceWeekday": 4000,
+        "priceHoliday": 6000,
+        "totalSites": 3
+      }
+    ]
+  },
+  {
+    "campgroundId": "C009",
+    "name": "台中武陵溪流野營",
+    "region": "中部",
+    "description": "武陵農場旁，四季各有風情：春賞櫻、夏戲水、秋楓紅、冬雪景。溪流旁的棧板區是最受歡迎的位置，也提供完整裝備租借。",
+    "environmentTags": [
+      "高海拔",
+      "有溪流",
+      "森林系"
+    ],
+    "facilityTags": [
+      "裝備租借",
+      "兒童遊樂設施",
+      "有雨棚"
+    ],
+    "zones": [
+      {
+        "zoneId": "Z012",
+        "type": "碎石區",
+        "capacityPerSite": 4,
+        "priceWeekday": 950,
+        "priceHoliday": 1450,
+        "totalSites": 14
+      },
+      {
+        "zoneId": "Z013",
+        "type": "棧板區",
+        "capacityPerSite": 4,
+        "priceWeekday": 1050,
+        "priceHoliday": 1600,
+        "totalSites": 8
+      }
+    ]
+  }
+]

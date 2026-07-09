@@ -2,26 +2,19 @@
   'use strict';
   var cfg = Object.assign(
     {
-      dataBasePath: '../data',
       authStorageKey: 'currentUser',
       homeHref: 'home.html',
       requireLogin: true,
     },
     window.MemberCenterConfig || {}
   );
-  var REVIEW_KEY = 'member_center_reviews';
-  var REVIEW_MAX_PHOTOS = 5;
-  var REVIEW_MAX_PHOTO_SIZE = 5 * 1024 * 1024;
-  var REVIEW_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  var MOCK_ORDERS_KEY = 'mockOrders';
-  var MOCK_POINTS_KEY = 'mockUserPointDeltas';
-  var MEMBER_PREFERENCE_DRAFT_KEY = 'memberPreferenceDraft';
+  // Canonical status enums（與 commerce JSON / schema-enums 對齊）
   var statusMeta = {
     purchase: [
       ['all', '全部', ''],
       ['unshipped', '待出貨', 'isPending'],
       ['shipped', '已出貨', 'isUpcoming'],
-      ['delivered', '已完成', 'isDone'],
+      ['completed', '已完成', 'isDone'],
       ['returned', '已退貨', 'isCancelled'],
     ],
     rental: [
@@ -29,12 +22,13 @@
       ['pending', '待確認', 'isPending'],
       ['confirmed', '已確認', 'isUpcoming'],
       ['completed', '已完成', 'isDone'],
-      ['refunded', '已退款', 'isCancelled'],
+      ['cancelled', '已取消', 'isCancelled'],
     ],
   };
+  // 過渡相容：舊別名 → canonical（資料已正規化後可再刪）
   var aliases = {
-    purchase: { processing: 'unshipped', cod: 'paid' },
-    rental: { processing: 'pending', shipped: 'confirmed', delivered: 'completed', cancelled: 'refunded' },
+    purchase: { processing: 'unshipped', delivered: 'completed' },
+    rental: { processing: 'pending', shipped: 'confirmed', delivered: 'completed', refunded: 'cancelled' },
   };
   var stylePrefs = [
     'glamping',
@@ -62,6 +56,8 @@
     user: null,
     orders: [],
     rentalOrders: [],
+    availableCoupons: [],
+    notifications: [],
     filters: { purchase: 'all', rental: 'all' },
     review: {
       orderId: '',
@@ -78,21 +74,12 @@
   };
 
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function path(file) {
-    return String(cfg.dataBasePath || '').replace(/\/+$/, '') + '/' + file;
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function parse(value, fallback) {
     try {
       return value ? JSON.parse(value) : fallback;
     } catch {
       return fallback;
     }
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function arrays(key) {
-    var value = parse(localStorage.getItem(key), []);
-    return Array.isArray(value) ? value : [];
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function html(value) {
@@ -123,122 +110,72 @@
     else console.log(message);
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  async function json(file, fallback) {
-    try {
-      var r = await fetch(path(file), { cache: 'no-store' });
-      if (!r.ok) throw new Error(r.status);
-      return await r.json();
-    } catch {
-      return fallback;
+  function orderDisplayId(order) {
+    if (!order) return '--';
+    if (window.formatOrderDisplayId) return window.formatOrderDisplayId(order.id);
+    return String(order.id);
+  }
+
+  /** 露營預約編號 BK-0001 */
+  function bookingDisplayId(booking) {
+    if (!booking) return '--';
+    if (window.formatBookingDisplayId) return window.formatBookingDisplayId(booking.id);
+    return String(booking.id);
+  }
+
+  function bookingTitle(booking) {
+    var info = (booking && booking.bookingInfo) || {};
+    return info.campgroundName || '露營預約';
+  }
+
+  function bookingAmount(booking) {
+    var summary = (booking && booking.summary) || {};
+    return summary.finalAmount != null ? summary.finalAmount : 0;
+  }
+
+  function bookingDetailItems(booking) {
+    var zones = (booking.selectedZones || []).map(function (z) {
+      var qty = Number(z.quantity) || 1;
+      return {
+        name: (z.zoneType || '營位') + '營位',
+        quantity: qty,
+        price: Math.round((Number(z.subtotal) || 0) / qty),
+        image: '',
+      };
+    });
+    var rentals = (booking.selectedRentals || []).map(function (r) {
+      var qty = Number(r.quantity) || 1;
+      return {
+        name: r.name || '營區裝備',
+        quantity: qty,
+        price: Math.round((Number(r.subtotal) || 0) / qty),
+        image: '',
+      };
+    });
+    return zones.concat(rentals);
+  }
+
+  function renderAvatarElement(el, user, fallbackName) {
+    if (!el || !user) return;
+    var avatar = user.avatar;
+    var isUrl = typeof avatar === 'string' && (/^\//.test(avatar) || /^https?:/.test(avatar));
+    if (isUrl) {
+      el.innerHTML = '<img src="' + html(avatar) + '" alt="" loading="lazy" />';
+    } else {
+      el.textContent = String(avatar || (fallbackName || 'U').charAt(0)).toUpperCase();
     }
   }
 
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function fallbackUsers() {
-    return [
-      {
-        id: 'user-001',
-        name: 'Yurui Camper',
-        email: 'member@yuruicamp.test',
-        phone: '0912-345-678',
-        address: '台北市中山區露營路 100 號',
-        birthday: '1995-01-01',
-        tierName: 'Explorer',
-        joinDate: '2025-01-15',
-        points: 760,
-        nextTierSpend: 30000,
-        preferences: { styles: ['backpacking', 'hiking'], equipment: ['tent', 'backpack'] },
-        coupons: [
-          { code: 'WELCOME100', discount: 100, type: 'fixed', minOrder: 500, expiry: '2026-12-31' },
-          { code: 'SUMMER10', discount: 10, type: 'percent', minOrder: 1000, expiry: '2026-08-31' },
-        ],
-        notifications: [
-          {
-            id: 'n1',
-            title: '訂單已成立',
-            message: '你的訂單正在準備出貨。',
-            time: '2026-05-13',
-            read: false,
-          },
-          {
-            id: 'n2',
-            title: '折價券提醒',
-            message: '記得在期限前使用會員折價券。',
-            time: '2026-05-10',
-            read: false,
-          },
-        ],
-      },
-    ];
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function fallbackOrders() {
-    return [
-      {
-        id: 'ord-001',
-        userId: 'user-001',
-        orderNumber: '#ORD-20260101',
-        createdAt: '2026-01-01',
-        status: 'delivered',
-        paymentStatus: 'paid',
-        subtotal: 3797,
-        total: 3797,
-        points: 380,
-        canReview: true,
-        items: [
-          { name: '兩人帳篷', price: 2999, quantity: 1, image: 'https://picsum.photos/seed/tent1/80/80' },
-        ],
-      },
-      {
-        id: 'ord-002',
-        userId: 'user-001',
-        orderNumber: '#ORD-20260310',
-        createdAt: '2026-03-10',
-        status: 'unshipped',
-        paymentStatus: 'paid',
-        subtotal: 4997,
-        discount: 500,
-        total: 4497,
-        points: 500,
-        items: [
-          { name: '防風外套', price: 3599, quantity: 1, image: 'https://picsum.photos/seed/jacket1/80/80' },
-        ],
-      },
-    ];
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function fallbackRentals() {
-    return [
-      {
-        id: 'rent-001',
-        userId: 'user-001',
-        orderNumber: '#RENT-20260412',
-        createdAt: '2026-04-12',
-        rentalStart: '2026-04-18',
-        rentalEnd: '2026-04-20',
-        pickupStore: '台北門市',
-        returnStore: '台北門市',
-        status: 'completed',
-        paymentStatus: 'paid',
-        subtotal: 1320,
-        deposit: 2000,
-        total: 3320,
-        items: [
-          { name: '露營帳篷', price: 480, quantity: 1, image: 'https://picsum.photos/seed/rent-tent/80/80' },
-        ],
-      },
-    ];
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function loginUser() {
     if (typeof window.YuruiAuth?.getUser === 'function') return window.YuruiAuth.getUser();
     if (window.AppState && window.AppState.isLoggedIn && window.AppState.currentUser)
       return window.AppState.currentUser;
-
-    if (localStorage.getItem('isLoggedIn') === 'false') return null;
-    var u = parse(localStorage.getItem(cfg.authStorageKey || 'currentUser'), null);
-    if (u) return u;
-    return localStorage.getItem('isLoggedIn') === 'true' ? { id: 'user-001' } : null;
+    var keys = [cfg.authStorageKey, cfg.fallbackAuthStorageKey, 'currentUser', 'yuruiUser'].filter(Boolean);
+    for (var i = 0; i < keys.length; i++) {
+      var u = parse(localStorage.getItem(keys[i]), null);
+      if (u) return u;
+    }
+    return localStorage.getItem('isLoggedIn') === 'true' ? { id: 'U001' } : null;
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function loggedIn() {
@@ -246,7 +183,9 @@
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function norm(type, value) {
-    return (aliases[type] && aliases[type][value]) || value || 'pending';
+    // purchase 預設 unshipped；rental 預設 pending
+    var fallback = type === 'purchase' ? 'unshipped' : 'pending';
+    return (aliases[type] && aliases[type][value]) || value || fallback;
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function meta(type, value) {
@@ -261,15 +200,7 @@
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function currentMemberId() {
     var u = loginUser() || {};
-    return u.id || u.userId || 'user-001';
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function mergeOrders(base, mock) {
-    var m = new Map();
-    (Array.isArray(base) ? base : []).concat(Array.isArray(mock) ? mock : []).forEach(function (o) {
-      if (o && o.id) m.set(o.id, o);
-    });
-    return Array.from(m.values());
+    return u.id || 'U001';
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function pointOf(order) {
@@ -289,27 +220,12 @@
   // 用途：將物流與門市欄位整理成明細資訊列。
   function fulfillmentLabel(order, type) {
     if (type === 'rental') {
-      return '取貨 / 還貨：' + (order.pickupStore || '--') + ' / ' + (order.returnStore || '--');
+      var info = (order && order.bookingInfo) || {};
+      return '營地：' + (info.campgroundName || '--') + '（' + (info.region || '--') + '）';
     }
     if (order.shippingMethod === 'store')
-      return '取貨門市：' + (order.storeAddress || order.shippingAddress || '--');
-    return '配送地址：' + (order.shippingAddress || order.storeAddress || '--');
-  }
-  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
-  function applyPointDeltas(users) {
-    var deltas = arrays(MOCK_ORDERS_KEY).reduce(
-      function (acc, o) {
-        if (norm('purchase', o && o.status) === 'delivered') {
-          var uid = o.userId || 'user-001';
-          acc[uid] = (Number(acc[uid]) || 0) + pointOf(o);
-        }
-        return acc;
-      },
-      parse(localStorage.getItem(MOCK_POINTS_KEY), {}) || {}
-    );
-    return users.map(function (u) {
-      return Object.assign({}, u, { points: (Number(u.points) || 0) + (Number(deltas[u.id]) || 0) });
-    });
+      return '取貨門市：' + (order.storeAddress || order.address || '--');
+    return '配送地址：' + (order.address || order.storeAddress || '--');
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function prefValues(p) {
@@ -374,35 +290,61 @@
   function clearPreferenceDraft() {
     sessionStorage.removeItem(MEMBER_PREFERENCE_DRAFT_KEY);
   }
+  // 用途：初始化會員資料頁的配送地址顯示與編輯 Modal。
+  function initProfileShippingAddress() {
+    if (!window.YuruiShippingAddressUI || !window.YuruiShippingAddress) return;
+    var addr = window.YuruiShippingAddress.resolve(state.user, savedProfile());
+    if (!state.profileShippingUi) {
+      state.profileShippingUi = window.YuruiShippingAddressUI.init({
+        displayEl: document.getElementById('shippingAddressDisplay'),
+        editBtn: document.getElementById('shippingAddressEditBtn'),
+        initialAddress: addr,
+        persist: true,
+        getAddress: function () {
+          return window.YuruiShippingAddress.resolve(state.user, savedProfile());
+        },
+        onSave: function (next) {
+          if (state.user) state.user.shippingAddress = next;
+          if (window.AppState && window.AppState.currentUser) {
+            window.AppState.currentUser.shippingAddress = next;
+          }
+        },
+      });
+    } else {
+      window.YuruiShippingAddressUI.setAddress(addr);
+    }
+  }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function applyProfile() {
     if (!state.user) return;
     var s = savedProfile();
     var name = s.name || state.user.name || 'Yurui Camper';
     var email = state.user.email || s.email || 'member@yuruicamp.test';
-    text('mcAvatar', name.charAt(0).toUpperCase());
     text('mcName', name);
     text('mcEmail', email);
+    renderAvatarElement(document.getElementById('mcAvatar'), state.user, name);
     text('cardName', name);
     text('cardTier', state.user.tierName || 'Explorer');
-    text('cardSince', '加入日期：' + (state.user.joinDate || '--'));
+    text('cardSince', '加入日期：' + (state.user.registeredAt || '--'));
     text('cardPoints', '回饋點數：' + Number(state.user.points || 0).toLocaleString('zh-TW'));
     input('profileName', name);
     input('profilePhone', s.phone || state.user.phone || '');
     input('profileEmail', email);
     input('profileBirthday', s.birthday || state.user.birthday || '');
-    input('profileAddress', s.address || state.user.address || '');
+    initProfileShippingAddress();
     renderProgress();
     syncPrefs(selectedPrefs());
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderProgress() {
-    var next = Number(state.user && state.user.nextTierSpend) || 0;
-    var spent = state.orders.reduce(function (t, o) {
-      return norm('purchase', o.status) === 'delivered' ? t + (Number(o.subtotal) || 0) : t;
+    var spent = Number(state.user && state.user.totalSpent) || state.orders.reduce(function (t, o) {
+      return norm('purchase', o.status) === 'completed' ? t + (Number(o.subtotal) || 0) : t;
     }, 0);
-    var progress = next > 0 ? Math.min(Math.round((spent / next) * 100), 100) : 0;
-    text('nextTierSpend', money(Math.max(next - spent, 0)));
+    var nextThreshold = window.getNextTierThreshold
+      ? window.getNextTierThreshold(spent)
+      : (spent >= 28000 ? null : spent >= 12000 ? 28000 : 12000);
+    var progress = nextThreshold ? Math.min(Math.round((spent / nextThreshold) * 100), 100) : 100;
+    text('nextTierSpend', money(Math.max((nextThreshold || spent) - spent, 0)));
     var bar = document.getElementById('tierProgressBar');
     if (!bar) return;
     // 用途：用 class 呈現進度條寬度，避免在 runtime 寫入 inline style。
@@ -495,85 +437,10 @@
       return norm(type, o.status) === selected || norm(type, o.paymentStatus) === selected;
     });
   }
-  // 用途：統一讀取評論清單，避免各處直接解析 localStorage 時判斷標準不一致。
-  function storedReviews() {
-    var reviews = parse(localStorage.getItem(REVIEW_KEY), []);
-    return Array.isArray(reviews) ? reviews : [];
-  }
-  // 用途：只有同時具備訂單、1-5 分評分與非空評論內容，才視為有效完成評論。
-  function isValidReview(review) {
-    if (!review || !review.orderId) return false;
-    var rating = Number(review.rating);
-    var content = String(review.content || '').trim();
-    return rating >= 1 && rating <= 5 && content.length > 0;
-  }
-  function reviewForOrderItem(orderId, itemId) {
-    if (!orderId || !itemId) return null;
-    var reviews = storedReviews().filter(function (review) {
-      return review && review.orderId === orderId && review.orderItemId === itemId && isValidReview(review);
-    });
-    return reviews.length ? reviews[reviews.length - 1] : null;
-  }
-  // 用途：以有效評論紀錄作為是否已評論的依據，不只依賴訂單上的 reviewed 旗標。
-  function reviewForOrder(orderId) {
-    if (!orderId) return null;
-    var reviews = storedReviews().filter(function (review) {
-      return review && review.orderId === orderId && isValidReview(review);
-    });
-    return reviews.length ? reviews[reviews.length - 1] : null;
-  }
-  // 用途：格式化查看評論時顯示的送出時間，時間無效時保留原始值避免畫面空白。
-  function reviewDateLabel(value) {
-    if (!value) return '--';
-    var date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-  function canWriteReviewItem(order, itemId) {
-    if (!order || !order.canReview || norm('purchase', order.status) !== 'delivered') return false;
-    return !reviewForOrderItem(order.id, itemId);
-  }
-  function renderReviewItemActions(order) {
-    var items = Array.isArray(order.items) ? order.items : [];
-    if (!items.length || norm('purchase', order.status) !== 'delivered' || !order.canReview) return '';
-    return (
-      '<div class="memberOrderReviewItems">' +
-      items
-        .map(function (item, index) {
-          var itemId = orderItemId(order, item, index);
-          var review = reviewForOrderItem(order.id, itemId);
-          var action = review
-            ? '<button class="memberOrderDetailButton" type="button" data-review-detail="' +
-              html(order.id) +
-              '" data-review-item-id="' +
-              html(itemId) +
-              '">查看評價</button>'
-            : canWriteReviewItem(order, itemId)
-              ? '<button class="memberOrderDetailButton" type="button" data-review-order="' +
-                html(order.id) +
-                '" data-review-item-id="' +
-                html(itemId) +
-                '">寫評價</button>'
-              : '';
-          if (!action) return '';
-          return (
-            '<div class="memberOrderReviewItem">' +
-            '<span class="memberOrderReviewItemName">' +
-            html(item.name || '商品') +
-            '</span>' +
-            action +
-            '</div>'
-          );
-        })
-        .join('') +
-      '</div>'
-    );
+  // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
+  function canReview(o) {
+    if (!o || o.reviewed || norm('purchase', o.status) !== 'completed') return false;
+    return true;
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderOrders() {
@@ -603,7 +470,7 @@
           html(title) +
           '</h3>' +
           '<p class="memberOrderMeta">' +
-          html(o.orderNumber || o.id) +
+          html(orderDisplayId(o)) +
           ' ｜ ' +
           html(o.createdAt || '--') +
           ' ｜ ' +
@@ -641,37 +508,35 @@
         '<div class="memberEmptyStateIcon">' +
         '<i class="bi bi-tent"></i>' +
         '</div>' +
-        '目前沒有符合條件的預約與租借紀錄' +
+        '目前沒有符合條件的預約紀錄' +
         '</div>';
       return;
     }
     c.innerHTML = orders
       .map(function (o) {
         var st = meta('rental', o.status);
+        var info = o.bookingInfo || {};
         return (
           '<article class="memberOrderCard" data-rental-order-id="' +
           html(o.id) +
           '">' +
           '<div class="memberOrderInfo">' +
           '<h3 class="memberOrderTitle">' +
-          html(itemTitle(o.items)) +
+          html(bookingTitle(o)) +
           '</h3>' +
           '<p class="memberOrderMeta">' +
-          html(o.orderNumber || o.id) +
+          html(bookingDisplayId(o)) +
           ' ｜ ' +
-          html(o.rentalStart || '--') +
+          html(info.checkIn || '--') +
           ' - ' +
-          html(o.rentalEnd || '--') +
+          html(info.checkOut || '--') +
           ' ｜ ' +
-          html(o.pickupStore || '--') +
-          ' / ' +
-          html(o.returnStore || '--') +
+          html(info.region || '--') +
           '</p>' +
-          thumbs(o.items) +
           '</div>' +
           '<div class="memberOrderSummary">' +
           '<div class="memberOrderAmount">' +
-          money(o.total) +
+          money(bookingAmount(o)) +
           '</div>' +
           '<span class="memberOrderStatus ' +
           st.cls +
@@ -689,14 +554,16 @@
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function couponOff(c) {
-    return c.used || (c.expiry && new Date(c.expiry + 'T23:59:59') < new Date());
+    if (c.used === true) return true;
+    var expiry = c.expiry || c.endDate;
+    return expiry && new Date(String(expiry).replace('T', ' ')) < new Date();
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function renderCoupons() {
     var a = document.getElementById('activeCoupons'),
       e = document.getElementById('expiredCoupons');
     if (!a || !e) return;
-    var list = ((state.user && state.user.coupons) || []).map(function (c) {
+    var list = (state.availableCoupons || []).map(function (c) {
       return Object.assign({}, c, { isDisabled: couponOff(c) });
     });
     function card(c) {
@@ -722,7 +589,7 @@
         money(c.minOrder || 0) +
         ' 可用</p>' +
         '<p class="memberCouponStatus">期限 ' +
-        html(c.expiry || '無期限') +
+        html(c.expiry || (c.endDate && String(c.endDate).slice(0, 10)) || '無期限') +
         '</p>' +
         '<div class="memberCouponCodeRow">' +
         '<span class="memberCouponCode">' +
@@ -755,7 +622,7 @@
   function renderNotifications() {
     var c = document.getElementById('notificationList');
     if (!c) return;
-    var list = (state.user && state.user.notifications) || [];
+    var list = state.notifications || [];
     if (!list.length) {
       c.innerHTML = '<div class="memberEmptyState">目前沒有通知</div>';
       return;
@@ -794,20 +661,20 @@
     state.orders.slice(0, 3).forEach(function (o) {
       list.push({
         date: o.createdAt,
-        title: '訂單 ' + (o.orderNumber || o.id) + ' ' + meta('purchase', o.status).label,
+        title: '訂單 ' + orderDisplayId(o) + ' ' + meta('purchase', o.status).label,
         type: 'purchase',
         id: o.id,
       });
     });
     state.rentalOrders.slice(0, 2).forEach(function (o) {
       list.push({
-        date: o.createdAt,
-        title: '租借 ' + (o.orderNumber || o.id) + ' ' + meta('rental', o.status).label,
+        date: o.submittedAt || o.createdAt,
+        title: '預約 ' + bookingDisplayId(o) + ' ' + meta('rental', o.status).label,
         type: 'rental',
         id: o.id,
       });
     });
-    ((state.user && state.user.notifications) || []).slice(0, 2).forEach(function (n) {
+    ((state.notifications) || []).slice(0, 2).forEach(function (n) {
       list.push({ date: n.time, title: n.title });
     });
     list.sort(function (a, b) {
@@ -844,34 +711,40 @@
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function updateStats() {
-    var coupons = ((state.user && state.user.coupons) || []).filter(function (c) {
+    var coupons = (state.availableCoupons || []).filter(function (c) {
       return !couponOff(c);
     }).length;
-    var unread = ((state.user && state.user.notifications) || []).filter(function (n) {
+    var unread = (state.notifications || []).filter(function (n) {
       return !n.read;
     }).length;
+    // 進行中：商城 unshipped/shipped；預約 pending/confirmed（不含付款狀態別名）
     text(
       'statOrders',
       state.orders.filter(function (o) {
-        return ['paid', 'unshipped', 'shipped'].includes(norm('purchase', o.status));
+        return ['unshipped', 'shipped'].includes(norm('purchase', o.status));
       }).length
     );
     text(
       'statBookings',
       state.rentalOrders.filter(function (o) {
-        return ['paid', 'pending', 'confirmed'].includes(norm('rental', o.status));
+        return ['pending', 'confirmed'].includes(norm('rental', o.status));
       }).length
     );
     text('statCoupons', coupons);
     text('statUnread', unread);
   }
   function detailRows(order, st, type) {
-    if (type === 'rental' && order && order.type === 'booking') return bookingDetailRows(order, st);
-
-    var items = Array.isArray(order.items) ? order.items : [];
-    var itemTitle = type === 'rental' ? '租借品項' : '商品明細';
-    var subtotalLabel = type === 'rental' ? '租借費用' : '商品小計';
+    var items = type === 'rental' ? bookingDetailItems(order) : (Array.isArray(order.items) ? order.items : []);
+    var itemTitleLabel = type === 'rental' ? '預約明細' : '商品明細';
+    var subtotalLabel = type === 'rental' ? '預約費用' : '商品小計';
     var shippingFee = Number(order.shippingFee || 0);
+    var orderDate = type === 'rental' ? (order.submittedAt || '--') : (order.createdAt || '--');
+    var orderTotal = type === 'rental' ? bookingAmount(order) : order.total;
+    var orderSubtotal = type === 'rental'
+      ? (order.summary
+          ? (Number(order.summary.zoneTotal) || 0) + (Number(order.summary.rentalTotal) || 0)
+          : bookingAmount(order))
+      : order.subtotal;
     var infoRows = [
       '<p class="memberDetailMeta"><i class="bi bi-credit-card" aria-hidden="true"></i><span>付款方式：' +
         html(paymentLabel(order.payment)) +
@@ -890,18 +763,21 @@
       );
     }
     if (type === 'rental') {
+      var info = order.bookingInfo || {};
       infoRows.unshift(
-        '<p class="memberDetailMeta">租借期間：' +
-          html(order.rentalStart || '--') +
-          ' - ' +
-          html(order.rentalEnd || '--') +
+        '<p class="memberDetailMeta">入住：' +
+          html(info.checkIn || '--') +
+          ' ｜ 退營：' +
+          html(info.checkOut || '--') +
+          ' ｜ 人數：' +
+          html(info.guestCount || '--') +
           '</p>'
       );
     }
     return (
       '<div class="memberDetailSummary">' +
       '<div class="memberDetailDate">' +
-      html(order.createdAt || '--') +
+      html(orderDate) +
       '</div>' +
       '<span class="memberOrderStatus ' +
       st.cls +
@@ -910,10 +786,10 @@
       '</span>' +
       '</div>' +
       '<section class="memberDetailSection" aria-label="' +
-      html(itemTitle) +
+      html(itemTitleLabel) +
       '">' +
       '<h3 class="memberDetailSectionTitle">' +
-      html(itemTitle) +
+      html(itemTitleLabel) +
       '</h3>' +
       '<div class="memberDetailItems">' +
       items
@@ -928,6 +804,9 @@
             '<h4 class="memberDetailItemName">' +
             html(i.name || '商品') +
             '</h4>' +
+            (i.specLabel
+              ? '<p class="memberDetailItemSpec">' + html(i.specLabel) + '</p>'
+              : '') +
             '<p class="memberDetailItemMeta">x ' +
             quantity +
             '，' +
@@ -945,7 +824,7 @@
       '<div class="memberDetailRow"><span class="memberDetailRowLabel">' +
       subtotalLabel +
       '</span><span class="memberDetailRowValue">' +
-      money(order.subtotal) +
+      money(orderSubtotal) +
       '</span></div>' +
       (type === 'purchase'
         ? '<div class="memberDetailRow"><span class="memberDetailRowLabel">運費</span><span class="memberDetailRowValue">' +
@@ -963,7 +842,7 @@
           '</span></div>'
         : '') +
       '<div class="memberDetailRow memberDetailRowTotal"><span class="memberDetailRowLabel">訂單總計</span><span class="memberDetailRowValue">' +
-      money(order.total) +
+      money(orderTotal) +
       '</span></div>' +
       (type === 'purchase'
         ? '<div class="memberDetailRow memberDetailRowSuccess"><span class="memberDetailRowLabel">回饋點數</span><span class="memberDetailRowValue">' +
@@ -977,7 +856,7 @@
       '<a class="memberDetailLineButton" href="https://line.me/R/ti/p/@yuruicamp" target="_blank" rel="noopener">' +
       '<i class="bi bi-chat-dots" aria-hidden="true"></i>' +
       '<span>使用 LINE 詢問' +
-      (type === 'rental' ? '租借' : '訂單') +
+      (type === 'rental' ? '預約' : '訂單') +
       '</span>' +
       '</a>'
     );
@@ -1235,10 +1114,10 @@
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   window.openOrderDetail = function (id) {
     var o = state.orders.find(function (x) {
-      return x.id === id;
+      return window.sameId ? window.sameId(x.id, id) : String(x.id) === String(id);
     });
     if (!o) return;
-    text('orderDetailTitle', '訂單詳情 ' + (o.orderNumber || o.id));
+    text('orderDetailTitle', '訂單詳情 ' + orderDisplayId(o));
     var b = document.getElementById('orderDetailBody');
     if (b) b.innerHTML = detailRows(o, meta('purchase', o.status), 'purchase');
     openModal('orderDetailOverlay');
@@ -1246,10 +1125,10 @@
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   window.openRentalOrderDetail = function (id) {
     var o = state.rentalOrders.find(function (x) {
-      return x.id === id;
+      return window.sameId ? window.sameId(x.id, id) : String(x.id) === String(id);
     });
     if (!o) return;
-    text('orderDetailTitle', '預約與租借詳情 ' + (o.orderNumber || o.id));
+    text('orderDetailTitle', '露營預約詳情 ' + bookingDisplayId(o));
     var b = document.getElementById('orderDetailBody');
     if (b) b.innerHTML = detailRows(o, meta('rental', o.status), 'rental');
     openModal('orderDetailOverlay');
@@ -1452,34 +1331,55 @@
   }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   async function loadData() {
-    var rs = await Promise.all([
-      json('users.json', fallbackUsers()),
-      json('orders.json', fallbackOrders()),
-      json('rentalOrders.json', fallbackRentals()),
-    ]);
     var uid = currentMemberId();
-    var users = Array.isArray(rs[0]) ? rs[0] : fallbackUsers();
-    state.user =
-      applyPointDeltas(users).find(function (u) {
-        var l = loginUser() || {};
-        return u.id === (l.id || l.userId) || u.email === l.email;
-      }) || applyPointDeltas(users)[0];
-    state.orders = mergeOrders(
-      Array.isArray(rs[1]) ? rs[1] : fallbackOrders(),
-      arrays(MOCK_ORDERS_KEY).filter(function (o) {
-        return o && o.type !== 'booking' && o.type !== 'rental';
-      })
-    ).filter(function (o) {
-      return !o.userId || o.userId === uid || (state.user && o.userId === state.user.id);
-    });
-    state.rentalOrders = mergeOrders(
-      Array.isArray(rs[2]) ? rs[2] : fallbackRentals(),
-      arrays(MOCK_ORDERS_KEY).filter(function (o) {
-        return o && (o.type === 'booking' || o.type === 'rental');
-      })
-    ).filter(function (o) {
-      return !o.userId || o.userId === uid || (state.user && o.userId === state.user.id);
-    });
+    if (!window.API) {
+      state.user = null;
+      state.orders = [];
+      state.rentalOrders = [];
+      state.availableCoupons = [];
+      state.notifications = [];
+      applyLogin();
+      return;
+    }
+    try {
+      state.user = await window.API.customers.getById(uid);
+      if (window.AppState) {
+        window.AppState.isLoggedIn = true;
+        window.AppState.currentUser = state.user;
+        if (typeof window.saveAppState === 'function') window.saveAppState();
+      }
+      // 訂單 / 預約一律用 customerId FK 篩選（不再依賴 customers.orders[] / rentals[] 白名單）
+      // Orders & bookings filtered by customerId FK (no whitelist arrays on customer)
+      if (window.API.orders.getByCustomerId) {
+        state.orders = await window.API.orders.getByCustomerId(uid);
+      } else {
+        var allOrders = await window.API.orders.getAll();
+        state.orders = (allOrders || []).filter(function (o) {
+          return o && o.customerId === uid;
+        });
+      }
+      state.notifications = await window.API.customers.getNotifications(uid);
+      state.availableCoupons = await window.API.coupons.getAvailable(uid);
+      if (window.BookingAPI && window.BookingAPI.getBookings) {
+        // getBookings(uid) 內部已依 customerId 篩選
+        state.rentalOrders = await window.BookingAPI.getBookings(uid);
+      } else {
+        state.rentalOrders = [];
+      }
+      state.orders.forEach(function (o) {
+        if (o.status === 'completed' && window.API.orders.awardPointsIfCompleted) {
+          window.API.orders.awardPointsIfCompleted(o);
+        }
+      });
+      state.user = await window.API.customers.getById(uid);
+    } catch (error) {
+      console.error('Member center data load failed', error);
+      state.user = null;
+      state.orders = [];
+      state.rentalOrders = [];
+      state.availableCoupons = [];
+      state.notifications = [];
+    }
     applyProfile();
     renderFilters('purchase', state.orders);
     renderFilters('rental', state.rentalOrders);
@@ -1541,19 +1441,76 @@
         syncPrefs(vals);
       });
     });
+    function showMemberFieldError(inputId, message) {
+      var input = document.getElementById(inputId);
+      if (!input) return;
+      input.classList.add('isInvalid');
+      input.setAttribute('aria-invalid', 'true');
+      var errEl = input.parentElement && input.parentElement.querySelector('.memberFieldError');
+      if (!errEl) {
+        errEl = document.createElement('p');
+        errEl.className = 'memberFieldError';
+        errEl.setAttribute('role', 'alert');
+        input.insertAdjacentElement('afterend', errEl);
+      }
+      errEl.id = inputId + 'Error';
+      errEl.textContent = message;
+      errEl.hidden = false;
+      input.setAttribute('aria-describedby', errEl.id);
+      input.focus({ preventScroll: true });
+    }
+    function clearMemberFieldError(inputId) {
+      var input = document.getElementById(inputId);
+      if (!input) return;
+      input.classList.remove('isInvalid');
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+      var errEl = input.parentElement && input.parentElement.querySelector('.memberFieldError');
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = '';
+      }
+    }
     var form = document.getElementById('profileForm');
     if (form && !form.dataset.bound) {
       form.dataset.bound = 'true';
+      var profilePhoneInput = document.getElementById('profilePhone');
+      if (profilePhoneInput && !profilePhoneInput.dataset.errorBound) {
+        profilePhoneInput.dataset.errorBound = 'true';
+        profilePhoneInput.addEventListener('input', function () {
+          if (profilePhoneInput.classList.contains('isInvalid')) {
+            clearMemberFieldError('profilePhone');
+          }
+        });
+      }
       form.addEventListener('submit', function (e) {
         e.preventDefault();
+        clearMemberFieldError('profilePhone');
+        var phoneRaw = document.getElementById('profilePhone').value.trim();
+        if (!phoneRaw) {
+          showMemberFieldError('profilePhone', '請填寫手機');
+          return;
+        }
+        if (window.isValidMobile && !window.isValidMobile(phoneRaw)) {
+          showMemberFieldError('profilePhone', '手機須為 09 開頭的 10 碼數字（例：0988744144）');
+          return;
+        }
         var s = savedProfile();
         s.name = document.getElementById('profileName').value.trim();
-        s.phone = document.getElementById('profilePhone').value.trim();
-        s.address = document.getElementById('profileAddress').value.trim();
+        s.phone = window.normalizeMobile ? window.normalizeMobile(phoneRaw) : phoneRaw.replace(/[\s\-()]/g, '');
         s.birthday = document.getElementById('profileBirthday').value;
         s.preferences = selectedPreferenceObject();
         localStorage.setItem('yurui_profile', JSON.stringify(s));
-        clearPreferenceDraft();
+        if (state.user) state.user.phone = s.phone;
+        if (window.AppState && window.AppState.currentUser) {
+          window.AppState.currentUser.phone = s.phone;
+          window.saveAppState && window.saveAppState();
+        }
+        if (window.API && window.API.customers && window.API.customers.update && state.user && state.user.id) {
+          window.API.customers.update(state.user.id, { phone: s.phone }).catch(function (err) {
+            console.warn('Sync profile phone failed', err);
+          });
+        }
         toast('會員資料已更新', 'success');
         applyProfile();
       });
@@ -1676,47 +1633,37 @@
     var form = document.getElementById('reviewForm');
     if (form && !form.dataset.bound) {
       form.dataset.bound = 'true';
-      form.addEventListener('submit', function (e) {
+      form.addEventListener('submit', async function (e) {
         e.preventDefault();
         if (state.review.mode === 'view') return;
         if (!state.review.orderId || !state.review.orderItemId || !state.review.rating) {
           toast('請先選擇評分', 'warning');
           return;
         }
-        var contentEl = document.getElementById('reviewContent');
-        var content = contentEl ? contentEl.value.trim() : '';
-        if (!content) {
-          toast('請輸入評論內容', 'warning');
-          if (contentEl) contentEl.focus();
-          return;
-        }
-        // 用途：同一訂單明細只保留最新一筆有效評論，避免重複資料造成查看內容不明確。
-        var reviews = storedReviews().filter(function (review) {
-          return !review || review.orderItemId !== state.review.orderItemId;
-        });
-        reviews.push({
-          orderId: state.review.orderId,
-          orderItemId: state.review.orderItemId,
-          productId: state.review.productId,
-          itemName: state.review.itemName,
-          rating: state.review.rating,
-          content: content,
-          photos: state.review.photos || [],
-          createdAt: new Date().toISOString(),
-        });
-        try {
-          localStorage.setItem(REVIEW_KEY, JSON.stringify(reviews));
-        } catch {
-          toast('圖片容量過大，請減少張數或壓低尺寸後再送出', 'warning');
-          return;
-        }
-        var o = state.orders.find(function (x) {
+        var order = state.orders.find(function (x) {
           return x.id === state.review.orderId;
         });
-        if (o) o.reviewed = true;
-        renderOrders();
-        closeModal('reviewOverlay');
-        toast('評價已送出', 'success');
+        var firstItem = order && order.items && order.items[0];
+        if (window.API && window.API.reviews && window.API.reviews.create) {
+          try {
+            await window.API.reviews.create({
+              customerId: currentMemberId(),
+              productId: firstItem && (firstItem.productId || firstItem.id),
+              orderId: state.review.orderId,
+              buyerName: state.user && state.user.name,
+              rating: state.review.rating,
+              comment: document.getElementById('reviewContent').value.trim(),
+            });
+            if (order) order.reviewed = true;
+            renderOrders();
+            closeModal('reviewOverlay');
+            toast('評價已送出', 'success');
+          } catch (err) {
+            toast('評價送出失敗，請稍後再試', 'error');
+          }
+          return;
+        }
+        toast('評價功能不可用', 'error');
       });
     }
   }
@@ -1727,8 +1674,8 @@
       list.dataset.bound = 'true';
       list.addEventListener('click', function (e) {
         var item = e.target.closest('.memberNotification[data-notif-id]');
-        if (!item || !state.user) return;
-        var n = (state.user.notifications || []).find(function (x) {
+        if (!item || !state.notifications) return;
+        var n = state.notifications.find(function (x) {
           return x.id === item.dataset.notifId;
         });
         if (n) n.read = true;
@@ -1740,8 +1687,8 @@
     if (all && !all.dataset.bound) {
       all.dataset.bound = 'true';
       all.addEventListener('click', function () {
-        if (state.user && Array.isArray(state.user.notifications))
-          state.user.notifications.forEach(function (n) {
+        if (state.notifications)
+          state.notifications.forEach(function (n) {
             n.read = true;
           });
         renderNotifications();

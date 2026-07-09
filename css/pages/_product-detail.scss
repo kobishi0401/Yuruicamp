@@ -169,6 +169,21 @@ main.productDetailContainer {
   border-radius: 12px;
   margin-bottom: 0.75rem;
   overflow: hidden;
+  position: relative;
+}
+
+// Detail page uses shared cardGallery inside .galleryMain
+// 詳情頁主圖改為 cardGallery（Swiper + 可點擊放大）
+.galleryMain .cardGallery,
+.galleryMain .card-gallery-swiper,
+.galleryMain .swiper-slide,
+.galleryMain .card-gallery-glightbox {
+  height: 100%;
+}
+
+.galleryMain .cardGallery img {
+  border-radius: 12px;
+  cursor: zoom-in;
 }
 
 .galleryMainImg {

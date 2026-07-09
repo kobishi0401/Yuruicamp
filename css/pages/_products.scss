@@ -313,12 +313,17 @@ $product-rating: var(--yc-pending-line);
   display: block;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.02);
-  transition: transform 350ms ease;
   width: 100%;
 }
 
-.productCard:hover .productCardImageWrap img {
+// Hover zoom only for plain single-image cards (not Swiper gallery)
+// 僅單圖卡片做 hover 放大；有輪播時交給 card-gallery 處理
+.productCardImageWrap:not(.cardGallery) img {
+  transform: scale(1.02);
+  transition: transform 350ms ease;
+}
+
+.productCard:hover .productCardImageWrap:not(.cardGallery) img {
   transform: scale(1.06);
 }
 
@@ -347,10 +352,47 @@ $product-rating: var(--yc-pending-line);
   font-weight: 600;
   height: 2.66rem;
   line-height: 1.4;
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.35rem;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.productCardSpecs {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.productCardSpecGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.productCardSpecChip {
+  border: 1px solid $product-border;
+  border-radius: 999px;
+  background: $product-surface;
+  color: $product-text;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.3rem 0.55rem;
+}
+
+.productCardSpecChip.isSelected {
+  background: $product-primary-soft;
+  border-color: $product-primary;
+  color: $product-primary-dark;
+}
+
+.productCardSpecPreview {
+  color: $product-muted;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .productCardRating {

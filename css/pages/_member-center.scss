@@ -404,6 +404,26 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   color: $member-muted;
 }
 
+.memberFormInput.isInvalid {
+  background: rgb(220 53 69 / 6%);
+  border-color: $member-danger;
+}
+
+.memberFormInput.isInvalid:focus-visible {
+  outline-color: rgb(220 53 69 / 35%);
+}
+
+.memberFieldError {
+  color: $member-danger;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.memberFieldError[hidden] {
+  display: none;
+}
+
 .memberPreferenceList {
   display: flex;
   flex-wrap: wrap;

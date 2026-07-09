@@ -1,0 +1,1490 @@
+[
+  {
+    "id": "P001",
+    "rentalId": "R001",
+    "rentalEnabled": true,
+    "name": "Coleman 六人帳篷",
+    "category": "帳篷",
+    "brand": "Coleman",
+    "interestTags": [
+      "tent"
+    ],
+    "price": 3200,
+    "status": "active",
+    "image": "/assets/images/products/P001-1.jpg",
+    "images": [
+      "/assets/images/products/P001-1.jpg",
+      "/assets/images/products/P001-2.jpg",
+      "/assets/images/products/P001-3.jpg"
+    ],
+    "description": "<p><strong>Coleman 六人帳篷</strong> 為 Yuruicamp 精選的帳篷商品，提供 <em>深橄欖綠</em>、<em>沙漠棕</em>、<em>太空灰</em> 三色可選。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "weight": "4.2 kg",
+      "capacity": "6 人",
+      "material": "聚酯纖維",
+      "waterproof": "3000mm"
+    },
+    "variants": [
+      {
+        "id": "v-P001-0",
+        "color": "深橄欖綠",
+        "size": "",
+        "label": "深橄欖綠",
+        "branch": {
+          "main": 2,
+          "branch-001": 1,
+          "branch-002": 0,
+          "branch-003": 0
+        }
+      },
+      {
+        "id": "v-P001-1",
+        "color": "沙漠棕",
+        "size": "",
+        "label": "沙漠棕",
+        "branch": {
+          "main": 0,
+          "branch-001": 1,
+          "branch-002": 0,
+          "branch-003": 1
+        }
+      },
+      {
+        "id": "v-P001-2",
+        "color": "太空灰",
+        "size": "",
+        "label": "太空灰",
+        "branch": {
+          "main": 0,
+          "branch-001": 0,
+          "branch-002": 0,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "帳篷",
+      "Coleman"
+    ],
+    "totalStock": 5,
+    "branch": {
+      "main": 2,
+      "branch-001": 2,
+      "branch-002": 0,
+      "branch-003": 1
+    }
+  },
+  {
+    "id": "P002",
+    "rentalId": "R002",
+    "rentalEnabled": true,
+    "name": "MSR 超輕量帳篷",
+    "category": "帳篷",
+    "brand": "MSR",
+    "interestTags": [
+      "tent"
+    ],
+    "price": 9800,
+    "status": "active",
+    "image": "/assets/images/products/P002-1.jpg",
+    "images": [
+      "/assets/images/products/P002-1.jpg",
+      "/assets/images/products/P002-2.jpg",
+      "/assets/images/products/P002-3.jpg"
+    ],
+    "description": "<p><strong>MSR 超輕量帳篷</strong> 為 Yuruicamp 精選的帳篷商品，規格：<em>沙漠卡其</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P002-0",
+        "color": "沙漠卡其",
+        "size": "",
+        "label": "沙漠卡其",
+        "branch": {
+          "main": 2,
+          "branch-001": 7,
+          "branch-002": 4,
+          "branch-003": 1
+        }
+      }
+    ],
+    "tags": [
+      "帳篷",
+      "MSR"
+    ],
+    "totalStock": 14,
+    "branch": {
+      "main": 2,
+      "branch-001": 7,
+      "branch-002": 4,
+      "branch-003": 1
+    }
+  },
+  {
+    "id": "P003",
+    "rentalId": "R018",
+    "rentalEnabled": true,
+    "name": "充氣式睡墊",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 1200,
+    "status": "active",
+    "image": "/assets/images/products/P003-1.jpg",
+    "images": [
+      "/assets/images/products/P003-1.jpg",
+      "/assets/images/products/P003-2.jpg",
+      "/assets/images/products/P003-3.jpg"
+    ],
+    "description": "<p><strong>充氣式睡墊</strong> 為 Yuruicamp 精選的睡袋商品，提供 <em>S / M / L</em> 三種尺寸。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "weight": "0.8 kg",
+      "material": "TPU 充氣層",
+      "capacity": "單人"
+    },
+    "variants": [
+      {
+        "id": "v-P003-0",
+        "color": "",
+        "size": "S",
+        "label": "S",
+        "branch": {
+          "main": 1,
+          "branch-001": 3,
+          "branch-002": 1,
+          "branch-003": 1
+        }
+      },
+      {
+        "id": "v-P003-1",
+        "color": "",
+        "size": "M",
+        "label": "M",
+        "branch": {
+          "main": 1,
+          "branch-001": 3,
+          "branch-002": 1,
+          "branch-003": 1
+        }
+      },
+      {
+        "id": "v-P003-2",
+        "color": "",
+        "size": "L",
+        "label": "L",
+        "branch": {
+          "main": 0,
+          "branch-001": 2,
+          "branch-002": 0,
+          "branch-003": 1
+        }
+      }
+    ],
+    "tags": [
+      "睡袋"
+    ],
+    "totalStock": 15,
+    "branch": {
+      "main": 2,
+      "branch-001": 8,
+      "branch-002": 2,
+      "branch-003": 3
+    }
+  },
+  {
+    "id": "P004",
+    "rentalId": "R005",
+    "rentalEnabled": true,
+    "name": "羽絨睡袋",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 2800,
+    "status": "active",
+    "image": "/assets/images/products/P004-1.jpg",
+    "images": [
+      "/assets/images/products/P004-1.jpg",
+      "/assets/images/products/P004-2.jpg",
+      "/assets/images/products/P004-3.jpg"
+    ],
+    "description": "<p><strong>羽絨睡袋</strong> 為 Yuruicamp 精選的睡袋商品，提供 <em>-10°C / -5°C / 0°C</em> 三種溫標可選。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "weight": "1.2 kg",
+      "material": "90% 羽絨",
+      "capacity": "單人"
+    },
+    "variants": [
+      {
+        "id": "v-P004-0",
+        "color": "",
+        "size": "-10°C",
+        "label": "-10°C",
+        "branch": {
+          "main": 1,
+          "branch-001": 3,
+          "branch-002": 2,
+          "branch-003": 0
+        }
+      },
+      {
+        "id": "v-P004-1",
+        "color": "",
+        "size": "-5°C",
+        "label": "-5°C",
+        "branch": {
+          "main": 1,
+          "branch-001": 2,
+          "branch-002": 1,
+          "branch-003": 0
+        }
+      },
+      {
+        "id": "v-P004-2",
+        "color": "",
+        "size": "0°C",
+        "label": "0°C",
+        "branch": {
+          "main": 0,
+          "branch-001": 1,
+          "branch-002": 0,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "睡袋"
+    ],
+    "totalStock": 11,
+    "branch": {
+      "main": 2,
+      "branch-001": 6,
+      "branch-002": 3,
+      "branch-003": 0
+    }
+  },
+  {
+    "id": "P005",
+    "rentalId": "R006",
+    "rentalEnabled": true,
+    "name": "Coleman 氣化爐",
+    "category": "炊具",
+    "brand": "Coleman",
+    "interestTags": [
+      "cooking"
+    ],
+    "price": 5000,
+    "status": "active",
+    "image": "/assets/images/products/P005-1.jpg",
+    "images": [
+      "/assets/images/products/P005-1.jpg",
+      "/assets/images/products/P005-2.jpg",
+      "/assets/images/products/P005-3.jpg"
+    ],
+    "description": "<p><strong>Coleman 氣化爐</strong> 為 Yuruicamp 精選的炊具商品，規格：<em>標準版</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P005-0",
+        "color": "標準版",
+        "size": "",
+        "label": "標準版",
+        "branch": {
+          "main": 3,
+          "branch-001": 0,
+          "branch-002": 2,
+          "branch-003": 6
+        }
+      }
+    ],
+    "tags": [
+      "炊具",
+      "Coleman"
+    ],
+    "totalStock": 11,
+    "branch": {
+      "main": 3,
+      "branch-001": 0,
+      "branch-002": 2,
+      "branch-003": 6
+    }
+  },
+  {
+    "id": "P006",
+    "rentalId": "R007",
+    "rentalEnabled": true,
+    "name": "Snow Peak 鈦合金杯組",
+    "category": "炊具",
+    "brand": "Snow Peak",
+    "interestTags": [
+      "cooking"
+    ],
+    "price": 1800,
+    "status": "active",
+    "image": "/assets/images/products/P006-1.jpg",
+    "images": [
+      "/assets/images/products/P006-1.jpg",
+      "/assets/images/products/P006-2.jpg",
+      "/assets/images/products/P006-3.jpg"
+    ],
+    "description": "<p><strong>Snow Peak 鈦合金杯組</strong> 為 Yuruicamp 精選的炊具商品，規格：<em>鈦金屬原色</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P006-0",
+        "color": "鈦金屬原色",
+        "size": "",
+        "label": "鈦金屬原色",
+        "branch": {
+          "main": 2,
+          "branch-001": 1,
+          "branch-002": 2,
+          "branch-003": 5
+        }
+      }
+    ],
+    "tags": [
+      "炊具",
+      "Snow Peak"
+    ],
+    "totalStock": 10,
+    "branch": {
+      "main": 2,
+      "branch-001": 1,
+      "branch-002": 2,
+      "branch-003": 5
+    }
+  },
+  {
+    "id": "P007",
+    "rentalId": "R011",
+    "rentalEnabled": true,
+    "name": "LED 露營燈",
+    "category": "燈具",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 800,
+    "status": "active",
+    "image": "/assets/images/products/P007-1.jpg",
+    "images": [
+      "/assets/images/products/P007-1.jpg",
+      "/assets/images/products/P007-2.jpg",
+      "/assets/images/products/P007-3.jpg"
+    ],
+    "description": "<p><strong>LED 露營燈</strong> 為 Yuruicamp 精選的燈具商品，提供 <em>暖白光</em>、<em>冷白光</em> 兩種色溫。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "lumens": "300 lm",
+      "batteryLife": "約 40 小時",
+      "power": "USB 充電"
+    },
+    "variants": [
+      {
+        "id": "v-P007-0",
+        "color": "暖白光",
+        "size": "",
+        "label": "暖白光",
+        "branch": {
+          "main": 1,
+          "branch-001": 2,
+          "branch-002": 2,
+          "branch-003": 2
+        }
+      },
+      {
+        "id": "v-P007-1",
+        "color": "冷白光",
+        "size": "",
+        "label": "冷白光",
+        "branch": {
+          "main": 1,
+          "branch-001": 2,
+          "branch-002": 2,
+          "branch-003": 2
+        }
+      }
+    ],
+    "tags": [
+      "燈具"
+    ],
+    "totalStock": 14,
+    "branch": {
+      "main": 2,
+      "branch-001": 4,
+      "branch-002": 4,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P008",
+    "rentalId": "R013",
+    "rentalEnabled": true,
+    "name": "防水登山背包",
+    "category": "背包",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "backpack"
+    ],
+    "price": 1600,
+    "status": "active",
+    "image": "/assets/images/products/P008-1.jpg",
+    "images": [
+      "/assets/images/products/P008-1.jpg",
+      "/assets/images/products/P008-2.jpg",
+      "/assets/images/products/P008-3.jpg"
+    ],
+    "description": "<p><strong>防水登山背包</strong> 為 Yuruicamp 精選的背包商品，提供 <em>35L / 45L</em> 兩種容量（森林綠）。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "weight": "1.1 kg",
+      "material": "防潑水尼龍",
+      "waterproof": "IPX4"
+    },
+    "variants": [
+      {
+        "id": "v-P008-0",
+        "color": "森林綠",
+        "size": "35L",
+        "label": "森林綠 / 35L",
+        "branch": {
+          "main": 1,
+          "branch-001": 2,
+          "branch-002": 2,
+          "branch-003": 3
+        }
+      },
+      {
+        "id": "v-P008-1",
+        "color": "森林綠",
+        "size": "45L",
+        "label": "森林綠 / 45L",
+        "branch": {
+          "main": 1,
+          "branch-001": 2,
+          "branch-002": 3,
+          "branch-003": 3
+        }
+      }
+    ],
+    "tags": [
+      "背包"
+    ],
+    "totalStock": 17,
+    "branch": {
+      "main": 2,
+      "branch-001": 4,
+      "branch-002": 5,
+      "branch-003": 6
+    }
+  },
+  {
+    "id": "P009",
+    "rentalId": "R008",
+    "rentalEnabled": true,
+    "name": "折疊桌椅組",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 2800,
+    "status": "active",
+    "image": "/assets/images/products/P009-1.jpg",
+    "images": [
+      "/assets/images/products/P009-1.jpg",
+      "/assets/images/products/P009-2.jpg",
+      "/assets/images/products/P009-3.jpg"
+    ],
+    "description": "<p><strong>折疊桌椅組</strong> 為 Yuruicamp 精選的其他商品，規格：<em>鋁合金輕量版</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P009-0",
+        "color": "鋁合金輕量版",
+        "size": "",
+        "label": "鋁合金輕量版",
+        "branch": {
+          "main": 3,
+          "branch-001": 8,
+          "branch-002": 8,
+          "branch-003": 7
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 26,
+    "branch": {
+      "main": 3,
+      "branch-001": 8,
+      "branch-002": 8,
+      "branch-003": 7
+    }
+  },
+  {
+    "id": "P010",
+    "rentalId": null,
+    "rentalEnabled": false,
+    "name": "保溫壺 1L",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 880,
+    "status": "disabled",
+    "image": "/assets/images/products/P010-1.jpg",
+    "images": [
+      "/assets/images/products/P010-1.jpg",
+      "/assets/images/products/P010-2.jpg",
+      "/assets/images/products/P010-3.jpg"
+    ],
+    "description": "<p><strong>保溫壺 1L</strong> 為 Yuruicamp 精選的其他商品，規格：<em>消光黑</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P010-0",
+        "color": "消光黑",
+        "size": "",
+        "label": "消光黑",
+        "branch": {
+          "main": 1,
+          "branch-001": 0,
+          "branch-002": 0,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 1,
+    "branch": {
+      "main": 1,
+      "branch-001": 0,
+      "branch-002": 0,
+      "branch-003": 0
+    }
+  },
+  {
+    "id": "P011",
+    "rentalId": "R003",
+    "rentalEnabled": true,
+    "name": "Snow Peak 客廳帳",
+    "category": "帳篷",
+    "brand": "Snow Peak",
+    "interestTags": [
+      "tent"
+    ],
+    "price": 8500,
+    "status": "active",
+    "image": "/assets/images/products/P011-1.jpg",
+    "images": [
+      "/assets/images/products/P011-1.jpg",
+      "/assets/images/products/P011-2.jpg",
+      "/assets/images/products/P011-3.jpg"
+    ],
+    "description": "<p><strong>Snow Peak 客廳帳</strong> 為 Yuruicamp 精選的帳篷商品，規格：<em>象牙白</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P011-0",
+        "color": "象牙白",
+        "size": "",
+        "label": "象牙白",
+        "branch": {
+          "main": 1,
+          "branch-001": 7,
+          "branch-002": 2,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "帳篷",
+      "Snow Peak"
+    ],
+    "totalStock": 10,
+    "branch": {
+      "main": 1,
+      "branch-001": 7,
+      "branch-002": 2,
+      "branch-003": 0
+    }
+  },
+  {
+    "id": "P012",
+    "rentalId": "R004",
+    "rentalEnabled": true,
+    "name": "四季保暖睡袋",
+    "category": "睡袋",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 2200,
+    "status": "active",
+    "image": "/assets/images/products/P012-1.jpg",
+    "images": [
+      "/assets/images/products/P012-1.jpg",
+      "/assets/images/products/P012-2.jpg",
+      "/assets/images/products/P012-3.jpg"
+    ],
+    "description": "<p><strong>四季保暖睡袋</strong> 為 Yuruicamp 精選的睡袋商品，提供 <em>M / L</em> 兩種尺寸（深藍）。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {
+      "weight": "1.5 kg",
+      "material": "合成纖維",
+      "capacity": "單人"
+    },
+    "variants": [
+      {
+        "id": "v-P012-0",
+        "color": "深藍",
+        "size": "M",
+        "label": "深藍 / M",
+        "branch": {
+          "main": 1,
+          "branch-001": 3,
+          "branch-002": 3,
+          "branch-003": 4
+        }
+      },
+      {
+        "id": "v-P012-1",
+        "color": "深藍",
+        "size": "L",
+        "label": "深藍 / L",
+        "branch": {
+          "main": 0,
+          "branch-001": 3,
+          "branch-002": 3,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "睡袋"
+    ],
+    "totalStock": 21,
+    "branch": {
+      "main": 1,
+      "branch-001": 6,
+      "branch-002": 6,
+      "branch-003": 8
+    }
+  },
+  {
+    "id": "P013",
+    "rentalId": "R009",
+    "rentalEnabled": true,
+    "name": "折疊蛋捲桌",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 1500,
+    "status": "active",
+    "image": "/assets/images/products/P013-1.jpg",
+    "images": [
+      "/assets/images/products/P013-1.jpg",
+      "/assets/images/products/P013-2.jpg",
+      "/assets/images/products/P013-3.jpg"
+    ],
+    "description": "<p><strong>折疊蛋捲桌</strong> 為 Yuruicamp 精選的其他商品，規格：<em>胡桃木紋</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P013-0",
+        "color": "胡桃木紋",
+        "size": "",
+        "label": "胡桃木紋",
+        "branch": {
+          "main": 2,
+          "branch-001": 5,
+          "branch-002": 2,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 9,
+    "branch": {
+      "main": 2,
+      "branch-001": 5,
+      "branch-002": 2,
+      "branch-003": 0
+    }
+  },
+  {
+    "id": "P014",
+    "rentalId": "R010",
+    "rentalEnabled": true,
+    "name": "高背月亮椅",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 980,
+    "status": "active",
+    "image": "/assets/images/products/P014-1.jpg",
+    "images": [
+      "/assets/images/products/P014-1.jpg",
+      "/assets/images/products/P014-2.jpg",
+      "/assets/images/products/P014-3.jpg"
+    ],
+    "description": "<p><strong>高背月亮椅</strong> 為 Yuruicamp 精選的其他商品，規格：<em>軍綠</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P014-0",
+        "color": "軍綠",
+        "size": "",
+        "label": "軍綠",
+        "branch": {
+          "main": 2,
+          "branch-001": 4,
+          "branch-002": 4,
+          "branch-003": 5
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 15,
+    "branch": {
+      "main": 2,
+      "branch-001": 4,
+      "branch-002": 4,
+      "branch-003": 5
+    }
+  },
+  {
+    "id": "P015",
+    "rentalId": "R012",
+    "rentalEnabled": true,
+    "name": "充電式頭燈",
+    "category": "燈具",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 650,
+    "status": "active",
+    "image": "/assets/images/products/P015-1.jpg",
+    "images": [
+      "/assets/images/products/P015-1.jpg",
+      "/assets/images/products/P015-2.jpg",
+      "/assets/images/products/P015-3.jpg"
+    ],
+    "description": "<p><strong>充電式頭燈</strong> 為 Yuruicamp 精選的燈具商品，規格：<em>USB-C</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P015-0",
+        "color": "USB-C",
+        "size": "",
+        "label": "USB-C",
+        "branch": {
+          "main": 1,
+          "branch-001": 8,
+          "branch-002": 0,
+          "branch-003": 3
+        }
+      }
+    ],
+    "tags": [
+      "燈具"
+    ],
+    "totalStock": 12,
+    "branch": {
+      "main": 1,
+      "branch-001": 8,
+      "branch-002": 0,
+      "branch-003": 3
+    }
+  },
+  {
+    "id": "P016",
+    "rentalId": "R014",
+    "rentalEnabled": true,
+    "name": "65L 重裝背包",
+    "category": "背包",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "backpack"
+    ],
+    "price": 4200,
+    "status": "active",
+    "image": "/assets/images/products/P016-1.jpg",
+    "images": [
+      "/assets/images/products/P016-1.jpg",
+      "/assets/images/products/P016-2.jpg",
+      "/assets/images/products/P016-3.jpg"
+    ],
+    "description": "<p><strong>65L 重裝背包</strong> 為 Yuruicamp 精選的背包商品，規格：<em>岩石灰</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P016-0",
+        "color": "岩石灰",
+        "size": "",
+        "label": "岩石灰",
+        "branch": {
+          "main": 3,
+          "branch-001": 1,
+          "branch-002": 8,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "背包"
+    ],
+    "totalStock": 12,
+    "branch": {
+      "main": 3,
+      "branch-001": 1,
+      "branch-002": 8,
+      "branch-003": 0
+    }
+  },
+  {
+    "id": "P017",
+    "rentalId": "R015",
+    "rentalEnabled": true,
+    "name": "露營拖車",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 3600,
+    "status": "active",
+    "image": "/assets/images/products/P017-1.jpg",
+    "images": [
+      "/assets/images/products/P017-1.jpg",
+      "/assets/images/products/P017-2.jpg",
+      "/assets/images/products/P017-3.jpg"
+    ],
+    "description": "<p><strong>露營拖車</strong> 為 Yuruicamp 精選的其他商品，規格：<em>折疊式</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P017-0",
+        "color": "折疊式",
+        "size": "",
+        "label": "折疊式",
+        "branch": {
+          "main": 3,
+          "branch-001": 3,
+          "branch-002": 1,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 11,
+    "branch": {
+      "main": 3,
+      "branch-001": 3,
+      "branch-002": 1,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P018",
+    "rentalId": "R016",
+    "rentalEnabled": true,
+    "name": "大型天幕",
+    "category": "帳篷",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "tent"
+    ],
+    "price": 2400,
+    "status": "active",
+    "image": "/assets/images/products/P018-1.jpg",
+    "images": [
+      "/assets/images/products/P018-1.jpg",
+      "/assets/images/products/P018-2.jpg",
+      "/assets/images/products/P018-3.jpg"
+    ],
+    "description": "<p><strong>大型天幕</strong> 為 Yuruicamp 精選的帳篷商品，規格：<em>4x4m</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P018-0",
+        "color": "4x4m",
+        "size": "",
+        "label": "4x4m",
+        "branch": {
+          "main": 3,
+          "branch-001": 5,
+          "branch-002": 6,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "帳篷"
+    ],
+    "totalStock": 18,
+    "branch": {
+      "main": 3,
+      "branch-001": 5,
+      "branch-002": 6,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P019",
+    "rentalId": "R017",
+    "rentalEnabled": true,
+    "name": "營柱與營繩組",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 450,
+    "status": "active",
+    "image": "/assets/images/products/P019-1.jpg",
+    "images": [
+      "/assets/images/products/P019-1.jpg",
+      "/assets/images/products/P019-2.jpg",
+      "/assets/images/products/P019-3.jpg"
+    ],
+    "description": "<p><strong>營柱與營繩組</strong> 為 Yuruicamp 精選的其他商品，規格：<em>標準套組</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P019-0",
+        "color": "標準套組",
+        "size": "",
+        "label": "標準套組",
+        "branch": {
+          "main": 2,
+          "branch-001": 1,
+          "branch-002": 3,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 10,
+    "branch": {
+      "main": 2,
+      "branch-001": 1,
+      "branch-002": 3,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P020",
+    "rentalId": "R019",
+    "rentalEnabled": true,
+    "name": "行動電源站",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 12800,
+    "status": "active",
+    "image": "/assets/images/products/P020-1.jpg",
+    "images": [
+      "/assets/images/products/P020-1.jpg",
+      "/assets/images/products/P020-2.jpg",
+      "/assets/images/products/P020-3.jpg"
+    ],
+    "description": "<p><strong>行動電源站</strong> 為 Yuruicamp 精選的其他商品，規格：<em>500Wh</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P020-0",
+        "color": "500Wh",
+        "size": "",
+        "label": "500Wh",
+        "branch": {
+          "main": 3,
+          "branch-001": 0,
+          "branch-002": 8,
+          "branch-003": 5
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 16,
+    "branch": {
+      "main": 3,
+      "branch-001": 0,
+      "branch-002": 8,
+      "branch-003": 5
+    }
+  },
+  {
+    "id": "P021",
+    "rentalId": "R020",
+    "rentalEnabled": true,
+    "name": "保冷冰桶 45L",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 1900,
+    "status": "active",
+    "image": "/assets/images/products/P021-1.jpg",
+    "images": [
+      "/assets/images/products/P021-1.jpg",
+      "/assets/images/products/P021-2.jpg",
+      "/assets/images/products/P021-3.jpg"
+    ],
+    "description": "<p><strong>保冷冰桶 45L</strong> 為 Yuruicamp 精選的其他商品，規格：<em>深藍</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P021-0",
+        "color": "深藍",
+        "size": "",
+        "label": "深藍",
+        "branch": {
+          "main": 1,
+          "branch-001": 3,
+          "branch-002": 5,
+          "branch-003": 3
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 12,
+    "branch": {
+      "main": 1,
+      "branch-001": 3,
+      "branch-002": 5,
+      "branch-003": 3
+    }
+  },
+  {
+    "id": "P022",
+    "rentalId": "R021",
+    "rentalEnabled": true,
+    "name": "雙層防風外套",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 3200,
+    "status": "active",
+    "image": "/assets/images/products/P022-1.jpg",
+    "images": [
+      "/assets/images/products/P022-1.jpg",
+      "/assets/images/products/P022-2.jpg",
+      "/assets/images/products/P022-3.jpg"
+    ],
+    "description": "<p><strong>雙層防風外套</strong> 為 Yuruicamp 精選的其他商品，規格：<em>L號</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P022-0",
+        "color": "L號",
+        "size": "",
+        "label": "L號",
+        "branch": {
+          "main": 1,
+          "branch-001": 5,
+          "branch-002": 6,
+          "branch-003": 3
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 15,
+    "branch": {
+      "main": 1,
+      "branch-001": 5,
+      "branch-002": 6,
+      "branch-003": 3
+    }
+  },
+  {
+    "id": "P023",
+    "rentalId": "R022",
+    "rentalEnabled": true,
+    "name": "快煮鍋 1.5L",
+    "category": "炊具",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "cooking"
+    ],
+    "price": 1100,
+    "status": "active",
+    "image": "/assets/images/products/P023-1.jpg",
+    "images": [
+      "/assets/images/products/P023-1.jpg",
+      "/assets/images/products/P023-2.jpg",
+      "/assets/images/products/P023-3.jpg"
+    ],
+    "description": "<p><strong>快煮鍋 1.5L</strong> 為 Yuruicamp 精選的炊具商品，規格：<em>不鏽鋼</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P023-0",
+        "color": "不鏽鋼",
+        "size": "",
+        "label": "不鏽鋼",
+        "branch": {
+          "main": 1,
+          "branch-001": 8,
+          "branch-002": 8,
+          "branch-003": 8
+        }
+      }
+    ],
+    "tags": [
+      "炊具"
+    ],
+    "totalStock": 25,
+    "branch": {
+      "main": 1,
+      "branch-001": 8,
+      "branch-002": 8,
+      "branch-003": 8
+    }
+  },
+  {
+    "id": "P024",
+    "rentalId": "R023",
+    "rentalEnabled": true,
+    "name": "碳纖維登山杖",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 1400,
+    "status": "active",
+    "image": "/assets/images/products/P024-1.jpg",
+    "images": [
+      "/assets/images/products/P024-1.jpg",
+      "/assets/images/products/P024-2.jpg",
+      "/assets/images/products/P024-3.jpg"
+    ],
+    "description": "<p><strong>碳纖維登山杖</strong> 為 Yuruicamp 精選的其他商品，規格：<em>一對</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P024-0",
+        "color": "一對",
+        "size": "",
+        "label": "一對",
+        "branch": {
+          "main": 3,
+          "branch-001": 0,
+          "branch-002": 8,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 15,
+    "branch": {
+      "main": 3,
+      "branch-001": 0,
+      "branch-002": 8,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P025",
+    "rentalId": "R024",
+    "rentalEnabled": true,
+    "name": "防水戶外手錶",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 5600,
+    "status": "active",
+    "image": "/assets/images/products/P025-1.jpg",
+    "images": [
+      "/assets/images/products/P025-1.jpg",
+      "/assets/images/products/P025-2.jpg",
+      "/assets/images/products/P025-3.jpg"
+    ],
+    "description": "<p><strong>防水戶外手錶</strong> 為 Yuruicamp 精選的其他商品，規格：<em>GPS版</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P025-0",
+        "color": "GPS版",
+        "size": "",
+        "label": "GPS版",
+        "branch": {
+          "main": 2,
+          "branch-001": 7,
+          "branch-002": 3,
+          "branch-003": 1
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 13,
+    "branch": {
+      "main": 2,
+      "branch-001": 7,
+      "branch-002": 3,
+      "branch-003": 1
+    }
+  },
+  {
+    "id": "P026",
+    "rentalId": "R025",
+    "rentalEnabled": true,
+    "name": "輕量吊床",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 890,
+    "status": "active",
+    "image": "/assets/images/products/P026-1.jpg",
+    "images": [
+      "/assets/images/products/P026-1.jpg",
+      "/assets/images/products/P026-2.jpg",
+      "/assets/images/products/P026-3.jpg"
+    ],
+    "description": "<p><strong>輕量吊床</strong> 為 Yuruicamp 精選的其他商品，規格：<em>雙人</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P026-0",
+        "color": "雙人",
+        "size": "",
+        "label": "雙人",
+        "branch": {
+          "main": 2,
+          "branch-001": 1,
+          "branch-002": 2,
+          "branch-003": 4
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 9,
+    "branch": {
+      "main": 2,
+      "branch-001": 1,
+      "branch-002": 2,
+      "branch-003": 4
+    }
+  },
+  {
+    "id": "P027",
+    "rentalId": "R026",
+    "rentalEnabled": true,
+    "name": "戶外淋浴袋",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 680,
+    "status": "active",
+    "image": "/assets/images/products/P027-1.jpg",
+    "images": [
+      "/assets/images/products/P027-1.jpg",
+      "/assets/images/products/P027-2.jpg",
+      "/assets/images/products/P027-3.jpg"
+    ],
+    "description": "<p><strong>戶外淋浴袋</strong> 為 Yuruicamp 精選的其他商品，規格：<em>20L</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P027-0",
+        "color": "20L",
+        "size": "",
+        "label": "20L",
+        "branch": {
+          "main": 2,
+          "branch-001": 0,
+          "branch-002": 6,
+          "branch-003": 7
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 15,
+    "branch": {
+      "main": 2,
+      "branch-001": 0,
+      "branch-002": 6,
+      "branch-003": 7
+    }
+  },
+  {
+    "id": "P028",
+    "rentalId": "R027",
+    "rentalEnabled": true,
+    "name": "折疊式焚火台",
+    "category": "炊具",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "cooking"
+    ],
+    "price": 2100,
+    "status": "active",
+    "image": "/assets/images/products/P028-1.jpg",
+    "images": [
+      "/assets/images/products/P028-1.jpg",
+      "/assets/images/products/P028-2.jpg",
+      "/assets/images/products/P028-3.jpg"
+    ],
+    "description": "<p><strong>折疊式焚火台</strong> 為 Yuruicamp 精選的炊具商品，規格：<em>不鏽鋼</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P028-0",
+        "color": "不鏽鋼",
+        "size": "",
+        "label": "不鏽鋼",
+        "branch": {
+          "main": 3,
+          "branch-001": 6,
+          "branch-002": 8,
+          "branch-003": 7
+        }
+      }
+    ],
+    "tags": [
+      "炊具"
+    ],
+    "totalStock": 24,
+    "branch": {
+      "main": 3,
+      "branch-001": 6,
+      "branch-002": 8,
+      "branch-003": 7
+    }
+  },
+  {
+    "id": "P029",
+    "rentalId": "R028",
+    "rentalEnabled": true,
+    "name": "防蚊帳篷內帳",
+    "category": "帳篷",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "tent"
+    ],
+    "price": 750,
+    "status": "active",
+    "image": "/assets/images/products/P029-1.jpg",
+    "images": [
+      "/assets/images/products/P029-1.jpg",
+      "/assets/images/products/P029-2.jpg",
+      "/assets/images/products/P029-3.jpg"
+    ],
+    "description": "<p><strong>防蚊帳篷內帳</strong> 為 Yuruicamp 精選的帳篷商品，規格：<em>通用型</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P029-0",
+        "color": "通用型",
+        "size": "",
+        "label": "通用型",
+        "branch": {
+          "main": 2,
+          "branch-001": 5,
+          "branch-002": 6,
+          "branch-003": 1
+        }
+      }
+    ],
+    "tags": [
+      "帳篷"
+    ],
+    "totalStock": 14,
+    "branch": {
+      "main": 2,
+      "branch-001": 5,
+      "branch-002": 6,
+      "branch-003": 1
+    }
+  },
+  {
+    "id": "P030",
+    "rentalId": null,
+    "rentalEnabled": false,
+    "name": "露營貼紙組",
+    "category": "其他",
+    "brand": "Yuruicamp",
+    "interestTags": [
+      "safety"
+    ],
+    "price": 199,
+    "status": "disabled",
+    "image": "/assets/images/products/P030-1.jpg",
+    "images": [
+      "/assets/images/products/P030-1.jpg",
+      "/assets/images/products/P030-2.jpg",
+      "/assets/images/products/P030-3.jpg"
+    ],
+    "description": "<p><strong>露營貼紙組</strong> 為 Yuruicamp 精選的其他商品，規格：<em>50入</em>。</p><p>適合露營、登山與戶外活動使用，後台可透過 Summernote 編輯器調整此描述。</p>",
+    "specifications": {},
+    "variants": [
+      {
+        "id": "v-P030-0",
+        "color": "50入",
+        "size": "",
+        "label": "50入",
+        "branch": {
+          "main": 1,
+          "branch-001": 0,
+          "branch-002": 0,
+          "branch-003": 0
+        }
+      }
+    ],
+    "tags": [
+      "其他"
+    ],
+    "totalStock": 1,
+    "branch": {
+      "main": 1,
+      "branch-001": 0,
+      "branch-002": 0,
+      "branch-003": 0
+    }
+  }
+]

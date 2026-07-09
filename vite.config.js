@@ -18,6 +18,7 @@ export default defineConfig({
         productDetail: 'pages/product-detail.html',
         checkout: 'pages/checkout.html',
         checkoutSuccess: 'pages/checkout-success.html',
+        bookingSuccess: 'booking/pages/booking-success.html',
         memberCenter: 'pages/member-center.html',
         blog: 'pages/blog.html',
         blogDetail: 'pages/blog-detail.html',

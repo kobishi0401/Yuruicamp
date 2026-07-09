@@ -1,7 +1,7 @@
 /**
  * admin/js/movement.js
  * 庫存異動紀錄模組
- * 從 admin/data/movement.json 載入主檔，點擊異動 ID 後顯示明細清單。
+ * 從 /data/admin/movement.json 載入主檔，點擊異動 ID 後顯示明細清單。
  *
  * 功能：
  *   - 期間篩選：近 7/30 天、本月、近 3 個月、自定義（flatpickr）
@@ -18,7 +18,7 @@ window.movementBaseLoaded = false;
  * 排序堆疊：依點擊時間順序排列
  * 初始值設為日期降冪（最新異動在最上面）
  */
-var movementSortStack = [{ key: 'created_at', dir: 'desc' }];
+var movementSortStack = [{ key: 'createdAt', dir: 'desc' }];
 
 /**
  * 日期篩選 UI 狀態（對齊 orders.js orderDateState）
@@ -39,7 +39,8 @@ var movementFilterState = {
 
 /** 取得異動時間（支援舊欄位 date）/ Get movement timestamp string */
 function getMovementCreatedAt(record) {
-  return (record && (record.created_at || record.date)) || '';
+  // 優先 camelCase；相容舊 created_at / date
+  return (record && (record.createdAt || record.created_at || record.date)) || '';
 }
 
 window.initMovement = function () {
@@ -48,7 +49,7 @@ window.initMovement = function () {
   $(document).off('.movement');
 
   // 每次進入頁面重置排序與篩選（預設：日期降冪 + 近 30 天）
-  movementSortStack = [{ key: 'created_at', dir: 'desc' }];
+  movementSortStack = [{ key: 'createdAt', dir: 'desc' }];
   movementFilterState = { employeeId: [], movementType: [], dateStart: null, dateEnd: null };
   movementDateState = { days: 30, startDate: null, endDate: null };
 
@@ -60,20 +61,27 @@ window.initMovement = function () {
     populateEmployeeFilterOptions(window.movementCache || []);
     applyMovementFiltersAndSort();
   } else {
-    $.getJSON('data/movement.json', function (records) {
-      window.movementCache = mergeMovementRecords(
-        window.generatedMovementRecords,
-        (records || []).map(normalizeMovementRecord)
-      );
-      window.movementBaseLoaded = true;
-      populateEmployeeFilterOptions(window.movementCache);
-      applyMovementFiltersAndSort();
-    }).fail(function () {
-      $('#movementTableBody').html(
-        '<tr><td colspan="5" class="text-center text-danger py-4">' +
-        '<i class="fas fa-exclamation-triangle me-2"></i>載入庫存異動紀錄失敗' +
-        '</td></tr>'
-      );
+    loadAdminJsonResource({
+      adminList: AdminAPI && AdminAPI.movement && AdminAPI.movement.list,
+      jsonPath: DataPaths.movement,
+      emptyValue: [],
+      errorMessage: '載入庫存異動失敗',
+      onSuccess: function (records) {
+        window.movementCache = mergeMovementRecords(
+          window.generatedMovementRecords,
+          (records || []).map(normalizeMovementRecord)
+        );
+        window.movementBaseLoaded = true;
+        populateEmployeeFilterOptions(window.movementCache);
+        applyMovementFiltersAndSort();
+      },
+      onError: function () {
+        $('#movementTableBody').html(
+          '<tr><td colspan="5" class="text-center text-danger py-4">' +
+          '<i class="fas fa-exclamation-triangle me-2"></i>載入庫存異動紀錄失敗' +
+          '</td></tr>'
+        );
+      }
     });
   }
 
@@ -129,7 +137,7 @@ window.initMovement = function () {
 
   // ── 清除條件按鈕：還原預設排序 + 清空欄位篩選 + 還原近 30 天 ──
   $(document).on('click.movement', '#btnClearMovementSort', function () {
-    movementSortStack = [{ key: 'created_at', dir: 'desc' }];
+    movementSortStack = [{ key: 'createdAt', dir: 'desc' }];
     movementFilterState.employeeId = [];
     movementFilterState.movementType = [];
     applyMovementDayRange(30);
@@ -232,10 +240,12 @@ function normalizeMovementRecord(record) {
 
   return {
     id: (record && record.id) || createMovementRecordId(),
-    created_at: getMovementCreatedAt(record) || formatMovementDateTime(new Date()),
+    // 權威欄位 camelCase；保留 created_at 一版相容讀取（getMovementCreatedAt 已 fallback）
+    createdAt: getMovementCreatedAt(record) || formatMovementDateTime(new Date()),
     employeeId: (record && (record.employeeId || record.adminId || record.staffId)) || '—',
     items: items.map(function (item) {
       return {
+        productId: (item && item.productId) || null,
         productName: (item && item.productName) || '未命名商品',
         quantity: parseInt(item && item.quantity, 10) || 0,
         fromStore: (item && item.fromStore) || '—',
@@ -489,8 +499,8 @@ function applyMovementFiltersAndSort() {
       for (var i = 0; i < movementSortStack.length; i++) {
         var key = movementSortStack[i].key;
         var dir = movementSortStack[i].dir === 'asc' ? 1 : -1;
-        var valA = key === 'created_at' ? getMovementCreatedAt(a) : (a[key] || '');
-        var valB = key === 'created_at' ? getMovementCreatedAt(b) : (b[key] || '');
+        var valA = key === 'createdAt' || key === 'created_at' ? getMovementCreatedAt(a) : (a[key] || '');
+        var valB = key === 'createdAt' || key === 'created_at' ? getMovementCreatedAt(b) : (b[key] || '');
         if (valA < valB) return -1 * dir;
         if (valA > valB) return  1 * dir;
       }
@@ -522,7 +532,7 @@ function updateMovementSortUI() {
 
   var isDefaultSort = (
     movementSortStack.length === 1 &&
-    movementSortStack[0].key === 'created_at' &&
+    movementSortStack[0].key === 'createdAt' &&
     movementSortStack[0].dir === 'desc'
   );
 

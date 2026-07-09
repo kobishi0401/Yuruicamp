@@ -11,7 +11,12 @@
     "format": "prettier --check --ignore-unknown \"booking/**/*.{html,scss,js,json}\" \"README.md\" \"docs/itcss-architecture.md\" \"plans/booking-itcss-scss-plan.md\" \"pages/member-center.html\" \"components/member-center.partial\" \"js/components/member-center.js\" \"js/components/header.js\"",
     "format:all": "prettier --check \"**/*.{html,css,scss,js,json,md}\"",
     "stylelint": "stylelint \"css/**/*.scss\" \"booking/css/**/*.scss\"",
-    "smoke": "node tests/smoke.mjs"
+    "smoke": "node tests/smoke.mjs",
+    "smoke:browser": "node tests/smoke-browser-encoding.mjs",
+    "validate:data": "node admin/scripts/validate-data-fk.cjs",
+    "sync:listings": "node admin/scripts/sync-rental-listings.cjs",
+    "fix:articles": "node admin/scripts/fix-articles-product-ids.cjs",
+    "normalize:data": "node admin/scripts/normalize-phase1-data.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

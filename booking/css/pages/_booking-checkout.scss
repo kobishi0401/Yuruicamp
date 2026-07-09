@@ -277,6 +277,13 @@
   display: none;
 }
 
+/* 成功頁顯示導購區塊 / Show upsell on booking success page */
+.bookingSuccessUpsell {
+  display: block;
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
 .checkoutUpsellSection .cartSectionTitle {
   color: var(--yc-on-cta);
 }
@@ -291,6 +298,11 @@
   padding: 0;
   background: none;
   border: none;
+}
+
+.checkoutFillProfileBtn {
+  margin-top: 0.5rem;
+  width: 100%;
 }
 
 .checkoutContactHint {

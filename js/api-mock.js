@@ -1,64 +1,37 @@
 // ========================================
-// Mock API 層 - 模擬後端接口
+// Mock API 層 — 統一讀取 /data（DataPaths）
 // ========================================
-// 預留後端接入點：日後僅需將此層改為真實 API 調用
-// 例：fetch(`${AppConfig.API_BASE_URL}/products`)
 
-/**
- * API 模擬物件
- * 包含所有應用需要的模擬 API 方法
- * 數據來自 data/*.json 靜態檔案
- */
-// 自動偵測 data 資料夾路徑（支援從 pages/ 子目錄載入）
-// Auto-detect data folder path - works whether page is at root or in pages/
-const _detectDataPath = () => {
-  const path = window.location.pathname;
-  if (path.includes('/pages/') || path.match(/\/pages\//)) {
-    return '../data';
-  }
-  return '/data';
-};
+const MOCK_ORDERS_KEY = 'mockOrders';
+const MOCK_REVIEWS_KEY = 'mockReviews';
+const MOCK_CUSTOMER_OVERLAY_KEY = 'mockCustomerOverlay';
 
-const MOCK_ORDERS_STORAGE_KEY = 'mockOrders';
-const MOCK_USER_POINT_DELTAS_STORAGE_KEY = 'mockUserPointDeltas';
 let productsCache = null;
 let productsCacheExpiresAt = 0;
+let reviewsCache = null;
+let ordersCache = null;
 
-/** 重點：集中讀取 localStorage JSON，避免新增訂單或點數快取資料損壞時中斷整個 mock API。 */
+const _path = (key) => (window.DataPaths && window.DataPaths[key]) || '';
+
 const _readJsonStorage = (key, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
   } catch (error) {
-    console.warn(`localStorage ${key} 解析失敗，已改用預設值`, error);
+    console.warn('localStorage parse failed:', key, error);
     return fallback;
   }
 };
 
-/** 重點：集中寫入 localStorage JSON，讓訂單與點數的 mock 持久化格式一致。 */
 const _writeJsonStorage = (key, value) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
-/** 重點：新增訂單會和 data/orders.json 合併，會員中心讀取時可同時看到靜態與本機新增資料。 */
-const _mergeOrders = (baseOrders = [], persistedOrders = []) => {
-  const orderMap = new Map();
-  [...baseOrders, ...persistedOrders].forEach(order => {
-    if (order && order.id) orderMap.set(order.id, order);
-  });
-  return [...orderMap.values()];
+const _fetchJson = async (url) => {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Fetch failed: ' + url);
+  return res.json();
 };
 
-/** 重點：訂單 ID 依目前最大 ord-數字 加 1，符合 data/orders.json 既有 ord-001 格式。 */
-const _getNextOrderSerial = (orders = []) => {
-  const serials = orders
-    .map(order => String(order.id || '').match(/^ord-(\d+)$/))
-    .filter(Boolean)
-    .map(match => Number(match[1]))
-    .filter(serial => Number.isFinite(serial) && serial > 0 && serial < 100000);
-  return Math.max(0, ...serials) + 1;
-};
-
-/** 重點：createdAt 使用本機 YYYY-MM-DD HH:mm:ss，避免 ISO UTC 跨日且方便後端對接。 */
 const _formatLocalDateTime = (date = new Date()) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -69,437 +42,411 @@ const _formatLocalDateTime = (date = new Date()) => {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 };
 
-/** 只取日期部分（訂單編號等用途） */
-const _formatLocalDate = (date = new Date()) => _formatLocalDateTime(date).slice(0, 10);
+const _getStoredOrders = () => _readJsonStorage(MOCK_ORDERS_KEY, []);
 
-const _formatOrderId = (serial) => `ord-${String(serial).padStart(3, '0')}`;
+const _mergeOrders = (base = [], persisted = []) => {
+  const map = new Map();
+  [...base, ...persisted].forEach((o) => {
+    if (o && o.id != null) map.set(o.id, o);
+  });
+  return [...map.values()];
+};
 
-const _formatOrderNumber = (date, serial) => (
-  `#ORD-${_formatLocalDate(date).replace(/-/g, '')}-${String(serial).padStart(4, '0')}`
-);
+const _getNextOrderId = (orders = []) => {
+  const ids = orders.map((o) => Number(o.id)).filter((n) => Number.isFinite(n) && n > 0);
+  return Math.max(100, ...ids, 0) + 1;
+};
 
-/** 重點：每筆訂單回饋點數固定為 subtotal 的 10% 並無條件進位。 */
-const _calculateRewardPoints = (subtotal) => Math.ceil((Number(subtotal) || 0) * 0.1);
-
-const _getStoredOrders = () => _readJsonStorage(MOCK_ORDERS_STORAGE_KEY, []);
-const _getUserPointDeltas = () => _readJsonStorage(MOCK_USER_POINT_DELTAS_STORAGE_KEY, {});
+const _normalizeOrder = (order) => {
+  if (!order) return order;
+  return {
+    ...order,
+    displayId: window.formatOrderDisplayId(order.id),
+  };
+};
 
 /**
- * Loads products.json once per cache window so product APIs share one request.
- * @returns {Promise<Array>} Cached product list.
+ * API 衍生欄位（不寫回 products.json）
+ * Derived fields only — do NOT persist rating / salesCount / reviewCount to JSON.
+ * totalStock / branch 亦為衍生（由 variants[].branch 加總，見 normalize-phase1-data.cjs）
  */
-const _getProducts = async () => {
-  const now = Date.now();
-  if (productsCache && now < productsCacheExpiresAt) {
-    return productsCache;
-  }
+const _enrichProduct = async (product, reviews, orders) => {
+  const enriched = window.enrichProductForDisplay(product);
+  const ratingInfo = window.aggregateProductRating(enriched.id, reviews);
+  enriched.rating = ratingInfo.rating;
+  enriched.reviewCount = ratingInfo.reviewCount;
+  enriched.ratingDisplay = ratingInfo.ratingDisplay;
+  enriched.salesCount = window.computeProductSales(enriched.id, orders);
+  return enriched;
+};
 
-  const response = await fetch(`${window.API._getDataPath()}/products.json`);
-  productsCache = await response.json();
+const _getCustomerOverlay = () => _readJsonStorage(MOCK_CUSTOMER_OVERLAY_KEY, {});
+
+const _setCustomerOverlay = (customerId, patch) => {
+  const all = _getCustomerOverlay();
+  all[customerId] = { ...(all[customerId] || {}), ...patch };
+  _writeJsonStorage(MOCK_CUSTOMER_OVERLAY_KEY, all);
+};
+
+const _applyCustomerOverlay = (customer) => {
+  const overlay = _getCustomerOverlay()[customer.id] || {};
+  return { ...customer, ...overlay };
+};
+
+const _loadProductsRaw = async () => {
+  const now = Date.now();
+  if (productsCache && now < productsCacheExpiresAt) return productsCache;
+  productsCache = await _fetchJson(_path('products'));
   productsCacheExpiresAt = now + (window.AppConfig?.CACHE_DURATION || 3600000);
   return productsCache;
 };
 
-/** 重點：只有 delivered 的 mockOrders 才會回饋點數，避免 checkout 新建 unshipped 訂單先更新 cardPoints。 */
-const _getDeliveredOrderPointDeltas = () => {
-  return _getStoredOrders().reduce((deltas, order) => {
-    if (!order || order.status !== 'delivered') return deltas;
-
-    const userId = order.userId || 'user-001';
-    const points = Number.isFinite(Number(order.points))
-      ? Number(order.points)
-      : _calculateRewardPoints(order.subtotal);
-    deltas[userId] = (Number(deltas[userId]) || 0) + points;
-    return deltas;
-  }, {});
+const _loadReviews = async () => {
+  if (reviewsCache) return reviewsCache;
+  const seed = await _fetchJson(_path('reviews'));
+  const mock = _readJsonStorage(MOCK_REVIEWS_KEY, []);
+  reviewsCache = [...seed, ...mock];
+  return reviewsCache;
 };
 
-/** 重點：users.json 是基礎資料，結帳新增的點數只記錄增量，避免覆蓋日後更新的 points 原始值。 */
-const _applyUserPointDeltas = (users = []) => {
-  const deltas = _getDeliveredOrderPointDeltas();
-  return users.map(user => ({
-    ...user,
-    points: (Number(user.points) || 0) + (Number(deltas[user.id]) || 0),
-  }));
+const _loadOrdersSeed = async () => {
+  if (ordersCache) return ordersCache;
+  ordersCache = await _fetchJson(_path('orders'));
+  return ordersCache;
+};
+
+const _buildCustomerNotifications = (customer, orders) => {
+  const list = [];
+  const cid = customer.id;
+  (orders || []).filter((o) => o.customerId === cid).forEach((o) => {
+    const disp = window.formatOrderDisplayId(o.id);
+    if (o.status === 'shipped') {
+      list.push({
+        id: 'n-ship-' + o.id,
+        type: 'order',
+        title: '訂單 ' + disp + ' 已出貨',
+        message: '您的訂單已由宅配公司取件，請留意配送進度。',
+        time: o.createdAt,
+        read: false,
+      });
+    }
+    if (o.status === 'completed') {
+      list.push({
+        id: 'n-done-' + o.id,
+        type: 'order',
+        title: '訂單 ' + disp + ' 已送達',
+        message: '已送達，歡迎評價。',
+        time: o.deliveredAt || o.createdAt,
+        read: false,
+      });
+    }
+  });
+  const now = new Date();
+  if (customer.birthday) {
+    const bMonth = parseInt(String(customer.birthday).slice(5, 7), 10);
+    if (bMonth === now.getMonth() + 1) {
+      list.push({
+        id: 'n-bday',
+        type: 'promo',
+        title: '生日折扣碼 YURUIHBD 當月可用',
+        message: '祝您生日快樂！本月結帳可使用生日優惠。',
+        time: _formatLocalDateTime(now).slice(0, 10),
+        read: false,
+      });
+    }
+  }
+  if (!customer.firstPurchaseUsed) {
+    list.push({
+      id: 'n-first',
+      type: 'promo',
+      title: '首購優惠 YRUIFIRST 尚未使用',
+      message: '首次購物可套用首購折扣碼。',
+      time: _formatLocalDateTime(now).slice(0, 10),
+      read: false,
+    });
+  }
+  return list;
+};
+
+const customersApi = {
+  getAll: async () => {
+    const customers = await _fetchJson(_path('customers'));
+    return customers.map(_applyCustomerOverlay);
+  },
+
+  getById: async (customerId) => {
+    const customers = await customersApi.getAll();
+    const user = customers.find((c) => c.id === customerId) || customers[0];
+    if (!user) throw new Error('Customer not found');
+    return user;
+  },
+
+  getNotifications: async (customerId) => {
+    const customer = await customersApi.getById(customerId);
+    const orders = await window.API.orders.getAll();
+    return _buildCustomerNotifications(customer, orders);
+  },
+
+  addPoints: async (customerId, points) => {
+    const earned = Number(points) || 0;
+    const customer = await customersApi.getById(customerId);
+    const nextPoints = (Number(customer.points) || 0) + earned;
+    _setCustomerOverlay(customerId, { points: nextPoints });
+    const updated = await customersApi.getById(customerId);
+    if (window.AppState?.currentUser?.id === customerId) {
+      window.AppState.currentUser.points = updated.points;
+      window.saveAppState && window.saveAppState();
+    }
+    window.dispatchEvent(new CustomEvent('yurui:user-points-updated', {
+      detail: { userId: customerId, points: updated.points, earnedPoints: earned },
+    }));
+    return updated;
+  },
+
+  markFirstPurchaseUsed: async (customerId) => {
+    _setCustomerOverlay(customerId, { firstPurchaseUsed: true });
+  },
+
+  update: async (customerId, updates) => {
+    const current = window.AppState?.currentUser;
+    if (!current || current.id !== customerId) throw new Error('Unauthorized');
+    const updated = { ...current, ...updates };
+    window.AppState.currentUser = updated;
+    window.saveAppState && window.saveAppState();
+    _setCustomerOverlay(customerId, updates);
+    return customersApi.getById(customerId);
+  },
+
+  logout: async () => {
+    if (window.YuruiAuth?.logout) {
+      window.YuruiAuth.logout({ showToast: false });
+      return;
+    }
+    window.AppState.isLoggedIn = false;
+    window.AppState.currentUser = null;
+    window.saveAppState && window.saveAppState();
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('yuruiUser');
+    localStorage.setItem('isLoggedIn', 'false');
+    window.dispatchEvent(new CustomEvent('yurui:auth-changed', { detail: { type: 'logout', user: null } }));
+  },
 };
 
 window.API = {
-  // Base data path for JSON fetching - adjusts based on current page location
-  _dataPath: null,
+  /** @deprecated 請用 DataPaths */
   _getDataPath() {
-    if (!this._dataPath) {
-      this._dataPath = _detectDataPath();
-    }
-    return this._dataPath;
+    return '/data';
   },
 
-  /**
-   * 產品相關 API
-   */
   products: {
-    /**
-     * 獲取所有產品列表
-     * @param {Object} filters - 篩選條件 {category, minPrice, maxPrice, brand}
-     * @returns {Promise<Array>}
-     */
     getAll: async (filters = {}) => {
-      try {
-        let products = await _getProducts();
-        
-        // 應用篩選
-        if (filters.category) {
-          products = products.filter(p => p.category === filters.category);
-        }
-        if (filters.minPrice !== undefined) {
-          products = products.filter(p => p.price >= filters.minPrice);
-        }
-        if (filters.maxPrice !== undefined) {
-          products = products.filter(p => p.price <= filters.maxPrice);
-        }
-        if (filters.brand) {
-          products = products.filter(p => p.brand === filters.brand);
-        }
-        
-        return Promise.resolve(products);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        return Promise.reject(error);
-      }
+      const [raw, reviews, orders] = await Promise.all([
+        _loadProductsRaw(),
+        _loadReviews(),
+        _loadOrdersSeed(),
+      ]);
+      let products = raw.filter((p) => p.status === 'active');
+      products = await Promise.all(products.map((p) => _enrichProduct(p, reviews, orders)));
+
+      if (filters.category) products = products.filter((p) => p.category === filters.category);
+      if (filters.minPrice != null) products = products.filter((p) => p.price >= filters.minPrice);
+      if (filters.maxPrice != null) products = products.filter((p) => p.price <= filters.maxPrice);
+      if (filters.brand) products = products.filter((p) => p.brand === filters.brand);
+      return products;
     },
-    
-    /**
-     * 根據 ID 獲取單一產品詳情
-     * @param {string} productId - 產品 ID
-     * @returns {Promise<Object>}
-     */
+
     getById: async (productId) => {
-      try {
-        const products = await _getProducts();
-        const product = products.find(p => p.id === productId);
-        
-        if (!product) {
-          return Promise.reject(new Error('Product not found'));
-        }
-        
-        return Promise.resolve(product);
-      } catch (error) {
-        console.error('Error fetching product detail:', error);
-        return Promise.reject(error);
-      }
+      const raw = await _loadProductsRaw();
+      const product = raw.find((p) => p.id === productId);
+      if (!product) throw new Error('Product not found');
+      const [reviews, orders] = await Promise.all([_loadReviews(), _loadOrdersSeed()]);
+      return _enrichProduct(product, reviews, orders);
     },
-    
-    /**
-     * 獲取分類列表
-     * @returns {Promise<Array>}
-     */
+
+    getReviews: async (productId) => {
+      const reviews = await _loadReviews();
+      return reviews.filter((r) => r.productId === productId);
+    },
+
+    getNewest: async (limit = 12) => {
+      const all = await window.API.products.getAll();
+      return all
+        .slice()
+        .sort((a, b) => {
+          const na = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0;
+          const nb = parseInt(String(b.id).replace(/\D/g, ''), 10) || 0;
+          return nb - na;
+        })
+        .slice(0, limit);
+    },
+
+    getBestsellers: async (limit = 20) => {
+      const all = await window.API.products.getAll();
+      return all
+        .slice()
+        .sort((a, b) => {
+          if (b.salesCount !== a.salesCount) return b.salesCount - a.salesCount;
+          return (b.reviewCount || 0) - (a.reviewCount || 0);
+        })
+        .slice(0, limit);
+    },
+
     getCategories: async () => {
-      try {
-        const products = await _getProducts();
-        const categories = [...new Set(products.map(p => p.category))];
-        return Promise.resolve(categories);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        return Promise.reject(error);
-      }
+      const products = await _loadProductsRaw();
+      return [...new Set(products.map((p) => p.category))];
     },
   },
-  
-  /**
-   * 訂單相關 API
-   */
+
   orders: {
-    /**
-     * 獲取用戶訂單列表
-     * @param {string} userId - 用戶 ID
-     * @param {string} status - 訂單狀態篩選
-     * @returns {Promise<Array>}
-     */
     getAll: async () => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/orders.json`, { cache: 'no-store' });
-        const orders = _mergeOrders(await response.json(), _getStoredOrders());
-        return Promise.resolve(orders);
-      } catch (error) {
-        console.error('Error fetching all orders:', error);
-        return Promise.reject(error);
-      }
+      const seed = await _loadOrdersSeed();
+      return _mergeOrders(seed, _getStoredOrders()).map(_normalizeOrder);
     },
 
-    getByUserId: async (userId, status = null) => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/orders.json`, { cache: 'no-store' });
-        let orders = _mergeOrders(await response.json(), _getStoredOrders());
-        
-        orders = orders.filter(o => o.userId === userId);
-        
-        if (status) {
-          orders = orders.filter(o => o.status === status);
-        }
-        
-        return Promise.resolve(orders);
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-        return Promise.reject(error);
-      }
+    getByCustomerId: async (customerId, status = null) => {
+      let orders = await window.API.orders.getAll();
+      orders = orders.filter((o) => o.customerId === customerId);
+      if (status) orders = orders.filter((o) => o.status === status);
+      return orders;
     },
-    
-    /**
-     * 創建訂單（模擬）
-     * @param {Object} orderData - 訂單數據
-     * @returns {Promise<Object>}
-     */
+
     create: async (orderData) => {
-      try {
-        const now = new Date();
-        const response = await fetch(`${window.API._getDataPath()}/orders.json`, { cache: 'no-store' });
-        const baseOrders = await response.json();
-        const storedOrders = _getStoredOrders();
-        const serial = _getNextOrderSerial(_mergeOrders(baseOrders, storedOrders));
-        const subtotal = Number(orderData.subtotal) || 0;
-        const rewardPoints = Number.isFinite(Number(orderData.points))
-          ? Number(orderData.points)
-          : _calculateRewardPoints(subtotal);
+      const seed = await _loadOrdersSeed();
+      const stored = _getStoredOrders();
+      const merged = _mergeOrders(seed, stored);
+      const nextId = orderData.id != null ? Number(orderData.id) : _getNextOrderId(merged);
+      const subtotal = Number(orderData.subtotal) || 0;
+      const points = window.calculateOrderRewardPoints(subtotal);
 
-        // 重點：新增訂單欄位依 checkout.js 整理後的頁面資料建立，狀態預設為待出貨 unshipped。
-        const newOrder = {
-          id: orderData.id || _formatOrderId(serial),
-          userId: orderData.userId || 'user-001',
-          orderNumber: orderData.orderNumber || _formatOrderNumber(now, serial),
-          items: orderData.items || [],
-          subtotal,
-          points: rewardPoints,
-          shippingFee: Number(orderData.shippingFee) || 0,
-          ...(Array.isArray(orderData.coupons) && orderData.coupons.length > 0 ? { coupons: orderData.coupons } : {}),
-          discount: Number(orderData.discount) || 0,
-          total: Number(orderData.total) || 0,
-          status: orderData.status || 'unshipped',
-          shippingMethod: orderData.shippingMethod || 'delivery',
-          shippingAddress: orderData.shippingAddress || orderData.deliveryAddress || '',
-          payment: orderData.payment || orderData.paymentMethod || 'credit-card',
-          paymentStatus: orderData.paymentStatus || ((orderData.payment || orderData.paymentMethod) === 'cod' ? 'paid' : 'unpaid'),
-          createdAt: orderData.createdAt || _formatLocalDateTime(now),
-          // 重點：checkout 傳入的空字串也要保留，讓會員中心訂單詳細欄位結構固定。
-          deliveredAt: orderData.deliveredAt || '',
-          trackingNumber: orderData.trackingNumber || '',
-          canReview: false,
-          review: false,
-          reviewed: false,
-          buyerName: orderData.buyerName || '',
-          buyerPhone: orderData.buyerPhone || '',
-          buyerEmail: orderData.buyerEmail || '',
-          userNote: orderData.userNote || orderData.buyerNote || '',
-          buyerNote: orderData.buyerNote || orderData.userNote || '',
-        };
-        
-        // 重點：瀏覽器無法直接寫回 data/orders.json，這裡以 mockOrders 模擬追加後的 orders.json。
-        const orders = [...storedOrders.filter(order => order.id !== newOrder.id), newOrder];
-        _writeJsonStorage(MOCK_ORDERS_STORAGE_KEY, orders);
+      const newOrder = _normalizeOrder({
+        id: nextId,
+        customerId: orderData.customerId || 'U001',
+        buyerName: orderData.buyerName || '',
+        buyerPhone: orderData.buyerPhone || '',
+        buyerEmail: orderData.buyerEmail || '',
+        userNote: orderData.userNote || orderData.buyerNote || '',
+        items: orderData.items || [],
+        subtotal,
+        points,
+        pointsAwarded: false,
+        shippingFee: Number(orderData.shippingFee) || 0,
+        coupons: orderData.coupons,
+        discount: Number(orderData.discount) || 0,
+        total: Number(orderData.total) || 0,
+        status: orderData.status || 'unshipped',
+        shippingMethod: orderData.shippingMethod || 'delivery',
+        address: orderData.address || '',
+        payment: orderData.payment || 'credit-card',
+        paymentStatus: orderData.paymentStatus || (orderData.payment === 'cod' ? 'cod' : 'paid'),
+        createdAt: orderData.createdAt || _formatLocalDateTime(),
+        deliveredAt: '',
+        trackingNumber: '',
+        reviewed: false,
+        history: [{ time: _formatLocalDateTime(), action: '訂單產生' }],
+      });
 
-        // 重點：訂單成立時同步把本筆 points 加到會員點數增量，會員中心會即時讀到新總點數。
-        // 重點：只有 delivered 訂單才可把 points 加到會員暫存點數，checkout 新訂單預設 unshipped 不更新 cardPoints。
-        if (newOrder.status === 'delivered' && newOrder.userId && newOrder.points > 0 && window.API.users && window.API.users.addPoints) {
-          await window.API.users.addPoints(newOrder.userId, newOrder.points);
-        }
-        
-        return Promise.resolve(newOrder);
-      } catch (error) {
-        console.error('Error creating order:', error);
-        return Promise.reject(error);
+      const orders = [...stored.filter((o) => o.id !== newOrder.id), newOrder];
+      _writeJsonStorage(MOCK_ORDERS_KEY, orders);
+      return newOrder;
+    },
+
+    markReviewed: async (orderId) => {
+      const stored = _getStoredOrders();
+      const idx = stored.findIndex((o) => o.id === orderId);
+      if (idx >= 0) {
+        stored[idx].reviewed = true;
+        _writeJsonStorage(MOCK_ORDERS_KEY, stored);
+      }
+    },
+
+    awardPointsIfCompleted: async (order) => {
+      if (!order || order.status !== 'completed' || order.pointsAwarded) return;
+      if (order.points > 0 && order.customerId) {
+        await customersApi.addPoints(order.customerId, order.points);
+      }
+      const stored = _getStoredOrders();
+      const idx = stored.findIndex((o) => o.id === order.id);
+      if (idx >= 0) {
+        stored[idx].pointsAwarded = true;
+        _writeJsonStorage(MOCK_ORDERS_KEY, stored);
       }
     },
   },
-  
-/**
-   * 用戶相關 API
-   */
-  users: {
-    /**
-     * 取得所有會員資料
-     * 重點：每次都重新讀 data/users.json，再套用本機點數增量，讓 users.json points 更新後畫面也會跟著刷新。
-     * @returns {Promise<Array>}
-     */
-    getAll: async () => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/users.json`, { cache: 'no-store' });
-        const users = await response.json();
-        return Promise.resolve(_applyUserPointDeltas(users));
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        return Promise.reject(error);
-      }
-    },
 
-    /**
-     * 依會員 ID 取得單一會員資料
-     * 重點：會員中心回饋點數固定從 users.json 的 points 欄位讀取，不再從訂單 delivered subtotal 推算。
-     * @param {string} userId - 用戶 ID
-     * @returns {Promise<Object>}
-     */
-    getById: async (userId) => {
-      const users = await window.API.users.getAll();
-      const user = users.find(item => item.id === userId) || users[0];
-      if (!user) return Promise.reject(new Error('User not found'));
-      return Promise.resolve(user);
-    },
+  customers: customersApi,
+  users: customersApi,
 
-    /**
-     * 累加會員回饋點數
-     * 重點：瀏覽器不能直接修改 data/users.json，因此只保存「新增點數增量」，再與 users.json points 合併顯示。
-     * @param {string} userId - 用戶 ID
-     * @param {number} points - 本次新增點數
-     * @returns {Promise<Object>}
-     */
-    addPoints: async (userId, points) => {
-      const safeUserId = userId || 'user-001';
-      const earnedPoints = Number(points) || 0;
-      const deltas = _getUserPointDeltas();
+  coupons: {
+    getAll: async () => _fetchJson(_path('coupons')),
 
-      deltas[safeUserId] = (Number(deltas[safeUserId]) || 0) + earnedPoints;
-      _writeJsonStorage(MOCK_USER_POINT_DELTAS_STORAGE_KEY, deltas);
-
-      const updatedUser = await window.API.users.getById(safeUserId);
-
-      // 重點：同步目前登入狀態，讓 Header 與其他頁面也可取得最新 points。
-      if (window.AppState && window.AppState.currentUser && (!window.AppState.currentUser.id || window.AppState.currentUser.id === safeUserId)) {
-        window.AppState.currentUser.id = safeUserId;
-        window.AppState.currentUser.points = updatedUser.points;
-        window.saveAppState && window.saveAppState();
-      }
-
-      window.dispatchEvent(new CustomEvent('yurui:user-points-updated', {
-        detail: { userId: safeUserId, points: updatedUser.points, earnedPoints },
-      }));
-
-      return Promise.resolve(updatedUser);
-    },
-
-    /**
-     * 登出
-     * 設計說明：登出時只清除認證狀態（isLoggedIn、currentUser）
-     *           購物車數據（cart）保留在 localStorage，不清空
-     *           用戶可在登出後再次登入時看到原有的購物車
-     * @returns {Promise<void>}
-     */
-    logout: async () => {
-      if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
-        window.YuruiAuth.logout({ showToast: false });
-        return Promise.resolve();
-      }
-
-      // 只清除認證相關狀態，保留購物車
-      window.AppState.isLoggedIn = false;
-      window.AppState.currentUser = null;
-      // 注意：不清空 window.AppState.cart，購物車數據保留
-      window.saveAppState();
-      localStorage.removeItem('currentUser');
-      // 清除舊登入 key 殘留，避免歷史資料干擾 currentUser 單一來源。
-      localStorage.removeItem('yuruiUser');
-      localStorage.setItem('isLoggedIn', 'false');
-      window.dispatchEvent(new CustomEvent('yurui:auth-changed', {
-        detail: { type: 'logout', user: null },
-      }));
-      return Promise.resolve();
-    },
-    
-    /**
-     * 更新用戶信息
-     * @param {string} userId - 用戶 ID
-     * @param {Object} updates - 要更新的字段
-     * @returns {Promise<Object>}
-     */
-    update: async (userId, updates) => {
-      try {
-        const currentUser = window.AppState.currentUser;
-        
-        if (currentUser.id !== userId) {
-          return Promise.reject(new Error('Unauthorized'));
+    // 會員中心列表：僅 birthday + firstPurchase（promotion 活動碼只在結帳輸入）
+    // Member center list: birthday + firstPurchase only (promotion codes are checkout-entry)
+    getAvailable: async (customerId) => {
+      const [coupons, customer] = await Promise.all([
+        window.API.coupons.getAll(),
+        customersApi.getById(customerId),
+      ]);
+      const now = new Date();
+      return coupons.filter((c) => {
+        if (c.status !== 'active') return false;
+        if (c.category === 'birthday') {
+          const bMonth = parseInt(String(customer.birthday).slice(5, 7), 10);
+          return bMonth === now.getMonth() + 1;
         }
-        
-        const updatedUser = { ...currentUser, ...updates };
-        window.AppState.currentUser = updatedUser;
-        window.saveAppState();
-        
-        return Promise.resolve(updatedUser);
-      } catch (error) {
-        console.error('Error updating user:', error);
-        return Promise.reject(error);
-      }
+        if (c.category === 'firstPurchase') return !customer.firstPurchaseUsed;
+        // 排除 promotion 等其他類別 / Exclude promotion and other categories
+        return false;
+      });
     },
   },
-  
-  /**
-   * 文章相關 API
-   */
+
+  reviews: {
+    create: async (payload) => {
+      const review = {
+        id: 'REV-M-' + Date.now(),
+        customerId: payload.customerId,
+        productId: payload.productId,
+        orderId: payload.orderId,
+        buyerName: payload.buyerName,
+        rating: payload.rating,
+        comment: payload.comment || '',
+        photos: [],
+        createdAt: _formatLocalDateTime(),
+      };
+      const mock = _readJsonStorage(MOCK_REVIEWS_KEY, []);
+      mock.push(review);
+      _writeJsonStorage(MOCK_REVIEWS_KEY, mock);
+      reviewsCache = null;
+      if (payload.orderId != null) {
+        await window.API.orders.markReviewed(payload.orderId);
+      }
+      return review;
+    },
+  },
+
   articles: {
-    /**
-     * 獲取所有文章
-     * @returns {Promise<Array>}
-     */
-    getAll: async () => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/articles.json`);
-        const articles = await response.json();
-        return Promise.resolve(articles);
-      } catch (error) {
-        console.error('Error fetching articles:', error);
-        return Promise.reject(error);
-      }
-    },
-    
-    /**
-     * 根據 ID 獲取文章詳情
-     * @param {string} articleId - 文章 ID
-     * @returns {Promise<Object>}
-     */
-    getById: async (articleId) => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/articles.json`);
-        const articles = await response.json();
-        const article = articles.find(a => a.id === articleId);
-        
-        if (!article) {
-          return Promise.reject(new Error('Article not found'));
-        }
-        
-        return Promise.resolve(article);
-      } catch (error) {
-        console.error('Error fetching article:', error);
-        return Promise.reject(error);
-      }
+    getAll: async () => _fetchJson(_path('articles')),
+    getById: async (id) => {
+      const articles = await window.API.articles.getAll();
+      const article = articles.find((a) => a.id === id);
+      if (!article) throw new Error('Article not found');
+      return article;
     },
   },
-  
-  /**
-   * 分店相關 API
-   */
+
   branches: {
-    /**
-     * 獲取所有分店
-     * @returns {Promise<Array>}
-     */
-    getAll: async () => {
-      try {
-        const response = await fetch(`${window.API._getDataPath()}/branches.json`);
-        const branches = await response.json();
-        return Promise.resolve(branches);
-      } catch (error) {
-        console.error('Error fetching branches:', error);
-        return Promise.reject(error);
-      }
-    },
+    getAll: async () => _fetchJson(_path('branches')),
   },
-  
-  /**
-   * 通用錯誤處理
-   */
-  handleError: (error) => {
-    console.error('API Error:', error.message);
-    return {
-      success: false,
-      message: error.message || 'An error occurred',
-      status: error.status || 500,
-    };
+
+  marketing: {
+    getBrands: async () => _fetchJson(_path('brands')),
   },
+
+  handleError: (error) => ({
+    success: false,
+    message: error.message || 'An error occurred',
+    status: error.status || 500,
+  }),
 };
 
-console.log('✓ Mock API 層已初始化');
+console.log('✓ Mock API 層已初始化（整合版）');

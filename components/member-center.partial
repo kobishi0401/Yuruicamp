@@ -5,7 +5,7 @@
         <i class="bi bi-person-lock"></i>
       </div>
       <h1 class="memberLoginGuardTitle">需要登入會員</h1>
-      <p class="memberLoginGuardText">登入後即可查看會員資料、訂單紀錄、租借紀錄、折價券與通知。</p>
+      <p class="memberLoginGuardText">登入後即可查看會員資料、訂單紀錄、露營預約、折價券與通知。</p>
       <button class="memberAction memberActionPrimary" id="guardLoginBtn" type="button">
         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
         會員登入
@@ -102,7 +102,7 @@
             </article>
             <article class="memberStatCard">
               <div class="memberStatValue" id="statBookings">0</div>
-              <div class="memberStatLabel">預約租借</div>
+              <div class="memberStatLabel">露營預約</div>
             </article>
             <article class="memberStatCard">
               <div class="memberStatValue" id="statCoupons">0</div>
@@ -136,8 +136,18 @@
                 ><input class="memberFormInput" type="text" id="profileName" name="name" placeholder="請輸入姓名" />
               </div>
               <div class="memberFormGroup">
-                <label class="memberFormLabel" for="profilePhone">電話</label
-                ><input class="memberFormInput" type="tel" id="profilePhone" name="phone" placeholder="0912-345-678" />
+                <label class="memberFormLabel" for="profilePhone">手機 <span class="requiredMark">*</span></label
+                ><input
+                  class="memberFormInput"
+                  type="tel"
+                  id="profilePhone"
+                  name="phone"
+                  maxlength="10"
+                  inputmode="numeric"
+                  pattern="09\d{8}"
+                  placeholder="0988744144"
+                  required
+                />
               </div>
               <div class="memberFormGroup">
                 <label class="memberFormLabel" for="profileEmail">電子郵件</label
@@ -155,9 +165,24 @@
                 <label class="memberFormLabel" for="profileBirthday">生日</label
                 ><input class="memberFormInput" type="date" id="profileBirthday" name="birthday" readonly aria-readonly="true" />
               </div>
-              <div class="memberFormGroup memberFormGroupFull">
-                <label class="memberFormLabel" for="profileAddress">配送地址</label
-                ><input class="memberFormInput" type="text" id="profileAddress" name="address" placeholder="請輸入常用配送地址" />
+              <div class="memberFormGroup memberFormGroupFull shippingAddressFieldGroup">
+                <div class="shippingAddressBlock">
+                  <span class="shippingAddressLabel">配送地址</span>
+                  <div class="shippingAddressMain">
+                    <div id="shippingAddressDisplay" class="shippingAddressDisplay" aria-live="polite">
+                      <span class="shippingAddressEmpty">尚未設定</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="shippingAddressEditBtn"
+                      id="shippingAddressEditBtn"
+                      aria-label="編輯配送地址"
+                      title="編輯配送地址"
+                    >
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
               <fieldset class="memberFormGroup memberFormGroupFull">
                 <legend class="memberFormLabel">露營偏好</legend>
@@ -195,14 +220,14 @@
         <section class="memberPanel" id="memberPanelRecords" data-panel="records" aria-labelledby="memberPanelRecordsTitle" hidden>
           <div class="memberPanelHeader">
             <h2 class="memberPanelTitle" id="memberPanelRecordsTitle">訂單紀錄</h2>
-            <p class="memberPanelDescription">查看購買訂單、預約與租借狀態。</p>
+            <p class="memberPanelDescription">查看購買訂單與露營預約狀態。</p>
           </div>
           <section class="memberPanelSection">
             <div class="memberRecordTabs" role="tablist" aria-label="紀錄類型">
               <button class="memberRecordTab isActive" type="button" data-rec="purchase" aria-selected="true" aria-controls="purchaseOrdersPanel">
                 購買紀錄</button
               ><button class="memberRecordTab" type="button" data-rec="rental" aria-selected="false" aria-controls="rentalOrdersPanel">
-                預約與租借
+                露營預約
               </button>
             </div>
             <div class="memberRecordPanel isActive" id="purchaseOrdersPanel" data-rec-panel="purchase" data-order-panel="purchase">
@@ -214,7 +239,7 @@
             <div class="memberRecordPanel" id="rentalOrdersPanel" data-rec-panel="rental" data-order-panel="rental" hidden>
               <div class="memberOrderFilters" id="rentalOrderStatusTabs" data-order-status-tabs="rental"></div>
               <div class="memberOrderList" id="rentalOrdersList">
-                <div class="memberLoadingState">載入租借紀錄中...</div>
+                <div class="memberLoadingState">載入預約紀錄中...</div>
               </div>
             </div>
           </section>

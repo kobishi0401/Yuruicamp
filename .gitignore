@@ -45,3 +45,7 @@ temp/
 # 影片檔案
 assets/videos/hero_video.mp4
 YuruicampTest/
+
+#CLI腳本
+scripts/
+

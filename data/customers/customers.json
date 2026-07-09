@@ -1,0 +1,2005 @@
+[
+  {
+    "id": "U001",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "Amy Chen",
+    "phone": "0912345678",
+    "email": "amy@example.com",
+    "birthday": "1992-03-18",
+    "registeredAt": "2025-01-15",
+    "totalSpent": 18391,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 4240,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "tent",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "王",
+      "firstName": "小明",
+      "postalCode": "701",
+      "city": "臺南市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "長榮路二段200號",
+      "addressLine2": "",
+      "email": "amy@example.com",
+      "phone": "0912345678"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U002",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "林美惠",
+    "phone": "0923456789",
+    "email": "lin@example.com",
+    "birthday": "1998-07-22",
+    "registeredAt": "2025-01-20",
+    "totalSpent": 24850,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2485,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "sleeping-bag",
+        "chair"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "林",
+      "firstName": "美惠",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "lin@example.com",
+      "phone": "0923456789"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U003",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "張志偉",
+    "phone": "0934567890",
+    "email": "chang@example.com",
+    "birthday": "1988-11-05",
+    "registeredAt": "2022-11-03",
+    "totalSpent": 23830,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2383,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "backpack",
+        "navigation"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "張",
+      "firstName": "志偉",
+      "postalCode": "320",
+      "city": "桃園市",
+      "district": "中壢區",
+      "township": "",
+      "addressLine1": "中山路300號",
+      "addressLine2": "",
+      "email": "chang@example.com",
+      "phone": "0934567890"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U004",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "黃淑芬",
+    "phone": "0945678901",
+    "email": "huang@example.com",
+    "birthday": "1995-01-30",
+    "registeredAt": "2024-06-10",
+    "totalSpent": 55960,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 5596,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "cooking",
+        "safety"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "黃",
+      "firstName": "淑芬",
+      "postalCode": "407",
+      "city": "臺中市",
+      "district": "西屯區",
+      "township": "",
+      "addressLine1": "台灣大道三段500號",
+      "addressLine2": "",
+      "email": "huang@example.com",
+      "phone": "0945678901"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U005",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "李建明",
+    "phone": "0956789012",
+    "email": "lee@example.com",
+    "birthday": "1990-09-12",
+    "registeredAt": "2023-03-28",
+    "totalSpent": 9980,
+    "tier": "explorer",
+    "tierName": "探險家",
+    "points": 998,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "lighting",
+        "photography"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "李",
+      "firstName": "建明",
+      "postalCode": "950",
+      "city": "臺東市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路120號",
+      "addressLine2": "",
+      "email": "lee@example.com",
+      "phone": "0956789012"
+    },
+    "tags": [],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U006",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "陳大華",
+    "phone": "0967890123",
+    "email": "chen@example.com",
+    "birthday": "1985-04-08",
+    "registeredAt": "2025-02-14",
+    "totalSpent": 24300,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2430,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "clothing",
+        "tent"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "陳",
+      "firstName": "大華",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "chen@example.com",
+      "phone": "0967890123"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U007",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "蔡佳玲",
+    "phone": "0978901234",
+    "email": "tsai@example.com",
+    "birthday": "2000-12-25",
+    "registeredAt": "2025-05-01",
+    "totalSpent": 13200,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1320,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "chair",
+        "sleeping-bag"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "蔡",
+      "firstName": "佳玲",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "tsai@example.com",
+      "phone": "0978901234"
+    },
+    "tags": [
+      "高退貨率"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U008",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "吳建宏",
+    "phone": "0989012345",
+    "email": "wu@example.com",
+    "birthday": "1987-06-17",
+    "registeredAt": "2021-09-22",
+    "totalSpent": 31730,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3173,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "navigation",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "吳",
+      "firstName": "建宏",
+      "postalCode": "260",
+      "city": "宜蘭市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路二段80號",
+      "addressLine2": "",
+      "email": "wu@example.com",
+      "phone": "0989012345"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U009",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "劉雅婷",
+    "phone": "0990123456",
+    "email": "liu@example.com",
+    "birthday": "1999-02-14",
+    "registeredAt": "2025-06-18",
+    "totalSpent": 33250,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3325,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "safety",
+        "cooking"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "劉",
+      "firstName": "雅婷",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "liu@example.com",
+      "phone": "0990123456"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U010",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "許志明",
+    "phone": "0901234567",
+    "email": "hsu@example.com",
+    "birthday": "1978-10-03",
+    "registeredAt": "2020-12-05",
+    "totalSpent": 45100,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4510,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "photography",
+        "lighting"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "許",
+      "firstName": "志明",
+      "postalCode": "110",
+      "city": "臺北市",
+      "district": "信義區",
+      "township": "",
+      "addressLine1": "松仁路100號",
+      "addressLine2": "",
+      "email": "hsu@example.com",
+      "phone": "0901234567"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U011",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "鄭文豪",
+    "phone": "0907143781",
+    "email": "user011@example.com",
+    "birthday": "1986-12-12",
+    "registeredAt": "2023-12-12",
+    "totalSpent": 48660,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4866,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "tent",
+        "clothing"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "鄭",
+      "firstName": "文豪",
+      "postalCode": "260",
+      "city": "宜蘭市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路二段80號",
+      "addressLine2": "",
+      "email": "user011@example.com",
+      "phone": "0907143781"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U012",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "周佩君",
+    "phone": "0944156852",
+    "email": "user012@example.com",
+    "birthday": "1987-01-13",
+    "registeredAt": "2024-01-13",
+    "totalSpent": 32650,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3265,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "sleeping-bag",
+        "chair"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "周",
+      "firstName": "佩君",
+      "postalCode": "500",
+      "city": "彰化市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路一段66號",
+      "addressLine2": "",
+      "email": "user012@example.com",
+      "phone": "0944156852"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U013",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "楊承翰",
+    "phone": "0981169923",
+    "email": "user013@example.com",
+    "birthday": "1988-02-14",
+    "registeredAt": "2025-02-14",
+    "totalSpent": 33160,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3316,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "backpack",
+        "navigation"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "楊",
+      "firstName": "承翰",
+      "postalCode": "701",
+      "city": "臺南市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "長榮路二段200號",
+      "addressLine2": "",
+      "email": "user013@example.com",
+      "phone": "0981169923"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U014",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "謝宜蓁",
+    "phone": "0918182994",
+    "email": "user014@example.com",
+    "birthday": "1989-03-15",
+    "registeredAt": "2019-03-15",
+    "totalSpent": 42080,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4208,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "cooking",
+        "safety"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "謝",
+      "firstName": "宜蓁",
+      "postalCode": "950",
+      "city": "臺東市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路120號",
+      "addressLine2": "",
+      "email": "user014@example.com",
+      "phone": "0918182994"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U015",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "洪偉傑",
+    "phone": "0955195065",
+    "email": "user015@example.com",
+    "birthday": "1990-04-16",
+    "registeredAt": "2020-04-16",
+    "totalSpent": 56560,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 5656,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "lighting",
+        "photography"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "洪",
+      "firstName": "偉傑",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "user015@example.com",
+      "phone": "0955195065"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U016",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "郭欣怡",
+    "phone": "0992208136",
+    "email": "user016@example.com",
+    "birthday": "1991-05-17",
+    "registeredAt": "2021-05-17",
+    "totalSpent": 22200,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2220,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "clothing",
+        "tent"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "郭",
+      "firstName": "欣怡",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user016@example.com",
+      "phone": "0992208136"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U017",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "邱冠宇",
+    "phone": "0929221207",
+    "email": "user017@example.com",
+    "birthday": "1992-06-18",
+    "registeredAt": "2022-06-18",
+    "totalSpent": 18960,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1896,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "chair",
+        "sleeping-bag"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "邱",
+      "firstName": "冠宇",
+      "postalCode": "110",
+      "city": "臺北市",
+      "district": "信義區",
+      "township": "",
+      "addressLine1": "松仁路100號",
+      "addressLine2": "",
+      "email": "user017@example.com",
+      "phone": "0929221207"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U018",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "曾雅雯",
+    "phone": "0966234278",
+    "email": "user018@example.com",
+    "birthday": "1993-07-19",
+    "registeredAt": "2023-07-19",
+    "totalSpent": 30750,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3075,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "navigation",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "曾",
+      "firstName": "雅雯",
+      "postalCode": "500",
+      "city": "彰化市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路一段66號",
+      "addressLine2": "",
+      "email": "user018@example.com",
+      "phone": "0966234278"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U019",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "廖俊傑",
+    "phone": "0903247349",
+    "email": "user019@example.com",
+    "birthday": "1994-08-20",
+    "registeredAt": "2024-08-20",
+    "totalSpent": 29900,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 2990,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "safety",
+        "cooking"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "廖",
+      "firstName": "俊傑",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user019@example.com",
+      "phone": "0903247349"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U020",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "賴思妤",
+    "phone": "0940260420",
+    "email": "user020@example.com",
+    "birthday": "1995-09-21",
+    "registeredAt": "2025-09-21",
+    "totalSpent": 19680,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1968,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "photography",
+        "lighting"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "賴",
+      "firstName": "思妤",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "user020@example.com",
+      "phone": "0940260420"
+    },
+    "tags": [
+      "新會員",
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U021",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "徐柏翰",
+    "phone": "0977273491",
+    "email": "user021@example.com",
+    "birthday": "1996-10-22",
+    "registeredAt": "2019-10-22",
+    "totalSpent": 12250,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1225,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "tent",
+        "clothing"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "徐",
+      "firstName": "柏翰",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user021@example.com",
+      "phone": "0977273491"
+    },
+    "tags": [],
+    "authProvider": "line"
+  },
+  {
+    "id": "U022",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "蘇品妍",
+    "phone": "0914286562",
+    "email": "user022@example.com",
+    "birthday": "1997-11-23",
+    "registeredAt": "2020-11-23",
+    "totalSpent": 32300,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3230,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "sleeping-bag",
+        "chair"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "蘇",
+      "firstName": "品妍",
+      "postalCode": "260",
+      "city": "宜蘭市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路二段80號",
+      "addressLine2": "",
+      "email": "user022@example.com",
+      "phone": "0914286562"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U023",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "葉家豪",
+    "phone": "0951299633",
+    "email": "user023@example.com",
+    "birthday": "1998-12-24",
+    "registeredAt": "2021-12-24",
+    "totalSpent": 31680,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3168,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "backpack",
+        "navigation"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "葉",
+      "firstName": "家豪",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user023@example.com",
+      "phone": "0951299633"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U024",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "莊淑惠",
+    "phone": "0988312704",
+    "email": "user024@example.com",
+    "birthday": "1999-01-25",
+    "registeredAt": "2022-01-25",
+    "totalSpent": 37990,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3799,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "cooking",
+        "safety"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "莊",
+      "firstName": "淑惠",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user024@example.com",
+      "phone": "0988312704"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U025",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "江志豪",
+    "phone": "0925325775",
+    "email": "user025@example.com",
+    "birthday": "1975-02-26",
+    "registeredAt": "2023-02-26",
+    "totalSpent": 33390,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3339,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "lighting",
+        "photography"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "江",
+      "firstName": "志豪",
+      "postalCode": "300",
+      "city": "新竹市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "光復路一段100號",
+      "addressLine2": "",
+      "email": "user025@example.com",
+      "phone": "0925325775"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U026",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "何佳穎",
+    "phone": "0962338846",
+    "email": "user026@example.com",
+    "birthday": "1976-03-27",
+    "registeredAt": "2024-03-27",
+    "totalSpent": 22900,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2290,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "clothing",
+        "tent"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "何",
+      "firstName": "佳穎",
+      "postalCode": "260",
+      "city": "宜蘭市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路二段80號",
+      "addressLine2": "",
+      "email": "user026@example.com",
+      "phone": "0962338846"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U027",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "羅俊宏",
+    "phone": "0999351917",
+    "email": "user027@example.com",
+    "birthday": "1977-04-28",
+    "registeredAt": "2025-04-28",
+    "totalSpent": 31500,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3150,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "chair",
+        "sleeping-bag"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "羅",
+      "firstName": "俊宏",
+      "postalCode": "200",
+      "city": "基隆市",
+      "district": "仁愛區",
+      "township": "",
+      "addressLine1": "愛一路50號",
+      "addressLine2": "",
+      "email": "user027@example.com",
+      "phone": "0999351917"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U028",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "高詩涵",
+    "phone": "0936364988",
+    "email": "user028@example.com",
+    "birthday": "1978-05-01",
+    "registeredAt": "2019-05-01",
+    "totalSpent": 22780,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2278,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "navigation",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "高",
+      "firstName": "詩涵",
+      "postalCode": "813",
+      "city": "高雄市",
+      "district": "左營區",
+      "township": "",
+      "addressLine1": "高鐵路100號",
+      "addressLine2": "",
+      "email": "user028@example.com",
+      "phone": "0936364988"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U029",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "潘宇軒",
+    "phone": "0973377059",
+    "email": "user029@example.com",
+    "birthday": "1979-06-02",
+    "registeredAt": "2020-06-02",
+    "totalSpent": 27200,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2720,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "safety",
+        "cooking"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "潘",
+      "firstName": "宇軒",
+      "postalCode": "300",
+      "city": "新竹市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "光復路一段100號",
+      "addressLine2": "",
+      "email": "user029@example.com",
+      "phone": "0973377059"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U030",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "簡惠如",
+    "phone": "0910390130",
+    "email": "user030@example.com",
+    "birthday": "1980-07-03",
+    "registeredAt": "2021-07-03",
+    "totalSpent": 32250,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3225,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "photography",
+        "lighting"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "簡",
+      "firstName": "惠如",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "user030@example.com",
+      "phone": "0910390130"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U031",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "馬冠廷",
+    "phone": "0947403201",
+    "email": "user031@example.com",
+    "birthday": "1981-08-04",
+    "registeredAt": "2022-08-04",
+    "totalSpent": 47200,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4720,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "tent",
+        "clothing"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "馬",
+      "firstName": "冠廷",
+      "postalCode": "970",
+      "city": "花蓮市",
+      "district": "",
+      "township": "",
+      "addressLine1": "國聯一路20號",
+      "addressLine2": "",
+      "email": "user031@example.com",
+      "phone": "0947403201"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U032",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "鍾怡君",
+    "phone": "0984416272",
+    "email": "user032@example.com",
+    "birthday": "1982-09-05",
+    "registeredAt": "2023-09-05",
+    "totalSpent": 19880,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1988,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "sleeping-bag",
+        "chair"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "鍾",
+      "firstName": "怡君",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user032@example.com",
+      "phone": "0984416272"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U033",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "游承恩",
+    "phone": "0921429343",
+    "email": "user033@example.com",
+    "birthday": "1983-10-06",
+    "registeredAt": "2024-10-06",
+    "totalSpent": 10550,
+    "tier": "explorer",
+    "tierName": "探險家",
+    "points": 1055,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "backpack",
+        "navigation"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "游",
+      "firstName": "承恩",
+      "postalCode": "950",
+      "city": "臺東市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路120號",
+      "addressLine2": "",
+      "email": "user033@example.com",
+      "phone": "0921429343"
+    },
+    "tags": [],
+    "authProvider": "line"
+  },
+  {
+    "id": "U034",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "石雅琪",
+    "phone": "0958442414",
+    "email": "user034@example.com",
+    "birthday": "1984-11-07",
+    "registeredAt": "2025-11-07",
+    "totalSpent": 26180,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2618,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "cooking",
+        "safety"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "石",
+      "firstName": "雅琪",
+      "postalCode": "950",
+      "city": "臺東市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路120號",
+      "addressLine2": "",
+      "email": "user034@example.com",
+      "phone": "0958442414"
+    },
+    "tags": [
+      "新會員",
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U035",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "方建志",
+    "phone": "0995455485",
+    "email": "user035@example.com",
+    "birthday": "1985-12-08",
+    "registeredAt": "2019-12-08",
+    "totalSpent": 42240,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4224,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "lighting",
+        "photography"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "方",
+      "firstName": "建志",
+      "postalCode": "110",
+      "city": "臺北市",
+      "district": "信義區",
+      "township": "",
+      "addressLine1": "松仁路100號",
+      "addressLine2": "",
+      "email": "user035@example.com",
+      "phone": "0995455485"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U036",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "彭心怡",
+    "phone": "0932468556",
+    "email": "user036@example.com",
+    "birthday": "1986-01-09",
+    "registeredAt": "2020-01-09",
+    "totalSpent": 52310,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 5231,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "clothing",
+        "tent"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "彭",
+      "firstName": "心怡",
+      "postalCode": "900",
+      "city": "屏東市",
+      "district": "",
+      "township": "",
+      "addressLine1": "民生路88號",
+      "addressLine2": "",
+      "email": "user036@example.com",
+      "phone": "0932468556"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U037",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "韓宗翰",
+    "phone": "0969481627",
+    "email": "user037@example.com",
+    "birthday": "1987-02-10",
+    "registeredAt": "2021-02-10",
+    "totalSpent": 37280,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3728,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "chair",
+        "sleeping-bag"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "韓",
+      "firstName": "宗翰",
+      "postalCode": "701",
+      "city": "臺南市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "長榮路二段200號",
+      "addressLine2": "",
+      "email": "user037@example.com",
+      "phone": "0969481627"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U038",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "唐美玲",
+    "phone": "0906494698",
+    "email": "user038@example.com",
+    "birthday": "1988-03-11",
+    "registeredAt": "2022-03-11",
+    "totalSpent": 20940,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2094,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "navigation",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "唐",
+      "firstName": "美玲",
+      "postalCode": "110",
+      "city": "臺北市",
+      "district": "信義區",
+      "township": "",
+      "addressLine1": "松仁路100號",
+      "addressLine2": "",
+      "email": "user038@example.com",
+      "phone": "0906494698"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U039",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "馮志偉",
+    "phone": "0943507769",
+    "email": "user039@example.com",
+    "birthday": "1989-04-12",
+    "registeredAt": "2023-04-12",
+    "totalSpent": 56490,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 5649,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "safety",
+        "cooking"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "馮",
+      "firstName": "志偉",
+      "postalCode": "200",
+      "city": "基隆市",
+      "district": "仁愛區",
+      "township": "",
+      "addressLine1": "愛一路50號",
+      "addressLine2": "",
+      "email": "user039@example.com",
+      "phone": "0943507769"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U040",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "董佳蓉",
+    "phone": "0980520840",
+    "email": "user040@example.com",
+    "birthday": "1990-05-13",
+    "registeredAt": "2024-05-13",
+    "totalSpent": 45000,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4500,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "photography",
+        "lighting"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "董",
+      "firstName": "佳蓉",
+      "postalCode": "300",
+      "city": "新竹市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "光復路一段100號",
+      "addressLine2": "",
+      "email": "user040@example.com",
+      "phone": "0980520840"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U041",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "程俊賢",
+    "phone": "0917533911",
+    "email": "user041@example.com",
+    "birthday": "1991-06-14",
+    "registeredAt": "2025-06-14",
+    "totalSpent": 22300,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2230,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "tent",
+        "clothing"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "程",
+      "firstName": "俊賢",
+      "postalCode": "407",
+      "city": "臺中市",
+      "district": "西屯區",
+      "township": "",
+      "addressLine1": "台灣大道三段500號",
+      "addressLine2": "",
+      "email": "user041@example.com",
+      "phone": "0917533911"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U042",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "傅淑芬",
+    "phone": "0954546982",
+    "email": "user042@example.com",
+    "birthday": "1992-07-15",
+    "registeredAt": "2019-07-15",
+    "totalSpent": 40300,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4030,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "sleeping-bag",
+        "chair"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "傅",
+      "firstName": "淑芬",
+      "postalCode": "320",
+      "city": "桃園市",
+      "district": "中壢區",
+      "township": "",
+      "addressLine1": "中山路300號",
+      "addressLine2": "",
+      "email": "user042@example.com",
+      "phone": "0954546982"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U043",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "范冠霖",
+    "phone": "0991559053",
+    "email": "user043@example.com",
+    "birthday": "1993-08-16",
+    "registeredAt": "2020-08-16",
+    "totalSpent": 27760,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2776,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "family",
+        "car-camping"
+      ],
+      "equipment": [
+        "backpack",
+        "navigation"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "范",
+      "firstName": "冠霖",
+      "postalCode": "110",
+      "city": "臺北市",
+      "district": "信義區",
+      "township": "",
+      "addressLine1": "松仁路100號",
+      "addressLine2": "",
+      "email": "user043@example.com",
+      "phone": "0991559053"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U044",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "戴雅婷",
+    "phone": "0928572124",
+    "email": "user044@example.com",
+    "birthday": "1994-09-17",
+    "registeredAt": "2021-09-17",
+    "totalSpent": 61710,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 6171,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "solo",
+        "ultralight"
+      ],
+      "equipment": [
+        "cooking",
+        "safety"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "戴",
+      "firstName": "雅婷",
+      "postalCode": "260",
+      "city": "宜蘭市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路二段80號",
+      "addressLine2": "",
+      "email": "user044@example.com",
+      "phone": "0928572124"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U045",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "段家銘",
+    "phone": "0965585195",
+    "email": "user045@example.com",
+    "birthday": "1995-10-18",
+    "registeredAt": "2022-10-18",
+    "totalSpent": 33850,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3385,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "hiking",
+        "base-camp"
+      ],
+      "equipment": [
+        "lighting",
+        "photography"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "段",
+      "firstName": "家銘",
+      "postalCode": "600",
+      "city": "嘉義市",
+      "district": "西區",
+      "township": "",
+      "addressLine1": "垂楊路200號",
+      "addressLine2": "",
+      "email": "user045@example.com",
+      "phone": "0965585195"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U046",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "曹佩珊",
+    "phone": "0902598266",
+    "email": "user046@example.com",
+    "birthday": "1996-11-19",
+    "registeredAt": "2023-11-19",
+    "totalSpent": 19100,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 1910,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "car-camping",
+        "glamping"
+      ],
+      "equipment": [
+        "clothing",
+        "tent"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "曹",
+      "firstName": "佩珊",
+      "postalCode": "300",
+      "city": "新竹市",
+      "district": "東區",
+      "township": "",
+      "addressLine1": "光復路一段100號",
+      "addressLine2": "",
+      "email": "user046@example.com",
+      "phone": "0902598266"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U047",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "袁宇翔",
+    "phone": "0939611337",
+    "email": "user047@example.com",
+    "birthday": "1997-12-20",
+    "registeredAt": "2024-12-20",
+    "totalSpent": 37840,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 3784,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "ultralight",
+        "backpacking"
+      ],
+      "equipment": [
+        "chair",
+        "sleeping-bag"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "袁",
+      "firstName": "宇翔",
+      "postalCode": "500",
+      "city": "彰化市",
+      "district": "",
+      "township": "",
+      "addressLine1": "中山路一段66號",
+      "addressLine2": "",
+      "email": "user047@example.com",
+      "phone": "0939611337"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "facebook"
+  },
+  {
+    "id": "U048",
+    "avatar": "/assets/images/avatar-01.jpg",
+    "name": "鄧欣妤",
+    "phone": "0976624408",
+    "email": "user048@example.com",
+    "birthday": "1998-01-21",
+    "registeredAt": "2025-01-21",
+    "totalSpent": 27690,
+    "tier": "guide",
+    "tierName": "嚮導",
+    "points": 2769,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "base-camp",
+        "family"
+      ],
+      "equipment": [
+        "navigation",
+        "backpack"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "鄧",
+      "firstName": "欣妤",
+      "postalCode": "220",
+      "city": "新北市",
+      "district": "板橋區",
+      "township": "",
+      "addressLine1": "文化路二段100號",
+      "addressLine2": "",
+      "email": "user048@example.com",
+      "phone": "0976624408"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "line"
+  },
+  {
+    "id": "U049",
+    "avatar": "/assets/images/avatar-02.jpg",
+    "name": "許柏均",
+    "phone": "0913637479",
+    "email": "user049@example.com",
+    "birthday": "1999-02-22",
+    "registeredAt": "2019-02-22",
+    "totalSpent": 40600,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 4060,
+    "firstPurchaseUsed": true,
+    "preferences": {
+      "styles": [
+        "glamping",
+        "solo"
+      ],
+      "equipment": [
+        "safety",
+        "cooking"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "許",
+      "firstName": "柏均",
+      "postalCode": "970",
+      "city": "花蓮市",
+      "district": "",
+      "township": "",
+      "addressLine1": "國聯一路20號",
+      "addressLine2": "",
+      "email": "user049@example.com",
+      "phone": "0913637479"
+    },
+    "tags": [
+      "高消費",
+      "高退貨率"
+    ],
+    "authProvider": "google"
+  },
+  {
+    "id": "U050",
+    "avatar": "/assets/images/avatar-03.jpg",
+    "name": "丁惠珍",
+    "phone": "0950650550",
+    "email": "user050@example.com",
+    "birthday": "1975-03-23",
+    "registeredAt": "2020-03-23",
+    "totalSpent": 54200,
+    "tier": "master",
+    "tierName": "大師",
+    "points": 5420,
+    "firstPurchaseUsed": false,
+    "preferences": {
+      "styles": [
+        "backpacking",
+        "hiking"
+      ],
+      "equipment": [
+        "photography",
+        "lighting"
+      ]
+    },
+    "shippingAddress": {
+      "lastName": "丁",
+      "firstName": "惠珍",
+      "postalCode": "970",
+      "city": "花蓮市",
+      "district": "",
+      "township": "",
+      "addressLine1": "國聯一路20號",
+      "addressLine2": "",
+      "email": "user050@example.com",
+      "phone": "0950650550"
+    },
+    "tags": [
+      "高消費"
+    ],
+    "authProvider": "facebook"
+  }
+]

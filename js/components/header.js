@@ -202,6 +202,18 @@
     });
   };
 
+  /** 將 header 頭像顯示為圖片或首字 */
+  function renderSiteUserAvatar(el, user) {
+    if (!el || !user) return;
+    var avatar = user.avatar;
+    var isUrl = typeof avatar === 'string' && (/^\//.test(avatar) || /^https?:/.test(avatar));
+    if (isUrl) {
+      el.innerHTML = '<img src="' + String(avatar).replace(/"/g, '&quot;') + '" alt="" loading="lazy" />';
+    } else {
+      el.textContent = String(avatar || user.name.charAt(0)).toUpperCase();
+    }
+  }
+
   window.updateNavbarLoginState = function () {
     var user = getCurrentUser();
     document.querySelectorAll('.siteLoginButton').forEach(function (button) {
@@ -212,8 +224,7 @@
       var userAvatar = menu.querySelector('.siteUserAvatar');
       menu.hidden = !(user && user.name);
       if (userName && user) userName.textContent = user.name;
-      if (userAvatar && user)
-        userAvatar.textContent = String(user.avatar || user.name.charAt(0)).toUpperCase();
+      if (userAvatar && user) renderSiteUserAvatar(userAvatar, user);
       if (!user) toggleUserMenu(menu, false);
     });
   };

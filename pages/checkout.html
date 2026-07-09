@@ -13,10 +13,7 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
       rel="stylesheet"
     />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏕️</text></svg>"
-    />
+    <link rel="icon" href="../assets/icons/camping_icon.png" type="image/png" />
   </head>
   <body>
     <div id="header"></div>
@@ -52,7 +49,7 @@
 
             <div class="checkoutPanelBody" id="panelBuyerBody">
               <fieldset class="checkoutFieldset">
-                <legend class="checkoutLegend">聯絡資料</legend>
+                <legend class="checkoutLegend">聯絡資訊</legend>
                 <div class="checkoutFormGrid">
                   <div class="checkoutField">
                     <label class="checkoutLabel" for="buyerName">姓名 <span class="requiredMark">*</span></label>
@@ -66,15 +63,17 @@
                     />
                   </div>
                   <div class="checkoutField">
-                    <label class="checkoutLabel" for="buyerPhone">電話 <span class="requiredMark">*</span></label>
+                    <label class="checkoutLabel" for="buyerPhone">手機 <span class="requiredMark">*</span></label>
                     <input
                       class="checkoutInput"
                       type="tel"
                       id="buyerPhone"
                       name="buyerPhone"
-                      placeholder="0912-345-678"
-                      pattern="^(\+886|886|0)[1-9][0-9\-\s()]{7,12}$"
-                      title="請輸入台灣電話格式，例如 0912-345-678 或 +886912345678"
+                      placeholder="0988744144"
+                      maxlength="10"
+                      inputmode="numeric"
+                      pattern="09\d{8}"
+                      title="請輸入 09 開頭的 10 碼手機（例：0988744144）"
                       required
                     />
                   </div>
@@ -157,14 +156,23 @@
               </fieldset>
 
               <div class="checkoutField checkoutAddressField" id="deliveryAddressSection">
-                <label class="checkoutLabel" for="deliveryAddress">送達地址 <span class="requiredMark">*</span></label>
-                <input
-                  class="checkoutInput"
-                  type="text"
-                  id="deliveryAddress"
-                  name="deliveryAddress"
-                  placeholder="台北市信義區信義路五段 100 號"
-                />
+                <div class="shippingAddressBlock">
+                  <span class="shippingAddressLabel">送達地址 <span class="requiredMark">*</span></span>
+                  <div class="shippingAddressMain">
+                    <div id="checkoutShippingAddressDisplay" class="shippingAddressDisplay" aria-live="polite">
+                      <span class="shippingAddressEmpty">尚未設定</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="shippingAddressEditBtn"
+                      id="checkoutShippingAddressEditBtn"
+                      aria-label="編輯送達地址"
+                      title="編輯送達地址"
+                    >
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -275,7 +283,7 @@
                   type="text"
                   id="checkoutCouponInput"
                   list="checkoutCouponCodeOptions"
-                  placeholder="輸入或選取折扣碼"
+                  placeholder="輸入或選擇折扣碼"
                   maxlength="20"
                 />
                 <datalist id="checkoutCouponCodeOptions"></datalist>
@@ -317,16 +325,20 @@
     </main>
 
     <div id="footer"></div>
+    <div id="shippingAddressModalMount"></div>
 
     <script src="../js/config.js" defer></script>
     <script src="../js/storage.js" defer></script>
     <script src="../js/state.js" defer></script>
     <script src="../js/formatters.js" defer></script>
+    <script src="../js/shipping-address.js" defer></script>
+    <script src="../js/data-paths.js" defer></script>
     <script src="../js/validators.js" defer></script>
     <script src="../js/cart-service.js" defer></script>
     <script src="../js/api-mock.js" defer></script>
     <script src="../js/components/toast.js" defer></script>
     <script src="../js/components/modal.js" defer></script>
+    <script src="../js/components/shipping-address-ui.js" defer></script>
     <script src="../js/components/header.js" defer></script>
     <script src="../js/components/cart.js" defer></script>
     <script src="../js/components/coupons.js" defer></script>

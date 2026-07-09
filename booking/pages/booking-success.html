@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Yuruicamp 預約成功，查看預約編號與後續入住流程。" />
+    <meta name="theme-color" content="#73816e" />
+    <link rel="icon" href="../../assets/icons/camping_icon.png" type="image/png" />
+    <title>預約成功 | Yuruicamp 營地預約</title>
+
+    <!-- 成功頁版型沿用主站 checkout-success 樣式 / Reuse main checkout-success styles -->
+    <link rel="stylesheet" href="../../css/main.css" />
+    <link rel="stylesheet" href="../css/booking-main.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    />
+  </head>
+  <body>
+    <div id="bookingHeader" class="bookingHeaderMount"></div>
+
+    <main class="checkoutSuccessPage">
+      <section class="checkoutSuccess" aria-labelledby="successTitle">
+        <div class="successIconWrap" aria-hidden="true"><span class="successIcon">✓</span></div>
+        <div class="successContent">
+          <h1 class="successTitle" id="successTitle">預約成功</h1>
+          <p class="successDescription">
+            感謝您的預約！我們已收到您的露營預約，確認信將寄送至您的信箱。
+          </p>
+          <dl class="orderNumberPanel">
+            <dt class="orderNumberLabel">預約編號</dt>
+            <dd class="orderNumberValue isLoading" id="bookingNumberDisplay" aria-live="polite">載入中...</dd>
+          </dl>
+          <div class="successActions">
+            <a class="successAction successActionPrimary" href="./member-center.html">查看預約明細</a>
+            <a class="successAction successActionSecondary" href="./camp-search.html">再預約一次露營</a>
+          </div>
+
+          <!-- 結帳後導購 / Post-checkout upsell -->
+          <div class="checkoutUpsellBannerBooking bookingSuccessUpsell" id="upsellBanner">
+            <p>🎉 喜歡這次的裝備體驗嗎？</p>
+            <p>前往選購屬於你的露營裝備，下次露營更輕鬆。</p>
+            <a href="../../pages/products.html" class="btn btnOutline btnFull">
+              <i class="bi bi-shop"></i> 前往選購新裝備
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="bookingFooter"></div>
+
+    <script src="../js/layout.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+      $(function () {
+        window.loadBookingSharedLayout && window.loadBookingSharedLayout();
+      });
+    </script>
+    <script src="../../js/formatters.js"></script>
+    <script>
+      (function initBookingSuccessPage() {
+        const bookingNumberDisplay = document.getElementById('bookingNumberDisplay');
+        const bookingNum = readBookingNumber();
+        if (bookingNumberDisplay) {
+          const normalized = String(bookingNum || '--').replace(/^#/, '');
+          bookingNumberDisplay.textContent = normalized === '--' ? '#--' : '#' + normalized;
+          bookingNumberDisplay.classList.remove('isLoading');
+        }
+      })();
+
+      /** 將 booking id 轉成顯示用編號 / Format booking id for display */
+      function toBookingDisplayNum(id) {
+        if (id == null || id === '') return '';
+        var formatted = window.formatBookingDisplayId ? window.formatBookingDisplayId(id) : '';
+        return formatted || String(id);
+      }
+
+      /** 從 URL 或 storage 讀取預約編號 / Read booking number from URL or storage */
+      function readBookingNumber() {
+        var params = new URLSearchParams(window.location.search);
+        var queryBookingNum = params.get('bookingNum');
+        // 排除空字串，避免 ?bookingNum= 被當成有效值
+        // Reject empty query value so ?bookingNum= is not treated as valid
+        if (queryBookingNum && queryBookingNum.trim()) {
+          return queryBookingNum.trim();
+        }
+
+        // 備援 1：sessionStorage（同分頁跳轉最可靠）
+        // Fallback 1: sessionStorage from same-tab redirect
+        try {
+          var sessionBooking = JSON.parse(sessionStorage.getItem('lastCheckoutBooking') || 'null');
+          if (sessionBooking && sessionBooking.id != null) {
+            return toBookingDisplayNum(sessionBooking.id);
+          }
+        } catch (error) {
+          console.warn('[booking-success] 讀取 sessionStorage 失敗', error);
+        }
+
+        // 備援 2：localStorage 結帳頁寫入的最後一筆預約
+        // Fallback 2: last booking saved at checkout
+        try {
+          var lastBooking = JSON.parse(localStorage.getItem('lastCheckoutBooking') || 'null');
+          if (lastBooking && lastBooking.id != null) {
+            return toBookingDisplayNum(lastBooking.id);
+          }
+        } catch (error) {
+          console.warn('[booking-success] 讀取 lastCheckoutBooking 失敗', error);
+        }
+
+        // 備援 3：BookingAPI 寫入 mockBookings 的最後一筆
+        // Fallback 3: latest entry from mockBookings
+        try {
+          var mockBookings = JSON.parse(localStorage.getItem('mockBookings') || '[]');
+          var latest = mockBookings[mockBookings.length - 1];
+          if (latest && latest.id != null) {
+            return toBookingDisplayNum(latest.id);
+          }
+        } catch (error) {
+          console.warn('[booking-success] 讀取 mockBookings 失敗', error);
+        }
+
+        return '';
+      }
+    </script>
+  </body>
+</html>

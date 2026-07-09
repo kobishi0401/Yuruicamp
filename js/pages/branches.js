@@ -4,50 +4,8 @@ const PARTNER_MODAL_ID = 'partnerModal';
 let partnerModalScrollPosition = { x: 0, y: 0 };
 let partnerModalTrigger = null;
 
-const PARTNER_DATA = [
-  {
-    name: '森谷露營區',
-    image: 'https://picsum.photos/seed/partner1/400/300',
-    tags: ['山林營位', '親子友善', '裝備租借'],
-    discount: 'YURUI88 享 88 折',
-    desc: '位於中海拔山區的寬敞營地，提供草地營位、衛浴設施與夜間照明，適合第一次露營的家庭與小型團體。',
-  },
-  {
-    name: '湖畔野營俱樂部',
-    image: 'https://picsum.photos/seed/partner2/400/300',
-    tags: ['湖景', 'SUP 體驗', '寵物友善'],
-    discount: 'LAKE100 折抵 NT$100',
-    desc: '鄰近湖岸的輕量野營場域，白天可預約水上體驗，夜晚適合觀星與小型聚會。',
-  },
-  {
-    name: '星野高原營地',
-    image: 'https://picsum.photos/seed/partner3/400/300',
-    tags: ['高海拔', '觀星', '團體包場'],
-    discount: 'STAR15 享 85 折',
-    desc: '高原草地與低光害環境是觀星愛好者的首選，營區提供團體包場與專人營位導引服務。',
-  },
-  {
-    name: '杉木工作室',
-    image: 'https://picsum.photos/seed/partner4/400/300',
-    tags: ['木作課程', '咖啡', '選物店'],
-    discount: 'WOOD10 享 9 折',
-    desc: '結合戶外選物、木作課程與咖啡吧的複合空間，適合行前採買與午後休息。',
-  },
-  {
-    name: '溪谷漫遊營地',
-    image: 'https://picsum.photos/seed/partner5/400/300',
-    tags: ['溪流', '夏季戲水', '車宿'],
-    discount: 'RIVER200 折抵 NT$200',
-    desc: '營位沿溪谷排列，夏季可安排安全戲水活動，也提供車宿與簡易電源配置。',
-  },
-  {
-    name: '北海岸風格露營',
-    image: 'https://picsum.photos/seed/partner6/400/300',
-    tags: ['海景', '懶人露營', '餐食預訂'],
-    discount: 'COAST12 享 88 折',
-    desc: '面向海岸線的懶人露營區，提供帳篷搭設、餐食預訂與基礎裝備，適合週末短行程。',
-  },
-];
+/** 動態載入後的合作露營地列表（給卡片與 Modal 共用） / Loaded partners for cards + modal */
+let partnerList = [];
 
 function createElement(tagName, className, textContent = '') {
   const element = document.createElement(tagName);
@@ -167,7 +125,8 @@ async function fetchBranches() {
     return window.API.branches.getAll();
   }
 
-  const response = await fetch('../data/branches.json', { cache: 'no-store' });
+  const path = (window.DataPaths && window.DataPaths.branches) || '/data/marketing/branches.json';
+  const response = await fetch(path, { cache: 'no-store' });
   return response.json();
 }
 
@@ -199,6 +158,42 @@ function createTag(tagName) {
   return createElement('span', 'partnerTag', tagName);
 }
 
+/**
+ * 取得預約／租借用的營地資料（與 camp-search 同源）
+ * Fetch campgrounds used by booking/rental
+ */
+async function fetchCampgrounds() {
+  if (window.BookingAPI?.getCampgrounds) {
+    return window.BookingAPI.getCampgrounds();
+  }
+
+  const path =
+    (window.DataPaths && window.DataPaths.campgrounds) || '/data/catalog/campgrounds.json';
+  const response = await fetch(path, { cache: 'no-store' });
+  if (!response.ok) throw new Error('Failed to fetch campgrounds');
+  return response.json();
+}
+
+/**
+ * 把營地 JSON 轉成卡片／Modal 需要的形狀
+ * Map campground record → partner card shape
+ */
+function mapCampgroundToPartner(camp) {
+  const tags = [...(camp.environmentTags || []), ...(camp.facilityTags || [])].slice(0, 4);
+  const region = camp.region || '';
+
+  return {
+    id: camp.campgroundId,
+    name: camp.name || '合作露營地',
+    image: `https://picsum.photos/seed/${camp.campgroundId}/400/300`,
+    tags,
+    region,
+    // 卡片預覽：顯示地區（不再顯示假優惠碼）/ Preview region instead of fake coupon
+    discount: region ? `地區：${region}` : '',
+    desc: camp.description || '',
+  };
+}
+
 function createPartnerCard(partner, index) {
   const article = createElement('article', 'partnerCard');
   const trigger = createElement('button', 'partnerCardTrigger');
@@ -222,7 +217,7 @@ function createPartnerCard(partner, index) {
   const content = createElement('span', 'partnerCardContent');
   const title = createElement('span', 'partnerCardTitle', partner.name);
   const tags = createElement('span', 'partnerTags');
-  partner.tags.forEach((tag) => tags.append(createTag(tag)));
+  (partner.tags || []).forEach((tag) => tags.append(createTag(tag)));
   const discount = createElement('span', 'partnerDiscountPreview', partner.discount);
 
   content.append(title, tags, discount);
@@ -231,11 +226,37 @@ function createPartnerCard(partner, index) {
   return article;
 }
 
-function renderPartners() {
+/**
+ * 非同步載入並渲染合作露營地（套路同 loadBranches）
+ * Async load + render partners (same pattern as loadBranches)
+ */
+async function loadPartners() {
   const container = document.getElementById('partnersGrid');
   if (!container) return;
 
-  container.replaceChildren(...PARTNER_DATA.map((partner, index) => createPartnerCard(partner, index)));
+  container.replaceChildren(createElement('div', 'branchesLoadingState', '載入合作露營地中...'));
+
+  try {
+    const camps = await fetchCampgrounds();
+    if (!Array.isArray(camps) || camps.length === 0) {
+      partnerList = [];
+      container.replaceChildren(
+        createElement('div', 'branchesErrorState', '目前沒有可顯示的合作露營地。')
+      );
+      return;
+    }
+
+    partnerList = camps.map(mapCampgroundToPartner);
+    container.replaceChildren(
+      ...partnerList.map((partner, index) => createPartnerCard(partner, index))
+    );
+  } catch (error) {
+    console.error('Failed to load campgrounds for partners:', error);
+    partnerList = [];
+    container.replaceChildren(
+      createElement('div', 'branchesErrorState', '載入合作露營地失敗，請稍後再試。')
+    );
+  }
 }
 
 function setPartnerModalImage(imageElement, partner) {
@@ -250,24 +271,43 @@ function setPartnerModalImage(imageElement, partner) {
   );
 }
 
+function getPartnerBookingHref(campgroundId) {
+  if (!campgroundId) return '../booking/pages/camp-search.html';
+  return `../booking/pages/camp-detail.html?id=${encodeURIComponent(campgroundId)}`;
+}
+
 function openPartnerDetail(index) {
-  const partner = PARTNER_DATA[index];
+  const partner = partnerList[index];
   if (!partner) return;
 
   const titleElement = document.getElementById('partnerModalTitle');
   const imageElement = document.getElementById('partnerModalImg');
   const tagsElement = document.getElementById('partnerModalTags');
   const descElement = document.getElementById('partnerModalDesc');
-  const discountElement = document.getElementById('partnerModalDiscount');
+  const regionElement = document.getElementById('partnerModalRegion');
+  const bookingLink = document.getElementById('partnerModalBookingLink');
 
   if (titleElement) titleElement.textContent = partner.name;
   if (imageElement) setPartnerModalImage(imageElement, partner);
-  if (tagsElement)
+  if (tagsElement) {
     tagsElement.replaceChildren(
-      ...partner.tags.map((tag) => createElement('span', 'partnerTag partnerModalTag', tag))
+      ...(partner.tags || []).map((tag) =>
+        createElement('span', 'partnerTag partnerModalTag', tag)
+      )
     );
+  }
   if (descElement) descElement.textContent = partner.desc;
-  if (discountElement) discountElement.textContent = partner.discount;
+
+  // 虛線區：左邊顯示地區，整塊連結到預約詳情頁
+  // Dashed row: region on the left, whole block links to booking detail
+  if (regionElement) regionElement.textContent = partner.region || '—';
+  if (bookingLink) {
+    bookingLink.href = getPartnerBookingHref(partner.id);
+    bookingLink.setAttribute(
+      'aria-label',
+      `前往預約${partner.name ? `「${partner.name}」` : ''}`
+    );
+  }
 
   window.openModal?.(PARTNER_MODAL_ID);
 }
@@ -361,18 +401,6 @@ function bindPartnerModalCloseWithoutScrollJump() {
   );
 }
 
-function bindPartnerModalActions() {
-  const modal = document.getElementById('partnerModal');
-  if (!modal || modal.dataset.partnerActionsBound === 'true') return;
-  modal.dataset.partnerActionsBound = 'true';
-
-  modal.addEventListener('click', (event) => {
-    const action = event.target.closest('[data-action="use-partner-discount"]');
-    if (!action || !modal.contains(action)) return;
-    window.showToast?.('優惠已記錄，前往合作夥伴時出示即可。', 'success');
-  });
-}
-
 window.initBranchesPage = function initBranchesPage() {
   window._appComponentsInitialized = true;
 
@@ -384,8 +412,7 @@ window.initBranchesPage = function initBranchesPage() {
   bindBranchSelection();
   bindPartnerGrid();
   bindPartnerModalCloseWithoutScrollJump();
-  bindPartnerModalActions();
-  renderPartners();
+  loadPartners();
   loadBranches();
 };
 

@@ -3,7 +3,7 @@
  * 預約/租借管理模組
  *
  * 設計重點：
- *   1. 從 bookings.json 載入後存入 window.bookingsCache，避免重複 fetch
+ *   1. 從 /data/commerce/camp-bookings.json 載入後存入 window.bookingsCache，避免重複 fetch
  *   2. 付款狀態 2 種：已付款 / 已退款（顧客結帳即付款，取消時自動退款）
  *   3. 訂單狀態 4 種：待確認 / 已確認 / 已完成 / 已取消
  *   4. 點擊預約單號開啟明細 Modal（#bookingDetailModal）
@@ -25,12 +25,12 @@
 
 /**
  * 使用者明確設定的排序堆疊（空陣列 = 使用隱含預設排序）
- * 每個元素：{ key: 'submitted_at' | 'final_amount', dir: 'asc' | 'desc' }
+ * 每個元素：{ key: 'submittedAt' | 'finalAmount', dir: 'asc' | 'desc' }
  */
 var bookingSortStack = [];
 
 /** 隱含預設：最新預約在最上面（bookingSortStack 為空時套用） */
-var DEFAULT_BOOKING_SORT = [{ key: 'submitted_at', dir: 'desc' }];
+var DEFAULT_BOOKING_SORT = [{ key: 'submittedAt', dir: 'desc' }];
 
 /**
  * 篩選條件：各欄位目前勾選的值
@@ -103,19 +103,24 @@ window.initBookings = function () {
   if (window.customersCache && window.customersCache.length > 0) {
     loadBookingsData();
   } else {
-    $.getJSON('data/customers.json', function (customers) {
-      window.customersCache = customers;
-      loadBookingsData();
-    }).fail(function () {
-      // customers 載入失敗不阻斷 bookings 渲染（顧客名稱顯示 id 即可）
-      loadBookingsData();
+    loadAdminJsonResource({
+      adminList: AdminAPI && AdminAPI.customers && AdminAPI.customers.list,
+      jsonPath: DataPaths.customers,
+      emptyValue: [],
+      onSuccess: function (customers) {
+        window.customersCache = customers;
+        loadBookingsData();
+      },
+      onError: function () {
+        loadBookingsData();
+      }
     });
   }
 
   // ── 排序：點擊 .sortable-th 標頭（限定 #bookingsTable，避免跨頁衝突）──
-  // 三段式：asc ↑ → desc ↓ → 移除；bookingSortStack 空時用隱含 submitted_at desc
+  // 三段式：asc ↑ → desc ↓ → 移除；bookingSortStack 空時用隱含 submittedAt desc
   $(document).on('click.bookings', '#bookingsTable .sortable-th', function () {
-    var key = $(this).data('sort-key'); // 'submitted_at' | 'final_amount'
+    var key = $(this).data('sort-key'); // 'submittedAt' | 'finalAmount'
     var idx = bookingSortStack.findIndex(function (s) { return s.key === key; });
 
     if (idx === -1) {
@@ -247,7 +252,7 @@ window.initBookings = function () {
     });
     if (booking) {
       booking.status = 'cancelled';
-      booking.payment_status = 'refunded';
+      booking.paymentStatus = 'refunded';
       var timeStr = getCurrentTimeStr();
       booking.history = booking.history || [];
       booking.history.push({ time: timeStr, action: actionText });
@@ -292,7 +297,7 @@ window.initBookings = function () {
     if (!booking) return;
 
     booking.status = 'completed';
-    booking.equipment_returned = true;
+    booking.equipmentReturned = true;
     var timeStr = getCurrentTimeStr();
     booking.history = booking.history || [];
     booking.history.push({ time: timeStr, action: '已完成' });
@@ -323,24 +328,38 @@ window.initBookings = function () {
 // ─────────────────────────────────────────────
 
 /**
- * 載入 bookings.json（若快取已存在則不重新 fetch），載入後觸發管線
+ * 載入 camp-bookings.json（若快取已存在則不重新 fetch），載入後觸發管線
  * 需在 customersCache 確認後呼叫
  */
 function loadBookingsData() {
   if (window.bookingsCache && window.bookingsCache.length > 0) {
     applyBookingFiltersAndSort();
-  } else {
-    $.getJSON('data/bookings.json', function (bookings) {
-      window.bookingsCache = bookings;
+    return;
+  }
+
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list,
+    jsonPath: DataPaths.campBookings,
+    emptyValue: [],
+    errorMessage: '載入預約失敗',
+    onSuccess: function (bookings) {
+      var seed = bookings || [];
+      if (typeof MockStorageMerge !== 'undefined') {
+        var overlay = MockStorageMerge.readJsonStorage(MockStorageMerge.MOCK_BOOKINGS_KEY, []);
+        window.bookingsCache = MockStorageMerge.mergeById(seed, overlay, 'id');
+      } else {
+        window.bookingsCache = seed;
+      }
       applyBookingFiltersAndSort();
-    }).fail(function () {
+    },
+    onError: function () {
       $('#bookingsTableBody').html(
         '<tr><td colspan="10" class="text-center text-danger py-4">' +
         '<i class="fas fa-exclamation-triangle me-2"></i>載入預約數據失敗' +
         '</td></tr>'
       );
-    });
-  }
+    }
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -521,7 +540,7 @@ function setupBookingPeriodFilter() {
 // ─────────────────────────────────────────────
 
 /**
- * 取得實際用於排序的堆疊（空 bookingSortStack → 隱含預設 submitted_at desc）
+ * 取得實際用於排序的堆疊（空 bookingSortStack → 隱含預設 submittedAt desc）
  */
 function getEffectiveBookingSortStack() {
   return bookingSortStack.length > 0 ? bookingSortStack : DEFAULT_BOOKING_SORT;
@@ -534,7 +553,7 @@ function getEffectiveBookingSortStack() {
  * @param {*} valB
  */
 function compareBookingValues(key, valA, valB) {
-  if (key === 'final_amount') {
+  if (key === 'finalAmount') {
     var numA = Number(valA) || 0;
     var numB = Number(valB) || 0;
     if (numA < numB) return -1;
@@ -561,7 +580,7 @@ function applyBookingFiltersAndSort() {
   // 付款狀態篩選（OR）：有勾選時才篩；空陣列 = 顯示全部
   if (bookingFilterState.paymentStatus.length > 0) {
     data = data.filter(function (b) {
-      return bookingFilterState.paymentStatus.indexOf(b.payment_status) !== -1;
+      return bookingFilterState.paymentStatus.indexOf(b.paymentStatus) !== -1;
     });
   }
 
@@ -572,39 +591,39 @@ function applyBookingFiltersAndSort() {
     });
   }
 
-  // 含租借篩選（OR）：比對 selected_rentals.length > 0
+  // 含租借篩選（OR）：比對 selectedRentals.length > 0
   // checkbox value 為字串 'true'/'false'，需轉換後比對
   if (bookingFilterState.hasRental.length > 0) {
     data = data.filter(function (b) {
-      var hasRentalStr = (b.selected_rentals && b.selected_rentals.length > 0) ? 'true' : 'false';
+      var hasRentalStr = (b.selectedRentals && b.selectedRentals.length > 0) ? 'true' : 'false';
       return bookingFilterState.hasRental.indexOf(hasRentalStr) !== -1;
     });
   }
 
-  // 營區篩選（OR）：來自 booking_info.campground_name
+  // 營區篩選（OR）：來自 bookingInfo.campgroundName
   if (bookingFilterState.campground.length > 0) {
     data = data.filter(function (b) {
-      var name = b.booking_info && b.booking_info.campground_name;
+      var name = b.bookingInfo && b.bookingInfo.campgroundName;
       return bookingFilterState.campground.indexOf(name) !== -1;
     });
   }
 
-  // 地區篩選（OR）：來自 booking_info.region
+  // 地區篩選（OR）：來自 bookingInfo.region
   if (bookingFilterState.region.length > 0) {
     data = data.filter(function (b) {
-      return bookingFilterState.region.indexOf(b.booking_info.region) !== -1;
+      return bookingFilterState.region.indexOf(b.bookingInfo.region) !== -1;
     });
   }
 
-  // 日期範圍篩選：依 submitted_at 欄位（格式 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS）
+  // 日期範圍篩選：依 submittedAt 欄位（格式 YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS）
   if (bookingFilterState.dateStart) {
     data = data.filter(function (b) {
-      return (b.submitted_at || '').slice(0, 10) >= bookingFilterState.dateStart;
+      return (b.submittedAt || '').slice(0, 10) >= bookingFilterState.dateStart;
     });
   }
   if (bookingFilterState.dateEnd) {
     data = data.filter(function (b) {
-      return (b.submitted_at || '').slice(0, 10) <= bookingFilterState.dateEnd;
+      return (b.submittedAt || '').slice(0, 10) <= bookingFilterState.dateEnd;
     });
   }
 
@@ -617,13 +636,13 @@ function applyBookingFiltersAndSort() {
       var dir = stackToUse[i].dir === 'asc' ? 1 : -1;
 
       var valA, valB;
-      if (key === 'final_amount') {
-        valA = (a.summary && a.summary.final_amount) || 0;
-        valB = (b.summary && b.summary.final_amount) || 0;
+      if (key === 'finalAmount') {
+        valA = (a.summary && a.summary.finalAmount) || 0;
+        valB = (b.summary && b.summary.finalAmount) || 0;
       } else {
-        // 用完整 submitted_at（含時分秒）排序，列表仍只顯示日期
-        valA = a.submitted_at || '';
-        valB = b.submitted_at || '';
+        // 用完整 submittedAt（含時分秒）排序，列表仍只顯示日期
+        valA = a.submittedAt || '';
+        valB = b.submittedAt || '';
       }
 
       var cmp = compareBookingValues(key, valA, valB);
@@ -661,7 +680,7 @@ function updateBookingSortUI() {
       .addClass('sort-active'); // 換成品牌色
   });
 
-  // 預設排序：使用者尚未明確修改 bookingSortStack（隱含 submitted_at desc）
+  // 預設排序：使用者尚未明確修改 bookingSortStack（隱含 submittedAt desc）
   var isDefaultSort = bookingSortStack.length === 0;
 
   // 欄位篩選：五個漏斗欄位任一有勾選
@@ -741,14 +760,14 @@ function renderBookingsTable(bookings) {
   };
 
   var html = bookings.map(function (booking) {
-    var info = booking.booking_info;
+    var info = booking.bookingInfo;
 
     // ── 付款 / 狀態 badge ──
-    var payBadge    = getPayBadgeHtml(booking.payment_status);
+    var payBadge    = getPayBadgeHtml(booking.paymentStatus);
     var statusBadge = statusBadgeMap[booking.status] || '';
 
     // ── 含租借 badge（同時計算 hasRental 字串供 data 屬性使用）──
-    var hasRental = booking.selected_rentals && booking.selected_rentals.length > 0;
+    var hasRental = booking.selectedRentals && booking.selectedRentals.length > 0;
     var rentalBadge = hasRental
       ? '<span class="badge bg-success">有租借</span>'
       : '<span class="badge bg-secondary">無</span>';
@@ -768,14 +787,14 @@ function renderBookingsTable(bookings) {
     }
 
     // ── 下單日期：只取 YYYY-MM-DD ──
-    var dateStr = (booking.submitted_at || '').split(' ')[0] || '';
+    var dateStr = (booking.submittedAt || '').split(' ')[0] || '';
 
     // ── 訂單金額 ──
-    var finalAmount = (booking.summary && booking.summary.final_amount) || 0;
+    var finalAmount = (booking.summary && booking.summary.finalAmount) || 0;
     var amountStr = 'NT$ ' + finalAmount.toLocaleString();
 
     // ── 營區（僅顯示名稱，地區移至獨立欄位）──
-    var campStr = info.campground_name;
+    var campStr = info.campgroundName;
 
     // ── 預約單號連結 ──
     var idLink =
@@ -786,16 +805,16 @@ function renderBookingsTable(bookings) {
     // ── 顧客姓名超連結 ──
     var customerLink =
       '<span class="admin-cell-link booking-customer-link" ' +
-      'data-customer-id="' + booking.customer_id + '" ' +
+      'data-customer-id="' + booking.customerId + '" ' +
       'title="查看顧客檔案">' +
-      getCustomerName(booking.customer_id) +
+      getCustomerName(booking.customerId) +
       '</span>';
 
     // ── <tr> 包含新增的 data-region 和 data-has-rental 屬性 ──
     return '<tr data-booking-id="' + booking.id + '"' +
            ' data-booking-status="' + booking.status + '"' +
-           ' data-payment-status="' + booking.payment_status + '"' +
-           ' data-submitted-at="' + (booking.submitted_at || '').slice(0, 10) + '"' +
+           ' data-payment-status="' + booking.paymentStatus + '"' +
+           ' data-submitted-at="' + (booking.submittedAt || '').slice(0, 10) + '"' +
            ' data-region="' + info.region + '"' +
            ' data-has-rental="' + (hasRental ? 'true' : 'false') + '">' +
            '<td>' + idLink + '</td>' +
@@ -826,9 +845,9 @@ function renderBookingsTable(bookings) {
  * @param {Object} booking - 來自 window.bookingsCache 的單筆預約物件
  */
 function showBookingModal(booking) {
-  var info    = booking.booking_info;
-  var rentals = booking.selected_rentals || [];
-  var zones   = booking.selected_zones   || [];
+  var info    = booking.bookingInfo;
+  var rentals = booking.selectedRentals || [];
+  var zones   = booking.selectedZones   || [];
   var summary = booking.summary          || {};
 
   // ── 標題：預約單號 + 狀態 badge ──
@@ -844,18 +863,18 @@ function showBookingModal(booking) {
   $('#bkModalStatus').html(statusLabelMap[booking.status] || '');
 
   // ── 訂購人資訊（需查詢 customersCache 取得電話/Email）──
-  var customerName  = getCustomerName(booking.customer_id);
-  var customerPhone = getCustomerField(booking.customer_id, 'phone');
-  var customerEmail = getCustomerField(booking.customer_id, 'email');
+  var customerName  = getCustomerName(booking.customerId);
+  var customerPhone = getCustomerField(booking.customerId, 'phone');
+  var customerEmail = getCustomerField(booking.customerId, 'email');
   $('#bkModalName').text(customerName);
   $('#bkModalPhone').text(customerPhone || '—');
   $('#bkModalEmail').text(customerEmail || '—');
-  $('#bkModalPaymentStatus').html(getPayBadgeHtml(booking.payment_status));
+  $('#bkModalPaymentStatus').html(getPayBadgeHtml(booking.paymentStatus));
 
   // ── 住宿明細 ──
   var zoneRows = zones.map(function (z) {
     return '<tr>' +
-      '<td>' + z.zone_type + '</td>' +
+      '<td>' + z.zoneType + '</td>' +
       '<td class="text-center">× ' + z.quantity + ' 個營位</td>' +
       '<td class="text-end">NT$ ' + z.subtotal.toLocaleString() + '</td>' +
       '</tr>';
@@ -863,17 +882,17 @@ function showBookingModal(booking) {
 
   $('#bkModalStayDetail').html(
     '<div class="mb-2 text-muted small">' +
-    '<i class="fas fa-campground me-1"></i>' + info.campground_name +
+    '<i class="fas fa-campground me-1"></i>' + info.campgroundName +
     '&ensp;<span class="badge bg-secondary bg-opacity-50 text-dark">' + info.region + '</span>' +
     '</div>' +
     '<div class="mb-2 text-muted small">' +
     '<i class="fas fa-calendar-alt me-1"></i>' +
-    info.check_in + ' ～ ' + info.check_out +
-    '（共 ' + info.total_days + ' 晚，平日 ' + info.weekday_count +
-    ' 晚・假日 ' + info.holiday_count + ' 晚）' +
+    info.checkIn + ' ～ ' + info.checkOut +
+    '（共 ' + info.totalDays + ' 晚，平日 ' + info.weekdayCount +
+    ' 晚・假日 ' + info.holidayCount + ' 晚）' +
     '</div>' +
     '<div class="mb-2 text-muted small">' +
-    '<i class="fas fa-users me-1"></i>' + info.guest_count + ' 人' +
+    '<i class="fas fa-users me-1"></i>' + info.guestCount + ' 人' +
     '</div>' +
     '<table class="table table-sm table-bordered mt-2 mb-0">' +
     '<thead class="table-light"><tr>' +
@@ -890,8 +909,11 @@ function showBookingModal(booking) {
     );
   } else {
     var rentalRows = rentals.map(function (r) {
+      var specLine = r.specLabel
+        ? '<div class="text-muted small">' + r.specLabel + '</div>'
+        : '';
       return '<tr>' +
-        '<td>' + r.name + '</td>' +
+        '<td>' + r.name + specLine + '</td>' +
         '<td class="text-center">× ' + r.quantity + '</td>' +
         '<td class="text-end">NT$ ' + r.subtotal.toLocaleString() + '</td>' +
         '</tr>';
@@ -910,31 +932,46 @@ function showBookingModal(booking) {
   var costHtml =
     '<div class="d-flex justify-content-between mb-1">' +
     '<span class="text-muted">住宿費</span>' +
-    '<span>NT$ ' + (summary.zone_total || 0).toLocaleString() + '</span></div>' +
+    '<span>NT$ ' + (summary.zoneTotal || 0).toLocaleString() + '</span></div>' +
     '<div class="d-flex justify-content-between mb-1">' +
     '<span class="text-muted">裝備租借費</span>' +
-    '<span>NT$ ' + (summary.rental_total || 0).toLocaleString() + '</span></div>';
+    '<span>NT$ ' + (summary.rentalTotal || 0).toLocaleString() + '</span></div>';
 
-  if (summary.applied_discount > 0) {
+  if (summary.appliedDiscount > 0) {
     costHtml +=
       '<div class="d-flex justify-content-between mb-1 text-success">' +
       '<span><i class="fas fa-tag me-1"></i>租借折扣</span>' +
-      '<span>- NT$ ' + summary.applied_discount.toLocaleString() + '</span></div>';
+      '<span>- NT$ ' + summary.appliedDiscount.toLocaleString() + '</span></div>';
   }
 
   costHtml +=
     '<hr class="my-2">' +
     '<div class="d-flex justify-content-between fw-bold">' +
     '<span>合計</span>' +
-    '<span>NT$ ' + (summary.final_amount || 0).toLocaleString() + '</span></div>';
+    '<span>NT$ ' + (summary.finalAmount || 0).toLocaleString() + '</span></div>';
 
   $('#bkModalCostBreakdown').html(costHtml);
+
+  // 買家備註：有值才顯示（用 .text() 防 XSS）
+  var buyerNote = booking.customerNote || booking.buyerNote || '';
+  if (buyerNote.trim()) {
+    $('#bkModalCustomerNote').text(buyerNote);
+    $('#bkModalCustomerNoteSection').removeClass('d-none');
+  } else {
+    $('#bkModalCustomerNote').text('');
+    $('#bkModalCustomerNoteSection').addClass('d-none');
+  }
+
+  // 賣家備註：可編輯 textarea
+  var savedNote = booking.sellerNote || '';
+  $('#bkModalSellerNote').val(savedNote);
+  $('#bookingDetailModal').data('seller-note-saved', savedNote);
 
   // ── 裝備歸還區塊：僅 confirmed + 有租借時顯示 ──
   var showReturn = (booking.status === 'confirmed') && (rentals.length > 0);
   if (showReturn) {
     $('#equipmentReturnSection').removeClass('d-none');
-    $('#equipmentReturnedCheck').prop('checked', booking.equipment_returned || false);
+    $('#equipmentReturnedCheck').prop('checked', booking.equipmentReturned || false);
   } else {
     $('#equipmentReturnSection').addClass('d-none');
   }
@@ -957,13 +994,64 @@ function showBookingModal(booking) {
   }).join('');
   $('#bkModalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');
 
+  // 依 bookings 編輯權限停用 Modal 內的賣家備註欄位
+  if (typeof window.applyEditPermission === 'function') {
+    window.applyEditPermission('bookings', $('#bookingDetailModal'));
+  }
+  updateBookingSellerNoteSaveButton();
+
   // 開啟 Modal
   new bootstrap.Modal('#bookingDetailModal').show();
+}
 
-  if (typeof window.applyEditPermission === 'function') {
-    window.applyEditPermission('bookings', $('#contentArea'));
+/**
+ * 比對 textarea 與已儲存內容，決定是否顯示「儲存」按鈕
+ * Compare booking seller note with saved baseline; toggle save button
+ */
+function updateBookingSellerNoteSaveButton() {
+  if (typeof window.canEdit === 'function' && !window.canEdit('bookings')) {
+    $('#btnSaveBookingSellerNote').addClass('d-none');
+    return;
+  }
+
+  var saved   = ($('#bookingDetailModal').data('seller-note-saved') || '').toString().trim();
+  var current = ($('#bkModalSellerNote').val() || '').trim();
+  var isDirty = current !== saved;
+
+  $('#btnSaveBookingSellerNote').toggleClass('d-none', !isDirty);
+}
+
+/**
+ * 儲存預約明細 Modal 內的賣家備註
+ * Save seller note from booking detail modal
+ */
+function saveBookingSellerNote() {
+  var bookingId = $('#bookingDetailModal').data('booking-id');
+  if (!bookingId) return;
+
+  var booking = (window.bookingsCache || []).find(function (b) {
+    return window.sameId(b.id, bookingId);
+  });
+  if (!booking) return;
+
+  var sellerNote = $('#bkModalSellerNote').val().trim();
+  booking.sellerNote = sellerNote;
+  $('#bkModalSellerNote').val(sellerNote);
+  $('#bookingDetailModal').data('seller-note-saved', sellerNote);
+  updateBookingSellerNoteSaveButton();
+
+  window.showAdminToast('預約 ' + window.formatBookingId(bookingId) + ' 賣家備註已儲存');
+
+  if (typeof AdminAPI !== 'undefined' && AdminAPI.bookings) {
+    AdminAPI.bookings.update(bookingId, { sellerNote: sellerNote }).catch(function (err) {
+      AdminAPI.handleError(err, '同步賣家備註失敗');
+    });
   }
 }
+
+// 賣家備註：輸入時檢查是否有未儲存變更（從預約管理或客戶管理開啟皆有效）
+$(document).on('input', '#bkModalSellerNote', updateBookingSellerNoteSaveButton);
+$(document).on('click', '#btnSaveBookingSellerNote', saveBookingSellerNote);
 
 /** 供 customers.js 等模組呼叫 / Expose for customers.js and other modules */
 window.showBookingModal = showBookingModal;
@@ -987,7 +1075,7 @@ function getPayBadgeHtml(paymentStatus) {
 
 /**
  * 從 customersCache 查詢顧客姓名
- * 若快取尚未載入，回傳 customer_id 作為備用顯示
+ * 若快取尚未載入，回傳 customerId 作為備用顯示
  * @param {string} customerId - 顧客 id（例："U001"）
  * @returns {string}
  */

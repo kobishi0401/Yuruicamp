@@ -235,7 +235,8 @@ async function blogLoadArticles() {
   }
 
   try {
-    const response = await fetch('../data/articles.json', { cache: 'no-store' });
+    const path = (window.DataPaths && window.DataPaths.articles) || '/data/marketing/articles.json';
+    const response = await fetch(path, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (Array.isArray(data) && data.length) return data;

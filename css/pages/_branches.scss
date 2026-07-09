@@ -184,7 +184,7 @@ $branches-transition-base: var(--yc-transition-base, 250ms cubic-bezier(0.4, 0, 
 .partnerCardTrigger:focus-visible,
 .branchesDirectionsLink:focus-visible,
 .partnerModalClose:focus-visible,
-.partnerModalAction:focus-visible {
+.partnerModalBookingLink:focus-visible {
   outline: 3px solid color-mix(in srgb, $branches-primary 35%, transparent);
   outline-offset: 3px;
 }
@@ -289,9 +289,9 @@ $branches-transition-base: var(--yc-transition-base, 250ms cubic-bezier(0.4, 0, 
   padding: $branches-space-4;
 }
 
-.branchesDirectionsLink,
-.partnerModalAction {
+.branchesDirectionsLink {
   display: inline-flex;
+  width: 100%;
   min-height: 44px;
   align-items: center;
   justify-content: center;
@@ -308,12 +308,7 @@ $branches-transition-base: var(--yc-transition-base, 250ms cubic-bezier(0.4, 0, 
   transition: background-color $branches-transition-fast, box-shadow $branches-transition-fast, color $branches-transition-fast;
 }
 
-.branchesDirectionsLink {
-  width: 100%;
-}
-
-.branchesDirectionsLink:hover,
-.partnerModalAction:hover {
+.branchesDirectionsLink:hover {
   background: var(--yc-cta-hover);
   box-shadow: $branches-shadow-md;
   color: var(--yc-on-cta);
@@ -482,30 +477,57 @@ $branches-transition-base: var(--yc-transition-base, 250ms cubic-bezier(0.4, 0, 
   line-height: 1.8;
 }
 
-.partnerModalCoupon {
-  display: grid;
-  gap: $branches-space-2;
+/* Modal 底部：地區 + 前往預約（整塊可點） / Booking link row */
+.partnerModalBookingLink {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: $branches-space-4;
   border: 1px dashed color-mix(in srgb, $branches-primary 32%, $branches-border);
   border-radius: $branches-radius-lg;
   background: $branches-bg;
   padding: $branches-space-4;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color $branches-transition-fast, background-color $branches-transition-fast;
 }
 
-.partnerModalCouponLabel {
+.partnerModalBookingLink:hover {
+  border-color: $branches-primary;
+  background: $branches-primary-soft;
+  text-decoration: none;
+  color: inherit;
+}
+
+.partnerModalBookingMeta {
+  display: grid;
+  gap: $branches-space-1;
+  min-width: 0;
+}
+
+.partnerModalBookingLabel {
   color: $branches-primary;
   font-size: 0.875rem;
   font-weight: 900;
 }
 
-.partnerModalCouponValue {
-  color: $branches-gold;
-  font-size: 1.2rem;
+.partnerModalBookingRegion {
+  color: $branches-text;
+  font-size: 1.1rem;
   font-weight: 900;
 }
 
-.partnerModalActions {
-  display: flex;
-  justify-content: flex-end;
+.partnerModalBookingCta {
+  flex-shrink: 0;
+  color: $branches-orange;
+  font-size: 1rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.partnerModalBookingLink:hover .partnerModalBookingCta {
+  color: $branches-primary;
 }
 
 @media (width <= 1024px) {
@@ -561,7 +583,7 @@ $branches-transition-base: var(--yc-transition-base, 250ms cubic-bezier(0.4, 0, 
   .branchCard,
   .branchesDirectionsLink,
   .partnerCardTrigger,
-  .partnerModalAction,
+  .partnerModalBookingLink,
   .partnerModalClose {
     transition: none;
   }

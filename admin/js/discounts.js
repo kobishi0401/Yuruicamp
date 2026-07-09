@@ -1,4 +1,4 @@
-﻿/**
+/**
  * admin/js/discounts.js
  * 折扣優惠管理模組
  * 使用 jQuery Event Namespace (.discounts) 防止重複導覽時事件堆疊
@@ -53,15 +53,22 @@ function formatDateDisplay(val) {
 window.initDiscounts = function () {
   $(document).off('.discounts');
 
-  $.getJSON('data/coupons.json', function (coupons) {
-    window.couponsCache = coupons || [];
-    renderCouponsTable(window.couponsCache);
-  }).fail(function () {
-    $('#couponsTableBody').html(
-      '<tr><td colspan="9" class="text-center text-danger py-4">' +
-      '<i class="fas fa-exclamation-triangle me-2"></i>載入優惠券數據失敗' +
-      '</td></tr>'
-    );
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.coupons && AdminAPI.coupons.list,
+    jsonPath: DataPaths.coupons,
+    emptyValue: [],
+    errorMessage: '載入優惠券失敗',
+    onSuccess: function (coupons) {
+      window.couponsCache = coupons || [];
+      renderCouponsTable(window.couponsCache);
+    },
+    onError: function () {
+      $('#couponsTableBody').html(
+        '<tr><td colspan="9" class="text-center text-danger py-4">' +
+        '<i class="fas fa-exclamation-triangle me-2"></i>載入優惠券數據失敗' +
+        '</td></tr>'
+      );
+    }
   });
 
   // 折扣類型 Switch：切換「折扣金額」和「折數」模式

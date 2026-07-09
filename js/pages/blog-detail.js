@@ -16,7 +16,7 @@ const blogDetailFallbackArticles = [
       { type: 'text', value: '第一次露營不需要一次買齊所有裝備，先確認營地條件、季節溫度與交通方式，再決定帳篷、睡袋、炊具與照明。' },
       { type: 'heading', value: '先確認營地與天氣' },
       { type: 'text', value: '營地是否有雨棚、電源、浴廁與平整營位，會直接影響你需要攜帶的裝備。出發前也要檢查降雨機率與夜間低溫。' },
-      { type: 'product', productId: 'prod-001' },
+      { type: 'product', productId: 'P001' },
       { type: 'heading', value: '建立可重複使用的檢查清單' },
       { type: 'text', value: '把睡眠、炊事、照明、個人用品與安全用品分區收納，撤收後補齊耗材，下次出發會更穩定。' },
     ],
@@ -51,7 +51,7 @@ const blogDetailFallbackArticles = [
 
 const blogDetailFallbackProducts = [
   {
-    id: 'prod-001',
+    id: 'P001',
     name: '雙人快搭帳篷',
     price: 2990,
     image: 'https://picsum.photos/seed/yurui-product-tent/240/240',
@@ -98,11 +98,34 @@ async function blogDetailLoadJson(path, fallback) {
 }
 
 async function blogDetailLoadAllArticles() {
-  return blogDetailLoadJson('../data/articles.json', blogDetailFallbackArticles);
+  // 優先 API（內部走 DataPaths）；失敗再直接 fetch
+  if (window.API && window.API.articles && typeof window.API.articles.getAll === 'function') {
+    try {
+      const data = await window.API.articles.getAll();
+      if (Array.isArray(data) && data.length) return data;
+    } catch (error) {
+      console.warn('API.articles.getAll failed, fallback to DataPaths', error);
+    }
+  }
+  return blogDetailLoadJson(
+    (window.DataPaths && window.DataPaths.articles) || '/data/marketing/articles.json',
+    blogDetailFallbackArticles
+  );
 }
 
 async function blogDetailLoadAllProducts() {
-  return blogDetailLoadJson('../data/products.json', blogDetailFallbackProducts);
+  if (window.API && window.API.products && typeof window.API.products.getAll === 'function') {
+    try {
+      const data = await window.API.products.getAll();
+      if (Array.isArray(data) && data.length) return data;
+    } catch (error) {
+      console.warn('API.products.getAll failed, fallback to DataPaths', error);
+    }
+  }
+  return blogDetailLoadJson(
+    (window.DataPaths && window.DataPaths.products) || '/data/catalog/products.json',
+    blogDetailFallbackProducts
+  );
 }
 
 function blogDetailProductHref(product) {

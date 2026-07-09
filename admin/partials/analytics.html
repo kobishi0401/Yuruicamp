@@ -75,10 +75,13 @@
               銷售額趨勢
             </h6>
             <!-- 中欄：期間銷售總額（由 analytics.js updateShopLineTotal() 動態更新） -->
-            <div class="flex-fill text-center">
+            <div class="flex-fill text-center analytics-line-total">
               <span id="shopLineTotalBadge"
                     class="fw-bold fs-4"
                     style="color: var(--admin-brand-accent);">NT$ 0</span>
+              <span id="shopLineTotalDelta"
+                    class="analytics-total-delta ms-2 small fw-semibold"
+                    aria-label="與上期比較"></span>
             </div>
             <!-- 右欄：空白佔位，確保中欄金額視覺上真正置中 -->
             <div class="flex-fill"></div>
@@ -115,6 +118,45 @@
       </div>
 
     </div><!-- end 圖表 row -->
+
+    <!-- ── 熱銷商品金額 Top 10（依 productId 合併規格；與上方期間篩選連動）── -->
+    <div class="row g-4 mb-4">
+      <div class="col-12">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white border-0 pt-3 pb-0
+                       d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <h6 class="fw-semibold mb-0">
+              <i class="fas fa-fire me-2" style="color: var(--admin-brand-accent);"></i>
+              熱銷商品金額（Top 10）
+            </h6>
+            <span class="text-muted small">依本期營收排序 · 與等長上期比較</span>
+          </div>
+          <div class="card-body">
+            <div id="shopTopProductsEmpty" class="text-center text-muted py-4 d-none">
+              <i class="fas fa-box-open fa-2x mb-2 text-secondary"></i>
+              <p class="mb-0 small">此期間無銷售資料</p>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0" id="shopTopProductsTable">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col" style="width: 3rem;">#</th>
+                    <th scope="col">商品</th>
+                    <th scope="col" class="text-end">件數</th>
+                    <th scope="col" class="text-end">件數成長</th>
+                    <th scope="col" class="text-end">金額</th>
+                    <th scope="col" class="text-end">金額成長</th>
+                  </tr>
+                </thead>
+                <tbody id="shopTopProductsBody">
+                  <!-- 由 analytics.js renderShopTopProducts() 動態填入 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ── KPI 卡片 第一列：訂單數 / 待出貨（銷售額已移至折線圖標題） ── -->
     <div class="row g-3 mb-3">
@@ -277,10 +319,13 @@
               預約收入趨勢
             </h6>
             <!-- 中欄：期間預約總額（由 analytics.js updateBookingLineTotal() 動態更新） -->
-            <div class="flex-fill text-center">
+            <div class="flex-fill text-center analytics-line-total">
               <span id="bookingLineTotalBadge"
                     class="fw-bold fs-4"
                     style="color: var(--admin-brand-accent);">NT$ 0</span>
+              <span id="bookingLineTotalDelta"
+                    class="analytics-total-delta ms-2 small fw-semibold"
+                    aria-label="與上期比較"></span>
             </div>
             <!-- 右欄：空白佔位，確保中欄金額視覺上真正置中 -->
             <div class="flex-fill"></div>

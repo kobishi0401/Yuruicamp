@@ -84,6 +84,11 @@
       <hr style="border-color: rgba(255,255,255,0.15); margin: 8px 16px;">
 
       <a href="#" class="sidebar-link"
+         data-section="booking-calendar" data-title="預約排程面板">
+        <i class="fas fa-calendar-alt"></i>
+        <span>預約排程面板</span>
+      </a>
+      <a href="#" class="sidebar-link"
          data-section="bookings" data-title="預約/租借管理">
         <i class="fas fa-calendar-check"></i>
         <span>預約/租借管理</span>
@@ -160,6 +165,10 @@
         <!-- 分隔線：將預約管理獨立成新區塊 -->
         <hr style="border-color: rgba(255,255,255,0.15); margin: 8px 16px;">
 
+        <a href="#" class="sidebar-link"
+           data-section="booking-calendar" data-title="預約排程面板">
+          <i class="fas fa-calendar-alt"></i><span>預約排程面板</span>
+        </a>
         <a href="#" class="sidebar-link"
            data-section="bookings" data-title="預約/租借管理">
           <i class="fas fa-calendar-check"></i><span>預約/租借管理</span>
@@ -323,6 +332,27 @@
             <hr class="my-3">
           </div>
 
+          <!-- 賣家備註（後台可編輯；sellerNote 存於 orders.json / 後端 API） -->
+          <!-- orders.js 的 showOrderModal() 會填入 #modalSellerNote -->
+          <div id="modalSellerNoteSection">
+            <h6 class="fw-semibold mb-2">
+              <i class="fas fa-sticky-note me-2 text-muted"></i>賣家備註
+            </h6>
+            <textarea id="modalSellerNote"
+                      class="form-control form-control-sm"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="內部備註，例如：已電聯、特殊包裝要求…"></textarea>
+            <!-- 有未儲存變更時才顯示；orders.js 的 updateSellerNoteSaveButton() 控制顯隱 -->
+            <button type="button"
+                    class="btn btn-sm btn-primary mt-2 d-none"
+                    id="btnSaveSellerNote">
+              儲存
+            </button>
+            <small class="text-muted d-block mt-1">僅後台可見，顧客不會看到此內容。</small>
+            <hr class="my-3">
+          </div>
+
           <!-- 訂單紀錄時間軸 -->
           <!-- orders.js 的 showOrderModal() 會動態填入 #modalHistory -->
           <h6 class="fw-semibold mb-2">
@@ -405,6 +435,36 @@
           <div id="bkModalCostBreakdown" class="mb-3"></div>
 
           <hr class="my-3">
+
+          <!-- 買家備註（customerNote 有值才顯示；bookings.js 控制顯隱） -->
+          <div id="bkModalCustomerNoteSection" class="d-none">
+            <h6 class="fw-semibold mb-2">
+              <i class="fas fa-comment-dots me-2 text-muted"></i>買家備註
+            </h6>
+            <p id="bkModalCustomerNote"
+               class="text-muted mb-0"
+               style="white-space: pre-wrap; word-break: break-all;"></p>
+            <hr class="my-3">
+          </div>
+
+          <!-- 賣家備註（後台可編輯；sellerNote 存於 bookings.json / 後端 API） -->
+          <div id="bkModalSellerNoteSection">
+            <h6 class="fw-semibold mb-2">
+              <i class="fas fa-sticky-note me-2 text-muted"></i>賣家備註
+            </h6>
+            <textarea id="bkModalSellerNote"
+                      class="form-control form-control-sm"
+                      rows="3"
+                      maxlength="500"
+                      placeholder="內部備註，例如：已電聯、特殊接待安排…"></textarea>
+            <button type="button"
+                    class="btn btn-sm btn-primary mt-2 d-none"
+                    id="btnSaveBookingSellerNote">
+              儲存
+            </button>
+            <small class="text-muted d-block mt-1">僅後台可見，買家不會看到此內容。</small>
+            <hr class="my-3">
+          </div>
 
           <!-- 裝備歸還確認（僅 confirmed + 有租借時顯示） -->
           <div id="equipmentReturnSection" class="d-none mb-3">
@@ -593,6 +653,76 @@
   </div>
 
   <!-- ============================================================
+       全域 Modal：公休設定（booking-calendar.js）
+       ============================================================ -->
+  <div class="modal fade" id="bcClosureModal" tabindex="-1"
+       aria-labelledby="bcClosureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bcClosureModalLabel">
+            <i class="fas fa-calendar-xmark me-2"></i>公休設定
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3" id="bcClosureModalCampLabel">營區：—</p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">公休類型</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="bcClosureType"
+                       id="bcClosureTypeRange" value="date_range" checked>
+                <label class="form-check-label" for="bcClosureTypeRange">指定日期</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="bcClosureType"
+                       id="bcClosureTypeWeekly" value="weekly">
+                <label class="form-check-label" for="bcClosureTypeWeekly">每週固定</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="bcClosureRangeFields">
+            <label class="form-label small" for="bcClosureDateRange">公休日期（入住日）</label>
+            <input type="text" class="form-control form-control-sm mb-3" id="bcClosureDateRange"
+                   placeholder="開始日期 ~ 結束日期" readonly>
+          </div>
+
+          <div id="bcClosureWeeklyFields" class="d-none">
+            <label class="form-label small">每週固定星期（可複選）</label>
+            <div class="d-flex flex-wrap gap-2 mb-3" id="bcClosureWeekdayBtns">
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="1"> 一</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="2"> 二</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="3"> 三</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="4"> 四</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="5"> 五</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="6"> 六</label>
+              <label class="btn btn-sm btn-outline-secondary"><input type="checkbox" class="d-none bc-weekday-cb" value="0"> 日</label>
+            </div>
+            <label class="form-label small" for="bcClosureEffectiveRange">生效期間</label>
+            <input type="text" class="form-control form-control-sm mb-3" id="bcClosureEffectiveRange"
+                   placeholder="生效開始 ~ 生效結束" readonly>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small" for="bcClosureReason">原因</label>
+            <input type="text" class="form-control form-control-sm" id="bcClosureReason"
+                   placeholder="例：每月公休、設施維修" maxlength="50">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="bcBtnSaveClosure">
+            <i class="fas fa-save me-1"></i>儲存公休
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        全域 Modal：新增商品（靜態放在 dashboard，由 products.js 處理）
        ============================================================ -->
   <div class="modal fade" id="addProductModal" tabindex="-1"
@@ -627,50 +757,39 @@
                         placeholder="請填入商品描述"></textarea>
             </div>
 
-            <!-- 商品圖片（file input 無法顯示既有檔案，預覽區由 JS 渲染） -->
+            <!-- 商品圖片：單一欄位可多選，第一張為主圖，預覽區可調整順序 -->
             <div class="mb-3">
-              <div class="row g-2">
-                <div class="col-6">
-                  <label class="form-label fw-semibold" for="newProductMainImage">主要圖片</label>
-                  <input type="file" class="form-control" id="newProductMainImage"
-                         accept="image/*">
-                  <div id="newProductMainImagePreview" class="product-image-preview-box mt-2"></div>
-                </div>
-                <div class="col-6">
-                  <label class="form-label fw-semibold" for="newProductImages">次要圖片（可多選）</label>
-                  <input type="file" class="form-control" id="newProductImages"
-                         accept="image/*" multiple>
-                  <div id="newProductSecondaryImagesPreview" class="product-image-preview-box mt-2"></div>
-                </div>
-              </div>
+              <label class="form-label fw-semibold" for="newProductImages">商品圖片</label>
+              <input type="file" class="form-control" id="newProductImages"
+                     accept="image/*" multiple>
+              <small class="text-muted d-block mt-1">
+                可一次選多張；第一張為主圖，拖曳握把調整順序
+              </small>
+              <div id="newProductImagesPreview" class="product-image-preview-box mt-2"></div>
             </div>
 
-            <!-- 分類 + 規格/顏色 -->
-            <div class="row g-2 mb-3">
+            <!-- 分類 + 品牌：同一列，下拉選單可選現有或新增自訂 / Category & brand combobox row -->
+            <div class="row g-2 mb-1">
               <div class="col-6">
-                <label class="form-label fw-semibold" for="newProductCategory">分類</label>
-                <select class="form-select" id="newProductCategory">
-                  <option>帳篷</option>
-                  <option>睡袋</option>
-                  <option>炊具</option>
-                  <option>燈具</option>
-                  <option>背包</option>
-                  <option>其他</option>
-                </select>
+                <label class="form-label fw-semibold" for="newProductCategorySelect">分類</label>
+                <select class="form-select" id="newProductCategorySelect"></select>
+                <input type="text"
+                       class="form-control form-control-sm mt-2 d-none"
+                       id="newProductCategoryCustom"
+                       placeholder="輸入新分類">
               </div>
               <div class="col-6">
-                <label class="form-label fw-semibold" for="newProductSpec">規格 / 顏色</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="newProductSpec"
-                         list="productSpecOptions" placeholder="例：weight">
-                  <button type="button" class="btn btn-outline-secondary" id="addSpec">新增</button>
-                </div>
-                <datalist id="productSpecOptions"></datalist>
-                <div id="productSpecFields" class="mt-2"></div>
+                <label class="form-label fw-semibold" for="newProductBrandSelect">品牌</label>
+                <select class="form-select" id="newProductBrandSelect"></select>
+                <input type="text"
+                       class="form-control form-control-sm mt-2 d-none"
+                       id="newProductBrandCustom"
+                       placeholder="輸入新品牌">
               </div>
             </div>
+            <small class="text-muted d-block mb-3">可從下拉選擇現有項目，或選「＋ 新增自訂…」；商店與租借編輯時品牌會同步</small>
 
-            <!-- 售價 + 主倉進貨量（主倉進貨量欄位在編輯模式下由 JS 隱藏） -->
+            <!-- 售價 + 主倉進貨量（無規格時使用；有規格卡片時由 JS 隱藏） -->
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label fw-semibold" for="newProductPrice">
@@ -684,58 +803,27 @@
                 <label class="form-label fw-semibold" for="newProductStock">主倉進貨量</label>
                 <input type="number" class="form-control" id="newProductStock"
                        min="0" value="0" aria-describedby="newProductStockHelp">
-                <!-- 說明文字：非租借時顯示商店主倉說明，租借時由 syncRentalFormState() 切換 -->
                 <div class="form-text" id="newProductStockHelp">
                   進貨先到主倉；建立後可透過「編輯」將庫存分配至各分店
                 </div>
               </div>
             </div>
 
-            <!-- [新增] 編輯商店商品時顯示的分店庫存區塊，新增模式預設隱藏 -->
-            <!-- Branch stock section: visible only in store-product edit mode -->
-            <div class="mb-3 d-none" id="editBranchStockField">
-              <label class="form-label fw-semibold">各分店庫存</label>
-
-              <!-- 總庫存唯讀顯示：由各分店數量自動加總 -->
-              <!-- Read-only total: auto-computed from branch inputs -->
-              <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="text-muted small">總庫存：</span>
-                <span id="editBranchTotalStock" class="fw-semibold">0</span>
-                <span class="text-muted small">件</span>
+            <!-- 規格與庫存：每個規格可獨立設定各分店數量 / Variant stock cards -->
+            <div class="mb-3" id="productVariantStockSection">
+              <label class="form-label fw-semibold">規格與庫存</label>
+              <small class="text-muted d-block mb-2" id="variantStockModeHint">
+                可新增多種規格；新增時各規格數量先進主倉，建立後可分配至各分店
+              </small>
+              <div id="productVariantCardList" class="row g-2 variant-card-grid"></div>
+              <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="addProductVariant">
+                <i class="fas fa-plus me-1"></i>新增規格
+              </button>
+              <div class="variant-total-summary-bar d-flex align-items-center justify-content-between mt-3 px-3 py-2 rounded">
+                <span class="text-muted small">商品總庫存</span>
+                <span class="fw-semibold"><span id="editProductTotalStock">0</span> 件</span>
               </div>
-
-              <!-- 固定 4 列：主倉 / 分店A / B / C，直接顯示可編輯數量 -->
-              <!-- Fixed 4 rows: main warehouse + branch A/B/C with editable qty inputs -->
-              <div class="vstack gap-2" id="editBranchPresetList">
-
-                <div class="input-group input-group-sm edit-branch-row" data-branch-id="main">
-                  <span class="input-group-text" style="min-width:60px;">商店主倉</span>
-                  <input type="number" class="form-control edit-branch-quantity-input"
-                         min="0" value="0" aria-label="商店主倉存放數量">
-                </div>
-
-                <div class="input-group input-group-sm edit-branch-row" data-branch-id="branch-001">
-                  <span class="input-group-text" style="min-width:60px;">分店 A</span>
-                  <input type="number" class="form-control edit-branch-quantity-input"
-                         min="0" value="0" aria-label="分店 A 存放數量">
-                </div>
-
-                <div class="input-group input-group-sm edit-branch-row" data-branch-id="branch-002">
-                  <span class="input-group-text" style="min-width:60px;">分店 B</span>
-                  <input type="number" class="form-control edit-branch-quantity-input"
-                         min="0" value="0" aria-label="分店 B 存放數量">
-                </div>
-
-                <div class="input-group input-group-sm edit-branch-row" data-branch-id="branch-003">
-                  <span class="input-group-text" style="min-width:60px;">分店 C</span>
-                  <input type="number" class="form-control edit-branch-quantity-input"
-                         min="0" value="0" aria-label="分店 C 存放數量">
-                </div>
-
-              </div><!-- end #editBranchPresetList -->
-
-
-            </div><!-- end #editBranchStockField -->
+            </div>
 
             <!-- 租借商品設定 -->
             <div class="mb-3">
@@ -762,68 +850,12 @@
                   </div>
                 </div>
 
-                <!-- [編輯模式] 各營地庫存分配（新增時隱藏） -->
-                <!-- Edit mode: camp distribution section (hidden in add mode) -->
+                <!-- [編輯模式] 各規格租借庫存（新增時隱藏，由 JS 動態產生卡片） -->
+                <!-- Edit mode: per-variant rental camp stock cards -->
                 <div id="rentalEditModeSection" class="d-none">
-                  <label class="form-label fw-semibold mb-2">存放營地與數量</label>
-
-                  <!-- 租借主倉固定列（編輯時永遠顯示） -->
-                  <!-- Rental main warehouse fixed row: always visible in edit mode -->
-                  <div class="input-group input-group-sm mb-2" id="rentalEditMainRow">
-                    <span class="input-group-text" style="min-width:64px;">租借主倉</span>
-                    <input type="number" class="form-control" id="rentalEditMainQty"
-                           min="0" value="0" aria-label="租借主倉存放數量">
-                  </div>
-
-                  <!-- 固定 5 個營地：直接顯示可編輯數量 -->
-                  <!-- Fixed 5 camps: always shown with editable qty inputs -->
-                  <div class="vstack gap-2 mb-2" id="rentalCampPresetList">
-
-                    <div class="input-group input-group-sm rental-camp-preset-row" data-camp-id="camp-001">
-                      <span class="input-group-text" style="min-width:64px;">湖畔星空營地</span>
-                      <input type="number" class="form-control rental-camp-quantity-input"
-                             min="0" value="0"
-                             aria-label="湖畔星空營地存放數量">
-                    </div>
-
-                    <div class="input-group input-group-sm rental-camp-preset-row" data-camp-id="camp-002">
-                      <span class="input-group-text" style="min-width:64px;">松林野營基地</span>
-                      <input type="number" class="form-control rental-camp-quantity-input"
-                             min="0" value="0"
-                             aria-label="松林野營基地存放數量">
-                    </div>
-
-                    <div class="input-group input-group-sm rental-camp-preset-row" data-camp-id="camp-003">
-                      <span class="input-group-text" style="min-width:64px;">溪谷森林營地</span>
-                      <input type="number" class="form-control rental-camp-quantity-input"
-                             min="0" value="0"
-                             aria-label="溪谷森林營地存放數量">
-                    </div>
-
-                    <div class="input-group input-group-sm rental-camp-preset-row" data-camp-id="camp-004">
-                      <span class="input-group-text" style="min-width:64px;">雲海高原營地</span>
-                      <input type="number" class="form-control rental-camp-quantity-input"
-                             min="0" value="0"
-                             aria-label="雲海高原營地存放數量">
-                    </div>
-
-                    <div class="input-group input-group-sm rental-camp-preset-row" data-camp-id="camp-005">
-                      <span class="input-group-text" style="min-width:64px;">海岸微風營地</span>
-                      <input type="number" class="form-control rental-camp-quantity-input"
-                             min="0" value="0"
-                             aria-label="海岸微風營地存放數量">
-                    </div>
-
-                  </div><!-- end #rentalCampPresetList -->
-
-                  <!-- 自訂營地清單（手打名稱）：由 products.js 動態新增列 -->
-                  <!-- Custom camps (free-text): rows added dynamically by products.js -->
-                  <div id="rentalCampList" class="vstack gap-2 mb-2"></div>
-
-                  <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="addRentalCamp">
-                    <i class="fas fa-plus me-1"></i>新增自訂營地
-                  </button>
-
+                  <label class="form-label fw-semibold mb-1">租借庫存（依規格）</label>
+                  <small class="text-muted d-block mb-2">每個規格可獨立分配至各營地</small>
+                  <div id="rentalVariantStockList" class="row g-2 variant-card-grid"></div>
                 </div><!-- end #rentalEditModeSection -->
 
               </div>
@@ -862,12 +894,19 @@
   <script src="https://cdn.jsdelivr.net/npm/summernote@0.9.1/dist/lang/summernote-zh-TW.min.js"></script>
   <!-- GLightbox 圖片放大預覽（須在 Bootstrap 之後） -->
   <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+  <!-- SortableJS：商品圖片拖曳排序 -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 
   <!-- 後台自訂 JS（permissions.js 須在 core.js 之前，提供 ADMIN_SECTIONS 與員工資料） -->
   <script src="../js/validators.js"></script>
+  <script src="../js/data-paths.js"></script>
+  <script src="../js/formatters.js"></script>
+  <script src="../js/mock-storage-merge.js"></script>
   <script src="js/admin-api.js"></script>
   <!-- 編號工具：資料存數字 id，畫面顯示加前綴（須在 orders / bookings / movement 之前） -->
   <script src="js/id-utils.js"></script>
+  <script src="../js/booking-availability.js"></script>
+  <script src="../js/booking-api.js"></script>
   <script src="js/permissions.js"></script>
   <script src="js/core.js"></script>
   <script src="js/analytics.js"></script>
@@ -878,6 +917,7 @@
   <script src="js/discounts.js"></script>
   <script src="js/reviews.js"></script>
   <script src="js/bookings.js"></script>
+  <script src="js/booking-calendar.js"></script>
 
 </body>
 </html>

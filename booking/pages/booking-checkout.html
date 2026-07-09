@@ -96,6 +96,14 @@
                 <input type="text" id="contactName" class="formControl" placeholder="訂購人姓名 *" required />
                 <input type="tel" id="contactPhone" class="formControl" placeholder="手機號碼 *" required />
                 <input type="email" id="contactEmail" class="formControl" placeholder="電子信箱 *" required />
+                <textarea id="buyerNote"
+                          class="formControl"
+                          rows="3"
+                          maxlength="500"
+                          placeholder="備註（選填）— 有什麼需要告知營地方的嗎？"></textarea>
+                <button type="button" id="fillProfileBtn" class="btn btnOutline checkoutFillProfileBtn">
+                  帶入會員資料
+                </button>
                 <p class="checkoutContactHint">* 確認信將寄送至此信箱</p>
               </div>
             </div>
@@ -212,15 +220,6 @@
               <p class="summarySecurityNoteLine">📋 預約確認信將寄送至您的信箱</p>
             </div>
 
-            <!-- 結帳後導購橫幅（預設隱藏）-->
-            <div class="upsellBanner checkoutUpsellBannerBooking" id="upsellBanner">
-              <p>🎉 預約已成功送出！</p>
-              <p>喜歡這次的裝備體驗嗎？前往選購屬於你的露營裝備。</p>
-              <a href="../../pages/products.html" class="btn btnOutline btnFull">
-                <i class="bi bi-shop"></i> 前往選購新裝備
-              </a>
-              <a href="./camp-search.html" class="rentalSkipLink"> 再預約一次露營 </a>
-            </div>
           </div>
         </div>
       </div>
@@ -236,6 +235,9 @@
         window.loadBookingSharedLayout();
       });
     </script>
+    <script src="../../js/data-paths.js"></script>
+    <script src="../../js/formatters.js"></script>
+    <script src="../../js/booking-api.js"></script>
     <script src="../js/booking-utils.js"></script>
     <script src="../js/booking-checkout.js"></script>
   </body>

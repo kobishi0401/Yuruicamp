@@ -1,6 +1,9 @@
 /**
+ * @deprecated 舊路徑腳本。admin/data/products.json 已移除；
+ * 請改維護 data/catalog/products.json。
+ *
  * 下載商品假圖到 assets/images/products/
- * 每個商品 3 張圖，並更新 admin/data/products.json
+ * 每個商品 3 張圖，並更新 admin/data/products.json（舊路徑，已失效）
  *
  * 執行：node admin/scripts/generate-product-images.cjs
  */

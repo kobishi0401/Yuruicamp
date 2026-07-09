@@ -386,12 +386,16 @@
   display: block;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--yc-transition-base);
   width: 100%;
 }
 
-.homeProductCard:hover .homeProductImage img,
-.homeProductCard:focus-visible .homeProductImage img {
+// Hover zoom only for plain single-image cards (not Swiper gallery)
+.homeProductImage:not(.cardGallery) img {
+  transition: transform var(--yc-transition-base);
+}
+
+.homeProductCard:hover .homeProductImage:not(.cardGallery) img,
+.homeProductCard:focus-visible .homeProductImage:not(.cardGallery) img {
   transform: scale(1.02);
 }
 
@@ -441,11 +445,48 @@
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.4;
-  margin: 0 0 var(--yc-space-3);
+  margin: 0 0 var(--yc-space-2);
   min-block-size: 2.8rem;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.homeProductSpecs {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: var(--yc-space-2);
+}
+
+.homeProductSpecGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.homeProductSpecChip {
+  border: 1px solid var(--yc-border);
+  border-radius: 999px;
+  background: var(--yc-surface);
+  color: var(--yc-text);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.3rem 0.55rem;
+}
+
+.homeProductSpecChip.isSelected {
+  background: var(--yc-sage-soft);
+  border-color: var(--yc-sage-action);
+  color: var(--yc-sage-dark);
+}
+
+.homeProductSpecPreview {
+  color: var(--yc-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .homeProductRating {

@@ -13,7 +13,9 @@ const APP_RESET_STORAGE_KEYS = [
   'memberProfile',
   'bookingCart',
   'mockOrders',
-  'mockUserPointDeltas',
+  'mockBookings',
+  'mockReviews',
+  'mockCustomerOverlay',
 ];
 
 /**

@@ -1,0 +1,109 @@
+// Card gallery：商品卡／營地卡共用的 Swiper + GLightbox 圖片區樣式。
+// Keep controls compact so they do not dominate the card.
+
+.cardGallery {
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+
+.cardGallery .swiper {
+  height: 100%;
+  width: 100%;
+}
+
+.cardGallery .swiper-slide {
+  height: 100%;
+}
+
+.cardGallery .card-gallery-glightbox {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.cardGallery img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.cardGalleryEmpty {
+  align-items: center;
+  background: var(--yc-surface-soft, #f0ece3);
+  color: var(--yc-text-muted, #888);
+  display: flex;
+  font-size: 0.875rem;
+  height: 100%;
+  justify-content: center;
+  min-height: 10rem;
+}
+
+// Compact nav arrows / 縮小箭頭，避免蓋住整張卡
+.cardGallery .swiper-button-prev,
+.cardGallery .swiper-button-next {
+  background: rgb(255 255 255 / 88%);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  color: var(--yc-sage-action, #4a5d4e);
+  height: 1.75rem;
+  margin-top: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.75rem;
+
+  &::after {
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+}
+
+.cardGallery .swiper-button-prev {
+  left: 0.4rem;
+}
+
+.cardGallery .swiper-button-next {
+  right: 0.4rem;
+}
+
+.cardGallery .swiper-button-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+// Pagination dots / 分頁點
+.cardGallery .swiper-pagination {
+  bottom: 0.4rem !important;
+  line-height: 0;
+}
+
+.cardGallery .swiper-pagination-bullet {
+  background: rgb(255 255 255 / 75%);
+  opacity: 1;
+}
+
+.cardGallery .swiper-pagination-bullet-active {
+  background: var(--yc-sage-action, #4a5d4e);
+}
+
+// Badge overlays stay above swiper chrome / 徽章疊在輪播上方
+.cardGallery .productCardBadge,
+.cardGallery .campCardBadge,
+.cardGallery .campCardBadgeBooking {
+  pointer-events: none;
+  z-index: 2;
+}
+
+// Soften hover zoom when gallery is present (avoid fighting Swiper)
+.productCard:hover .cardGallery img,
+.homeProductCard:hover .cardGallery img,
+.campCardBooking:hover .cardGallery img {
+  transform: none;
+}
+
+// Hide GLightbox title/description white bar under the image
+// 隱藏燈箱圖片下方的標題白條（即使誤帶 data-title 也不顯示）
+.glightbox-container .gslide-description {
+  display: none !important;
+}

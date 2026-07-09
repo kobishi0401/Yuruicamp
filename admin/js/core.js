@@ -13,16 +13,45 @@
  *    AdminAPI.configure({ useBackend: true, baseUrl: '/api/admin' });
  */
 
+/**
+ * 後端啟用時走 AdminAPI.list()，否則讀 DataPaths JSON
+ * Load admin list data from REST API or local JSON seed
+ */
+window.loadAdminJsonResource = function (options) {
+  var onSuccess = options.onSuccess;
+  var onError = options.onError;
+  var emptyValue = options.emptyValue;
+  var adminList = options.adminList;
+  var jsonPath = options.jsonPath;
+
+  if (typeof AdminAPI !== 'undefined' && AdminAPI.isBackendEnabled && AdminAPI.isBackendEnabled() && adminList) {
+    adminList()
+      .then(function (res) { onSuccess((res && res.data) || emptyValue); })
+      .catch(function (err) {
+        if (options.errorMessage) AdminAPI.handleError(err, options.errorMessage);
+        if (onError) onError(err);
+        else onSuccess(emptyValue);
+      });
+    return;
+  }
+
+  $.getJSON(jsonPath, onSuccess).fail(function () {
+    if (onError) onError();
+    else onSuccess(emptyValue);
+  });
+};
+
 // ==========================================================
 // === 各模組「無 edit 權限」時需停用的選擇器 ===
 // ==========================================================
 var EDIT_PERMISSION_SELECTORS = {
-  orders: '.btn-ship-order',
-  products: '[data-bs-target="#addProductModal"], .edit-product-name, .stock-edit-btn, .stock-confirm-btn, .stock-cancel-btn, .stock-step-btn, #submitAddProduct',
+  orders: '.btn-ship-order, .btn-complete-order, #btnSaveSellerNote, #modalSellerNote',
+  products: '[data-bs-target="#addProductModal"], .edit-product-name, .stock-edit-btn, .stock-confirm-btn, .stock-cancel-btn, #submitAddProduct',
   customers: '#addCustomerBtn, #saveCustomerBtn, #addCustomerModal input:not([readonly]), #addCustomerModal select, #addCustomerModal button:not(.btn-close):not([data-bs-dismiss="modal"]), .shipping-address-edit-btn, #saveCustomerShippingAddressBtn, #customerShippingAddressModal input, #customerShippingAddressModal select, #customerShippingAddressModal button:not(.btn-close):not([data-bs-dismiss="modal"]), .phone-edit-btn, .email-edit-btn, .birthday-edit-btn, .tier-edit-btn, .points-edit-btn, .tags-edit-btn, .tags-done-btn, .tags-cancel-btn, .tag-add-btn, .tag-delete-btn, .customer-edit-confirm-btn, .customer-edit-cancel-all-btn, #customerEditConfirmBtn',
   discounts: '#submitAddCoupon, .btn-toggle-coupon, .btn-delete-coupon, #generateCouponCode, #addCouponForm input, #addCouponForm select, #addCouponForm textarea, #addCouponForm button:not(.btn-close)',
-  reviews: '.btn-open-reply-modal, #btnSubmitReviewReply, #btnDeleteReviewReply, #reviewReplyTextarea',
-  bookings: '.btn-confirm-booking, .btn-cancel-booking',
+  reviews: '.btn-delete-review',
+  bookings: '.btn-confirm-booking, .btn-cancel-booking, #btnSaveBookingSellerNote, #bkModalSellerNote',
+  'booking-calendar': '#bcBtnClosureSettings, #bcBtnSaveClosure, #bcBtnCloseSingleDay, .bc-btn-delete-closure',
   permissions: '#addEmployeeBtn, .btn-edit-employee, .btn-toggle-employee, #employeeModal input:not([readonly]), #employeeModal button:not(.btn-close):not([data-bs-dismiss]), #saveEmployeeBtn, .perm-view-cb, .perm-edit-cb, #empIsSuperAdmin',
 };
 
@@ -123,7 +152,13 @@ window.applyEditPermission = function (section, $container) {
     }
     // 預約 Modal 在 dashboard 全域，需另外還原
     if (section === 'bookings') {
-      $('#btnCompleteBooking, #equipmentReturnedCheck, #confirmCancelBtn, #cancelReasonInput')
+      $('#btnCompleteBooking, #equipmentReturnedCheck, #confirmCancelBtn, #cancelReasonInput, #btnSaveBookingSellerNote, #bkModalSellerNote')
+        .prop('disabled', false)
+        .removeAttr('data-permission-disabled');
+    }
+    // 訂單明細 Modal 在 dashboard 全域（賣家備註）
+    if (section === 'orders') {
+      $('#btnSaveSellerNote, #modalSellerNote')
         .prop('disabled', false)
         .removeAttr('data-permission-disabled');
     }
@@ -148,7 +183,15 @@ window.applyEditPermission = function (section, $container) {
 
   // 預約相關全域 Modal 控制項
   if (section === 'bookings') {
-    $('#btnCompleteBooking, #equipmentReturnedCheck, #confirmCancelBtn, #cancelReasonInput')
+    $('#btnCompleteBooking, #equipmentReturnedCheck, #confirmCancelBtn, #cancelReasonInput, #btnSaveBookingSellerNote, #bkModalSellerNote')
+      .prop('disabled', true)
+      .attr('data-permission-disabled', 'true')
+      .attr('title', noEditTitle);
+  }
+
+  // 訂單明細 Modal：賣家備註（從訂單管理或客戶管理開啟皆適用）
+  if (section === 'orders') {
+    $('#btnSaveSellerNote, #modalSellerNote')
       .prop('disabled', true)
       .attr('data-permission-disabled', 'true')
       .attr('title', noEditTitle);
@@ -275,7 +318,7 @@ $(document).ready(function () {
  *       載入完成後呼叫對應模組的初始化函式
  *
  * @param {string} sectionName - 模組名稱
- *   可選值：'analytics' | 'orders' | 'movement' | 'products' | 'customers' | 'discounts' | 'reviews' | 'bookings'
+ *   可選值：'analytics' | 'orders' | 'movement' | 'products' | 'customers' | 'discounts' | 'reviews' | 'booking-calendar' | 'bookings'
  *
  * --- API 預留說明 ---
  * 目前從本地 partials/ 資料夾載入靜態 HTML。
@@ -336,6 +379,7 @@ function loadSection(sectionName) {
       discounts:   window.initDiscounts,
       reviews:     window.initReviews,
       bookings:    window.initBookings,
+      'booking-calendar': window.initBookingCalendar,
       permissions: window.initPermissions,
     };
 

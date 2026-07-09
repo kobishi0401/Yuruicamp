@@ -140,7 +140,11 @@ function moveBookingOverlayElementsToRoot() {
  * 套用元件：#loginModal、#personalizationModal、.bookingHeader。
  */
 function loadBookingHeaderScript() {
-  loadScriptOnce('../../js/components/modal.js', '__yuruiModalScriptLoaded')
+  // booking-utils 先載入：header 讀 bookingCart 時需要 normalizeBookingCart（3-13 camelCase）
+  loadScriptOnce('../js/booking-utils.js', '__bookingUtilsScriptLoaded')
+    .then(function () {
+      return loadScriptOnce('../../js/components/modal.js', '__yuruiModalScriptLoaded');
+    })
     .then(function () {
       return loadScriptOnce('../../js/components/auth.js', '__yuruiAuthScriptLoaded');
     })
