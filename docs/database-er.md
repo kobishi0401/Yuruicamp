@@ -321,7 +321,7 @@ erDiagram
 
 ## 行銷內容
 
-### ARTICLES
+### ARTICLES 露營指南
 
 來源：`data/marketing/articles.json`。
 
@@ -329,7 +329,7 @@ erDiagram
 - `relatedProducts[]` → `ARTICLE_RELATED_PRODUCTS`  
 - 內嵌 `productId` 必須為 `P001` 格式
 
-### BRANCHES / BRANDS
+### BRANCHES 分店/ BRANDS 品牌
 
 來源：`data/marketing/branches.json`、`brands.json`。
 
