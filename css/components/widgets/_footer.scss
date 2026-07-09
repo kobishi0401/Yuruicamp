@@ -1,9 +1,13 @@
-﻿// Footer 元件：主站與 booking 共用的頁尾樣式。
+// Footer 元件：主站與 booking 共用的頁尾樣式。
 
 // 頁尾外層：主站與 booking 使用不同主色背景。
 .siteFooter,
 .bookingFooter {
   color: var(--yc-surface);
+
+  // 共用頁尾排版：明確指定字體與基準行高，避免主站 body 與 booking h2/body 基底差異造成渲染不一致。
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .siteFooter {
@@ -42,8 +46,10 @@
 .bookingFooterHeading {
   margin: 0;
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.5;
 }
 
 .siteFooterText,
@@ -78,6 +84,7 @@
 .bookingFooterLinks a,
 .bookingFooterPolicies a {
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
   text-decoration: none;
   transition: color var(--yc-transition-fast);
 }
@@ -103,6 +110,7 @@
   display: grid;
   gap: var(--yc-space-1);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
 }
 
 .siteFooterContactItem strong,
@@ -158,6 +166,7 @@
   gap: var(--yc-space-4);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .siteFooterBottom p,
@@ -218,7 +227,7 @@
   }
 
   .siteFooterGrid,
-  .bookingFooterGrid { 
+  .bookingFooterGrid {
     grid-template-columns: 1fr;
     gap: var(--yc-space-6);
   }

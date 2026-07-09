@@ -1323,6 +1323,9 @@ main {
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-button);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
 }
 
 .modalHeader {
@@ -1338,13 +1341,17 @@ main {
 .modalTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .modalBody {
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .modalClose {
@@ -1380,13 +1387,15 @@ main {
 }
 .sharedAuthContent {
   width: min(440px, 100vw - 32px);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 #loginModal {
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
-  z-index: var(--yc-z-sticky);
+  z-index: var(--yc-z-modal);
 }
 
 #loginModal .sharedAuthContent {
@@ -1407,6 +1416,8 @@ main {
 .sharedAuthBody {
   display: grid;
   gap: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 #loginModal .modalTabPanel.isOpen {
@@ -1553,7 +1564,7 @@ main {
   position: fixed;
   right: var(--yc-space-6);
   bottom: var(--yc-space-8);
-  z-index: var(--yc-z-toast);
+  z-index: var(--yc-z-sticky);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -2122,6 +2133,9 @@ main {
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
+  /* Booking 登入浮層契約：與主站 #loginModal 使用同一套 UI 字體與行高。 */
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 /* Booking 登入面板：維持右側抽屜式登入體驗，不影響 #personalizationModal 與 #surveyCloseConfirmModal。 */
@@ -2132,6 +2146,9 @@ main {
   border-block: 0;
   border-inline-end: 0;
   border-radius: var(--yc-radius-button) 0 0 var(--yc-radius-button);
+  /* Booking 登入內容面板：防止 h1-h6 或 body 行高差異影響登入表單。 */
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 /* Booking OAuth 品牌補強：Google、Facebook、LINE 使用外部品牌識別色，不併入設計 token 系統。 */
@@ -2177,6 +2194,9 @@ main {
   width: min(420px, 100vw);
   background: var(--yc-surface);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
   transition: transform var(--yc-transition-base);
 }
 
@@ -2237,8 +2257,10 @@ main {
 .bookingSlidePanelTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteOffcanvasBody,
@@ -2248,6 +2270,8 @@ main {
   height: calc(100% - 72px);
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2304,6 +2328,8 @@ main {
   padding: var(--yc-space-4);
   border-top: 1px solid var(--yc-border);
   background: var(--yc-surface);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 .siteCartSummary,
@@ -2313,6 +2339,7 @@ main {
   display: flex;
   justify-content: space-between;
   gap: var(--yc-space-4);
+  line-height: 1.5;
 }
 
 .siteCartSummary {
@@ -2350,12 +2377,16 @@ main {
 .siteCartEmptyTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteCartEmptyText {
   margin: 0;
   color: var(--yc-text-muted);
+  line-height: 1.5;
 }
 
 .siteCartItem {
@@ -2387,7 +2418,9 @@ main {
 
 .siteCartItemName {
   color: var(--yc-text);
+  font-family: var(--yc-font-ui);
   font-weight: 800;
+  line-height: 1.35;
   text-decoration: none;
 }
 
@@ -2458,13 +2491,17 @@ main {
 .bookingCartPanelLabel {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .bookingCartPanelMeta {
   margin: 0;
   color: var(--yc-text-muted);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (width <= 480px) {
@@ -2509,6 +2546,8 @@ main {
 .siteFooter,
 .bookingFooter {
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .siteFooter {
@@ -2544,8 +2583,10 @@ main {
 .bookingFooterHeading {
   margin: 0;
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.5;
 }
 
 .siteFooterText,
@@ -2578,6 +2619,7 @@ main {
 .bookingFooterLinks a,
 .bookingFooterPolicies a {
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
   text-decoration: none;
   transition: color var(--yc-transition-fast);
 }
@@ -2602,6 +2644,7 @@ main {
   display: grid;
   gap: var(--yc-space-1);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
 }
 
 .siteFooterContactItem strong,
@@ -2652,6 +2695,7 @@ main {
   gap: var(--yc-space-4);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .siteFooterBottom p,
@@ -2959,7 +3003,9 @@ main {
 
 .priceRangeFill {
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  left: 0;
+  right: 0;
   height: 6px;
   background: var(--yc-sage-action);
   border-radius: 3px;
@@ -4349,11 +4395,6 @@ main {
 
 .cartRemoveButtonBooking:hover {
   color: var(--yc-error);
-}
-
-.cartItemQtyLabelBooking {
-  color: var(--yc-text-muted);
-  font-size: 0.72rem;
 }
 
 .cartEmptyNoteBooking {

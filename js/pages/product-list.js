@@ -54,7 +54,7 @@ function _renderStars(rating) {
   `;
 }
 
-// Normalize survey preference storage from AppState or profile localStorage.
+// Normalize survey preference storage from the saved member profile.
 function _normalizeSurveyTagValues(preferences) {
   if (Array.isArray(preferences)) return preferences;
   if (typeof preferences === 'string' && preferences) return [preferences];
@@ -73,15 +73,9 @@ function _readStorageJson(key, fallback) {
   }
 }
 
-// Get the same surveyTag values that member-center displays as selected.
+// Get the saved member preference tags used for personalized recommendations.
 function _getSavedSurveyTags() {
-  const appPrefs = _normalizeSurveyTagValues(window.AppState && window.AppState.preferences);
-  if (appPrefs.length > 0) return appPrefs;
-
-  const profilePrefs = _normalizeSurveyTagValues(_readStorageJson('yurui_profile', {}).preferences);
-  if (profilePrefs.length > 0) return profilePrefs;
-
-  return _normalizeSurveyTagValues(_readStorageJson('preferences', {}));
+  return _normalizeSurveyTagValues(_readStorageJson('yurui_profile', {}).preferences);
 }
 
 // Randomize carousel products so matched products do not always show in JSON order.

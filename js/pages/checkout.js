@@ -128,7 +128,12 @@ function _getCheckoutPaymentStatus() {
 // Build coupon snapshots for the order payload.
 function _buildCheckoutCouponSnapshots(subtotal) {
   if (!window.YuruiCoupons || checkoutCouponCatalog.length === 0) return [];
-  const applied = window.YuruiCoupons.calculateAppliedCoupons(checkoutCouponCatalog, appliedCheckoutCouponCodes, subtotal);
+  const applied = window.YuruiCoupons.calculateAppliedCoupons(
+    checkoutCouponCatalog,
+    appliedCheckoutCouponCodes,
+    subtotal,
+    _getCheckoutCouponValidationOptions()
+  );
   return applied.items.map(item => ({
     code: item.code,
     type: item.coupon.type,
@@ -181,13 +186,23 @@ async function _loadCheckoutCouponCatalog() {
 // Recalculate applied coupons and sync localStorage.
 function _syncCheckoutAppliedCoupons() {
   const subtotal = window.calculateCartTotal(window.AppState.cart);
-  const applied = window.YuruiCoupons.calculateAppliedCoupons(checkoutCouponCatalog, appliedCheckoutCouponCodes, subtotal);
+  const previousCodes = [...appliedCheckoutCouponCodes];
+  const applied = window.YuruiCoupons.calculateAppliedCoupons(
+    checkoutCouponCatalog,
+    appliedCheckoutCouponCodes,
+    subtotal,
+    _getCheckoutCouponValidationOptions()
+  );
   checkoutDiscount = applied.totalDiscount;
   appliedCheckoutCouponCodes = applied.items.map(item => item.code);
   _renderAppliedCoupons(applied.items);
 
   if (appliedCheckoutCouponCodes.length > 0) window.YuruiCoupons.saveAppliedCouponCodes(appliedCheckoutCouponCodes);
   else window.YuruiCoupons.clearAppliedCouponCode();
+  if (previousCodes.length > appliedCheckoutCouponCodes.length) {
+    _showCouponMessage('部分折扣碼已不符合使用條件，已重新計算折扣', 'error');
+  }
+  return { removed: previousCodes.length > appliedCheckoutCouponCodes.length, items: applied.items };
 }
 
 // Render checkout item rows.
@@ -269,6 +284,24 @@ function _setPanelOpen(trigger, isOpen) {
   panel?.classList.toggle('isOpen', isOpen);
   trigger.setAttribute('aria-expanded', String(isOpen));
   if (body) body.hidden = !isOpen;
+}
+
+function _openCheckoutPanelByField(fieldId) {
+  const panelMap = {
+    buyerName: 'panelBuyerBody',
+    buyerPhone: 'panelBuyerBody',
+    buyerEmail: 'panelBuyerBody',
+    deliveryAddress: 'panelShippingBody',
+    cardNumber: 'panelPaymentBody',
+    cardExpiry: 'panelPaymentBody',
+    cardCvv: 'panelPaymentBody',
+  };
+  const bodyId = panelMap[fieldId];
+  if (!bodyId) return;
+
+  const trigger = document.querySelector(`[aria-controls="${bodyId}"]`);
+  // 表單錯誤可能藏在收合面板內，先展開再 focus，避免使用者不知道哪裡需要修正。
+  if (trigger && trigger.getAttribute('aria-expanded') !== 'true') _setPanelOpen(trigger, true);
 }
 
 // Support Enter and Space on accordion triggers.
@@ -414,7 +447,7 @@ async function _applyCheckoutCouponCode({ showToast = true } = {}) {
   const result = await window.YuruiCoupons.validateCoupon(coupons, code, subtotal, customerId);
 
   if (!result.valid) {
-    _showCouponMessage('\u6298\u6263\u78bc\u7121\u6cd5\u4f7f\u7528', 'error');
+    _showCouponMessage(result.message || '\u6298\u6263\u78bc\u7121\u6cd5\u4f7f\u7528', 'error');
     _updateCheckoutSummary();
     return;
   }
@@ -467,12 +500,28 @@ function _initConfirmOrderBtn() {
 
 // Validate form, submit order, and route to success page.
 async function _handleConfirmOrder(confirmBtn) {
+  if (!_getCheckoutCurrentUser()) {
+    window.showToast('請先登入後再完成結帳', 'info');
+    window.openModal?.('loginModal');
+    return;
+  }
+
   const formData = _readCheckoutFormData();
   if (!_validateCheckoutForm(formData)) return;
+
+  let pricingSnapshot;
+  try {
+    pricingSnapshot = await _verifyCheckoutPricingBeforeSubmit();
+    if (!pricingSnapshot) return;
+  } catch (error) {
+    window.showToast(error.message || '購物車資料異常，請重新確認後再結帳', 'warning');
+    return;
+  }
+
   _setConfirmButtonLoading(confirmBtn, true);
 
   try {
-    const orderData = await _buildOrderData(formData);
+    const orderData = await _buildOrderData(formData, pricingSnapshot);
     const newOrder = await window.API.orders.create(orderData);
     if (appliedCheckoutCouponCodes.includes('YRUIFIRST')) {
       await window.API.customers.markFirstPurchaseUsed(_getCheckoutUserId());
@@ -527,8 +576,91 @@ function _validateCheckoutForm(data) {
   const failed = rules.find(rule => !rule.valid);
   if (!failed) return true;
   window.showToast(failed.message, 'warning');
-  document.getElementById(failed.field)?.focus();
+  _openCheckoutPanelByField(failed.field);
+  window.setTimeout(() => document.getElementById(failed.field)?.focus(), 50);
   return false;
+}
+
+// 送出前重新用正式商品資料計價，避免 localStorage 被手動改價後直接建單。
+async function _verifyCheckoutPricingBeforeSubmit() {
+  const verifiedCart = await _buildVerifiedCheckoutCart();
+  const changed = _hasCheckoutCartChanged(window.AppState.cart, verifiedCart);
+
+  if (changed) {
+    window.AppState.cart = verifiedCart;
+    window.saveAppState();
+    window.updateCartBadge?.();
+    _renderCheckoutItems();
+    _updateCheckoutSummary();
+    window.showToast('商品價格或資料已更新，請確認金額後再送出', 'warning');
+    return null;
+  }
+
+  const pricingSnapshot = _buildCheckoutPricingSnapshot(verifiedCart);
+  if (pricingSnapshot.couponChanged) {
+    _renderDiscountRow();
+    _setText('checkoutTotal', window.formatCurrency(pricingSnapshot.total));
+    window.showToast('折扣碼狀態已更新，請確認金額後再送出', 'warning');
+    return null;
+  }
+  return pricingSnapshot;
+}
+
+// 從 products.json / API 重建購物車項目，只信任 productId 與 quantity。
+async function _buildVerifiedCheckoutCart() {
+  const products = await window.API.products.getAll();
+  const productMap = new Map(products.map(product => [product.id, product]));
+
+  return (window.AppState.cart || []).map(item => {
+    const productId = item.productId || item.id;
+    const product = productMap.get(productId);
+    if (!product) throw new Error('部分商品已無法購買，請返回購物車確認');
+
+    const quantity = Math.floor(Number(item.quantity || 0));
+    if (quantity < 1) throw new Error('購物車商品數量異常，請重新確認');
+    if (Number(product.stock) > 0 && quantity > Number(product.stock)) {
+      throw new Error(`${product.name} 庫存不足，最多可購買 ${product.stock} 件`);
+    }
+
+    return {
+      id: product.id,
+      productId: product.id,
+      name: product.name,
+      brand: product.brand,
+      price: Number(product.price || 0),
+      image: product.image,
+      quantity,
+      stock: Number(product.stock || 0),
+    };
+  });
+}
+
+// 比對目前購物車與正式商品資料重建後的購物車，判斷是否需要讓使用者重新確認。
+function _hasCheckoutCartChanged(currentCart, verifiedCart) {
+  const current = currentCart || [];
+  if (current.length !== verifiedCart.length) return true;
+  return verifiedCart.some((verified, index) => {
+    const currentItem = current[index] || {};
+    return (
+      (currentItem.productId || currentItem.id) !== verified.productId ||
+      Number(currentItem.quantity || 0) !== verified.quantity ||
+      Number(currentItem.price || 0) !== verified.price ||
+      currentItem.name !== verified.name ||
+      currentItem.brand !== verified.brand ||
+      currentItem.image !== verified.image
+    );
+  });
+}
+
+// 產生訂單使用的正式金額快照，所有訂單欄位都從這份資料建立。
+function _buildCheckoutPricingSnapshot(cart) {
+  const subtotal = window.calculateCartTotal(cart);
+  const shipping = window.calculateShippingFee(subtotal, selectedShippingMethod);
+  // 送出前 coupon 也要重新驗證，避免 localStorage 暫存的折扣碼失效後仍被帶入訂單。
+  const couponSyncResult = checkoutCouponCatalog.length > 0 ? _syncCheckoutAppliedCoupons() : { removed: false };
+  const discount = checkoutDiscount;
+  const total = Math.max(subtotal - discount + shipping, 0);
+  return { cart, subtotal, shipping, discount, total, couponChanged: couponSyncResult.removed };
 }
 
 // Toggle confirm button loading state.
@@ -557,6 +689,7 @@ async function _buildOrderData(formData) {
     address: selectedShippingMethod === 'delivery' ? formData.deliveryAddress : STORE_PICKUP_ADDRESS,
     payment: _getSelectedPaymentCode(),
     paymentStatus: _getCheckoutPaymentStatus(),
+    paymentLabel: _getSelectedPaymentCode() === 'cod' ? '貨到付款' : '',
     items: _buildOrderItems(cart),
     subtotal,
     points: _calculateCheckoutPointsFromSummary(),

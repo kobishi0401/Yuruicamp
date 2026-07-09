@@ -14,6 +14,10 @@
   padding: var(--yc-space-4);
   border-top: 1px solid var(--yc-border);
   background: var(--yc-surface);
+
+  // 購物車摘要契約：主站抽屜與 booking 背包底部使用相同 UI 字體與行高。
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 .siteCartSummary,
@@ -23,6 +27,7 @@
   display: flex;
   justify-content: space-between;
   gap: var(--yc-space-4);
+  line-height: 1.5;
 }
 
 .siteCartSummary {
@@ -61,12 +66,16 @@
 .siteCartEmptyTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteCartEmptyText {
   margin: 0;
   color: var(--yc-text-muted);
+  line-height: 1.5;
 }
 
 // 購物車品項列：圖片固定寬度，內容欄位彈性收合。
@@ -99,7 +108,9 @@
 
 .siteCartItemName {
   color: var(--yc-text);
+  font-family: var(--yc-font-ui);
   font-weight: 800;
+  line-height: 1.35;
   text-decoration: none;
 }
 
@@ -171,13 +182,17 @@
 .bookingCartPanelLabel {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .bookingCartPanelMeta {
   margin: 0;
   color: var(--yc-text-muted);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (width <= 480px) {

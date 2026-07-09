@@ -3,6 +3,10 @@
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
+
+  /* Booking 登入浮層契約：與主站 #loginModal 使用同一套 UI 字體與行高。 */
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 /* Booking 登入面板：維持右側抽屜式登入體驗，不影響 #personalizationModal 與 #surveyCloseConfirmModal。 */
@@ -13,6 +17,10 @@
   border-block: 0;
   border-inline-end: 0;
   border-radius: var(--yc-radius-button) 0 0 var(--yc-radius-button);
+
+  /* Booking 登入內容面板：防止 h1-h6 或 body 行高差異影響登入表單。 */
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 /* Booking OAuth 品牌補強：Google、Facebook、LINE 使用外部品牌識別色，不併入設計 token 系統。 */

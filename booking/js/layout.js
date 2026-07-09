@@ -106,6 +106,36 @@ function applyBookingAuthSemanticClasses(target) {
 }
 
 /**
+ * 取得全頁 overlay 掛載點，讓 booking modal/panel 脫離 sticky header 的 stacking context。
+ * @returns {HTMLElement} 全頁 overlay root。
+ */
+function getBookingOverlayRoot() {
+  let overlayRoot = document.getElementById('yuruiOverlayRoot');
+
+  if (!overlayRoot) {
+    overlayRoot = document.createElement('div');
+    overlayRoot.id = 'yuruiOverlayRoot';
+    overlayRoot.className = 'yuruiOverlayRoot';
+    document.body.appendChild(overlayRoot);
+  }
+
+  return overlayRoot;
+}
+
+/**
+ * 將 booking 預約背包面板移到 overlay root，避免被 booking header 層級限制。
+ */
+function moveBookingOverlayElementsToRoot() {
+  const overlayRoot = getBookingOverlayRoot();
+  ['cartPanel', 'bookingPanelBackdrop'].forEach(function (elementId) {
+    const element = document.getElementById(elementId);
+    if (element && element.parentElement !== overlayRoot) {
+      overlayRoot.appendChild(element);
+    }
+  });
+}
+
+/**
  * 載入 booking shared auth 與 header 互動腳本。
  * 套用元件：#loginModal、#personalizationModal、.bookingHeader。
  */
@@ -136,7 +166,8 @@ function loadBookingHeaderScript() {
  * @returns {Promise<boolean>} Whether the partial was loaded.
  */
 function loadBookingLayoutPartial(targetSelector, url, partSelector, callback) {
-  const target = document.querySelector(targetSelector);
+  const shouldUseOverlayRoot = partSelector === '[data-layout-part="shared-auth"]';
+  const target = shouldUseOverlayRoot ? getBookingOverlayRoot() : document.querySelector(targetSelector);
   if (!target) {
     if (callback) callback(false);
     return Promise.resolve(false);
@@ -148,13 +179,16 @@ function loadBookingLayoutPartial(targetSelector, url, partSelector, callback) {
       return response.text();
     })
     .then(function (html) {
+      // Shared auth 只需要一組，避免重複初始化時產生同 ID modal。
+      if (shouldUseOverlayRoot && target.querySelector('#loginModal')) return true;
+
       const template = document.createElement('template');
       template.innerHTML = html;
       const part = template.content.querySelector(partSelector);
       const content = part ? part.innerHTML : html;
 
-      // Shared auth is appended after the booking header so both systems use one modal.
-      if (partSelector === '[data-layout-part="shared-auth"]') {
+      // Shared auth 掛到 overlay root，讓登入 modal 使用全頁 modal 層級。
+      if (shouldUseOverlayRoot) {
         target.insertAdjacentHTML('beforeend', content);
         applyBookingAuthSemanticClasses(target);
       } else {
@@ -181,6 +215,7 @@ window.loadBookingSharedLayout = function () {
     '[data-layout-part="bookingHeader"]',
     function (ok) {
       if (!ok) return;
+      moveBookingOverlayElementsToRoot();
       loadBookingLayoutPartial(
         '#bookingHeader',
         '../../components/header.partial',

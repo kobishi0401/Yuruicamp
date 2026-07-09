@@ -304,6 +304,9 @@ a:focus-visible,
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-button);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
 }
 
 .modalHeader {
@@ -319,13 +322,17 @@ a:focus-visible,
 .modalTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .modalBody {
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .modalClose {
@@ -361,13 +368,15 @@ a:focus-visible,
 }
 .sharedAuthContent {
   width: min(440px, 100vw - 32px);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 #loginModal {
   align-items: stretch;
   justify-content: flex-end;
   padding: 0;
-  z-index: var(--yc-z-sticky);
+  z-index: var(--yc-z-modal);
 }
 
 #loginModal .sharedAuthContent {
@@ -388,6 +397,8 @@ a:focus-visible,
 .sharedAuthBody {
   display: grid;
   gap: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 #loginModal .modalTabPanel.isOpen {
@@ -541,6 +552,9 @@ a:focus-visible,
   width: min(420px, 100vw);
   background: var(--yc-surface);
   box-shadow: var(--yc-shadow-hover);
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
   transition: transform var(--yc-transition-base);
 }
 
@@ -601,8 +615,10 @@ a:focus-visible,
 .bookingSlidePanelTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteOffcanvasBody,
@@ -612,6 +628,8 @@ a:focus-visible,
   height: calc(100% - 72px);
   overflow: auto;
   padding: var(--yc-space-4);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -668,6 +686,8 @@ a:focus-visible,
   padding: var(--yc-space-4);
   border-top: 1px solid var(--yc-border);
   background: var(--yc-surface);
+  font-family: var(--yc-font-ui);
+  line-height: 1.5;
 }
 
 .siteCartSummary,
@@ -677,6 +697,7 @@ a:focus-visible,
   display: flex;
   justify-content: space-between;
   gap: var(--yc-space-4);
+  line-height: 1.5;
 }
 
 .siteCartSummary {
@@ -714,12 +735,16 @@ a:focus-visible,
 .siteCartEmptyTitle {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .siteCartEmptyText {
   margin: 0;
   color: var(--yc-text-muted);
+  line-height: 1.5;
 }
 
 .siteCartItem {
@@ -751,7 +776,9 @@ a:focus-visible,
 
 .siteCartItemName {
   color: var(--yc-text);
+  font-family: var(--yc-font-ui);
   font-weight: 800;
+  line-height: 1.35;
   text-decoration: none;
 }
 
@@ -822,13 +849,17 @@ a:focus-visible,
 .bookingCartPanelLabel {
   margin: 0;
   color: var(--yc-sage-action);
+  font-family: var(--yc-font-ui);
   font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .bookingCartPanelMeta {
   margin: 0;
   color: var(--yc-text-muted);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (width <= 480px) {
@@ -1205,6 +1236,8 @@ body.shippingAddressModalOpen {
 .siteFooter,
 .bookingFooter {
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 .siteFooter {
@@ -1240,8 +1273,10 @@ body.shippingAddressModalOpen {
 .bookingFooterHeading {
   margin: 0;
   color: var(--yc-surface);
+  font-family: var(--yc-font-body);
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.5;
 }
 
 .siteFooterText,
@@ -1274,6 +1309,7 @@ body.shippingAddressModalOpen {
 .bookingFooterLinks a,
 .bookingFooterPolicies a {
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
   text-decoration: none;
   transition: color var(--yc-transition-fast);
 }
@@ -1298,6 +1334,7 @@ body.shippingAddressModalOpen {
   display: grid;
   gap: var(--yc-space-1);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
+  line-height: 1.5;
 }
 
 .siteFooterContactItem strong,
@@ -1348,6 +1385,7 @@ body.shippingAddressModalOpen {
   gap: var(--yc-space-4);
   color: color-mix(in srgb, var(--yc-surface) 72%, transparent);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .siteFooterBottom p,
@@ -1413,7 +1451,7 @@ body.shippingAddressModalOpen {
   position: fixed;
   right: var(--yc-space-6);
   bottom: var(--yc-space-8);
-  z-index: var(--yc-z-toast);
+  z-index: var(--yc-z-sticky);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -3775,9 +3813,14 @@ body.shippingAddressModalOpen {
 }
 
 .checkoutPanelArrow {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid currentcolor;
   color: var(--yc-text-muted);
-  font-size: 1.1rem;
-  transition: transform 200ms ease;
+  flex: 0 0 auto;
+  height: 0;
+  transition: transform 200ms ease, color 200ms ease;
+  width: 0;
 }
 
 .checkoutPanel.isOpen .checkoutPanelArrow {
@@ -6662,6 +6705,25 @@ body.shippingAddressModalOpen {
   margin-top: 0.6rem;
 }
 
+.memberOrderReviewItems {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.memberOrderReviewItem {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.memberOrderReviewItemName {
+  color: var(--yc-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 .memberOrderThumb,
 .memberOrderMore {
   border-radius: var(--yc-radius-button, 8px);
@@ -6901,6 +6963,109 @@ body.shippingAddressModalOpen {
   padding: 0.875rem 1rem;
 }
 
+.memberBookingDetailHero {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+}
+
+.memberBookingDetailImage {
+  aspect-ratio: 16/9;
+  border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
+  border-radius: var(--yc-radius-card, 12px);
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.memberBookingDetailContent {
+  align-content: center;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.memberBookingDetailTitle {
+  color: var(--yc-text);
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.memberBookingDetailMeta {
+  color: var(--yc-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.memberBookingDetailStats {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.memberBookingDetailStat {
+  background: var(--yc-surface-soft);
+  border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
+  border-radius: var(--yc-radius-button, 8px);
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.875rem;
+}
+
+.memberBookingDetailStat span,
+.memberBookingDetailStat small {
+  color: var(--yc-text-muted);
+  line-height: 1.4;
+}
+
+.memberBookingDetailStat strong {
+  color: var(--yc-text);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.memberBookingDetailSection {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.memberBookingDetailLine {
+  align-items: start;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  line-height: 1.5;
+}
+
+.memberBookingDetailLine span {
+  color: var(--yc-text);
+  min-width: 0;
+}
+
+.memberBookingDetailLine strong {
+  color: var(--yc-text);
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.memberBookingDetailLine.isDiscount strong {
+  color: var(--yc-error);
+}
+
+.memberBookingDetailReward strong {
+  color: var(--yc-success);
+}
+
+.memberBookingDetailTotal {
+  border-top: 1px solid color-mix(in srgb, var(--yc-sage-action) 18%, var(--yc-border));
+  padding-top: 0.875rem;
+}
+
 .memberDetailSummary {
   align-items: center;
   border-bottom: 1px solid color-mix(in srgb, var(--yc-sage-action) 16%, var(--yc-border));
@@ -7098,6 +7263,26 @@ body.shippingAddressModalOpen {
   resize: vertical;
 }
 
+.memberReviewFileInput {
+  padding-block: 0.7rem;
+}
+
+.memberReviewPhotoPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.memberReviewPhotoThumb {
+  aspect-ratio: 1;
+  border: 1px solid var(--yc-border);
+  border-radius: var(--yc-radius-button, 8px);
+  display: block;
+  object-fit: cover;
+  width: 72px;
+}
+
 .memberClipboardProxy {
   opacity: 0;
   position: fixed;
@@ -7130,6 +7315,12 @@ body.shippingAddressModalOpen {
   .memberOrderSummary {
     place-items: start start;
   }
+  .memberBookingDetailHero {
+    grid-template-columns: 1fr;
+  }
+  .memberBookingDetailStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (width <= 440px) {
   .memberCenter {
@@ -7143,6 +7334,13 @@ body.shippingAddressModalOpen {
   }
   .memberCouponDivider {
     display: none;
+  }
+  .memberBookingDetailStats,
+  .memberBookingDetailLine {
+    grid-template-columns: 1fr;
+  }
+  .memberBookingDetailLine strong {
+    text-align: left;
   }
 }
 @media (width <= 375px) {

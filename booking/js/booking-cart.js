@@ -12,6 +12,14 @@
 // 目前操作中的 bookingCart（camelCase），初始從 localStorage 讀取
 var bookingCart = null;
 
+function notifyBookingCartChanged(action) {
+  window.dispatchEvent(
+    new CustomEvent('yurui:booking-cart-changed', {
+      detail: { action: action || 'update' },
+    })
+  );
+}
+
 $(document).ready(function () {
   bookingCart =
     typeof window.readBookingCart === 'function' ? window.readBookingCart() : null;
@@ -26,12 +34,14 @@ $(document).ready(function () {
     bookingCart = window.writeBookingCart(bookingCart);
   }
 
+  normalizeBookingCart();
   renderAll();
 
   // 清除背包
   $('#bookingCartClearButton').on('click', function () {
     showConfirmToast('確定清除背包中的所有預約資料？', function () {
       localStorage.removeItem('bookingCart');
+      notifyBookingCartChanged('clear');
       bookingCart = null;
       showToast('背包已清除', 'info');
       $('#bookingCartContent').removeClass('isVisible');
@@ -68,15 +78,14 @@ $(document).ready(function () {
     var rental = bookingCart.selectedRentals[idx];
     if (!rental) return;
 
-    var unitPrice = rental.subtotal / rental.quantity;
     var newQty = rental.quantity + (action === 'inc' ? 1 : -1);
     if (newQty < 1 || newQty > 20) return;
 
     rental.quantity = newQty;
-    rental.subtotal = Math.round(unitPrice * newQty);
+    rental.subtotal = Math.round(getRentalFinalUnitPrice(rental) * newQty);
 
     recalcSummary();
-    saveCart();
+    saveCart('rental-quantity');
     renderRentalBody();
     renderSummary();
   });
@@ -87,7 +96,7 @@ $(document).ready(function () {
     bookingCart.selectedRentals.splice(idx, 1);
 
     recalcSummary();
-    saveCart();
+    saveCart('rental-remove');
     renderRentalBody();
     renderSummary();
 
@@ -127,9 +136,7 @@ function renderStayBody() {
   }
 
   var html = zones
-    .map(function (z, idx) {
-      var atMin = z.quantity <= 1;
-      var atMax = z.quantity >= 10;
+    .map(function (z) {
       return `
       <div class="cartItem cartItemBooking">
         <div class="cartItemInfo cartItemInfoBooking">
@@ -141,13 +148,7 @@ function renderStayBody() {
           </div>
         </div>
         <div class="cartItemActions cartItemActionsBooking">
-          <div class="quantityStepper quantityStepperBooking">
-            <button class="quantityButton quantityButtonBooking" data-action="dec" data-idx="${idx}"${atMin ? ' disabled' : ''}>−</button>
-            <span class="quantityValue quantityValueBooking">${z.quantity}</span>
-            <button class="quantityButton quantityButtonBooking" data-action="inc" data-idx="${idx}"${atMax ? ' disabled' : ''}>+</button>
-          </div>
-          <div class="cartItemPrice cartItemPriceBooking" id="zonePrice${idx}">NT$${z.subtotal.toLocaleString()}</div>
-          <div class="cartItemQtyLabel cartItemQtyLabelBooking">營位數量</div>
+          <div class="cartItemPrice cartItemPriceBooking">NT$${z.subtotal.toLocaleString()}</div>
         </div>
       </div>
     `;
@@ -171,13 +172,14 @@ function renderRentalBody() {
   var html = rentals
     .map(function (r, idx) {
       var atMax = r.quantity >= 20;
+      var finalUnitPrice = getRentalFinalUnitPrice(r);
       return `
       <div class="cartItem cartItemBooking">
         <div class="cartItemInfo cartItemInfoBooking">
           <div class="cartItemTitle cartItemTitleBooking">${esc(r.name || '')}</div>
           ${r.specLabel ? `<div class="rentalCartItemSpec rentalCartItemSpecBooking">${esc(r.specLabel)}</div>` : ''}
           <div class="cartItemMeta cartItemMetaBooking">
-            <span>單價 NT$${Math.round(r.subtotal / r.quantity).toLocaleString()}</span>
+            <span>折扣後單價 NT$${Math.round(finalUnitPrice).toLocaleString()}</span>
           </div>
         </div>
         <div class="cartItemActions cartItemActionsBooking">
@@ -202,6 +204,9 @@ function renderRentalBody() {
 
 function renderSummary() {
   var s = bookingCart.summary || {};
+  var rentalOriginalTotal = Number(s.rental_original_total || s.rental_total || 0);
+  var rentalDiscountTotal = Number(s.rental_discount_total || s.applied_discount || 0);
+  var rentalTotal = Number(s.rental_total || 0);
 
   var html = `
     <div class="bookingCostRow">
@@ -239,7 +244,13 @@ function recalcSummary() {
     return s + (z.subtotal || 0);
   }, 0);
   var rentalTotal = rentals.reduce(function (s, r) {
-    return s + (r.subtotal || 0);
+    return s + Number(r.subtotal || 0);
+  }, 0);
+  var rentalOriginalTotal = rentals.reduce(function (s, r) {
+    return s + getRentalOriginalUnitPrice(r) * Number(r.quantity || 0);
+  }, 0);
+  var rentalDiscountTotal = rentals.reduce(function (s, r) {
+    return s + getRentalUnitDiscount(r) * Number(r.quantity || 0);
   }, 0);
 
   var discount = bookingCart.summary ? bookingCart.summary.appliedDiscount || 0 : 0;
@@ -254,12 +265,56 @@ function recalcSummary() {
   updateItemCount();
 }
 
+function normalizeBookingCart() {
+  var zones = bookingCart.selected_zones || [];
+  if (zones.length > 0) {
+    var firstZone = zones[0];
+    var originalQuantity = Math.max(Number(firstZone.quantity || 1), 1);
+    firstZone.subtotal = Math.round(Number(firstZone.subtotal || 0) / originalQuantity);
+    firstZone.quantity = 1;
+    bookingCart.selected_zones = [firstZone];
+  }
+
+  (bookingCart.selected_rentals || []).forEach(function (rental) {
+    var quantity = Math.max(Number(rental.quantity || 1), 1);
+    var subtotal = Number(rental.subtotal || 0);
+    var legacyDiscount = Number(rental.unit_discount || 0);
+    var finalUnit = Number(rental.unit_final_price || 0);
+
+    if (!finalUnit && subtotal > 0) finalUnit = subtotal / quantity;
+    rental.unit_final_price = Math.max(finalUnit, 0);
+    rental.unit_discount = Math.max(legacyDiscount, 0);
+    rental.unit_original_price = Math.max(
+      Number(rental.unit_original_price || 0),
+      rental.unit_final_price + rental.unit_discount
+    );
+    rental.subtotal = Math.round(rental.unit_final_price * quantity);
+  });
+  recalcSummary();
+}
+
+function getRentalOriginalUnitPrice(rental) {
+  return (
+    Number(rental.unit_original_price || 0) || getRentalFinalUnitPrice(rental) + getRentalUnitDiscount(rental)
+  );
+}
+
+function getRentalUnitDiscount(rental) {
+  return Number(rental.unit_discount || 0);
+}
+
+function getRentalFinalUnitPrice(rental) {
+  var stored = Number(rental.unit_final_price || 0);
+  if (stored > 0) return stored;
+  return Number(rental.subtotal || 0) / Math.max(Number(rental.quantity || 1), 1);
+}
+
 function updateItemCount() {
   var zones = bookingCart.selectedZones || [];
   var rentals = bookingCart.selectedRentals || [];
   var total =
-    zones.reduce(function (s, z) {
-      return s + (z.quantity || 0);
+    zones.reduce(function (s) {
+      return s + 1;
     }, 0) +
     rentals.reduce(function (s, r) {
       return s + (r.quantity || 0);

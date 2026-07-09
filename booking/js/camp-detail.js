@@ -30,6 +30,11 @@ $(document).ready(function () {
   // 步驟 1：從 URL 取得 id 參數 / Step 1: Get id from URL
   const params = new URLSearchParams(window.location.search);
   const campId = params.get('id');
+  initialBookingParams = {
+    checkIn: params.get('checkIn'),
+    checkOut: params.get('checkOut'),
+    guests: params.get('guests'),
+  };
 
   // 防呆：缺少 id 時返回搜尋頁 / Guard: redirect if id missing
   if (!campId) {
@@ -193,6 +198,7 @@ function renderZoneSelector(zones) {
     $card.addClass('isSelected');
     $(this).html('<i class="bi bi-check-circle-fill"></i> ✓ 已選擇');
     selectedZoneId = $card.data('zone-id');
+    updateGuestCapacityLimit();
 
     // 若日期已選擇，立即更新費用 / If dates already selected, update price
     if (weekdayCount + holidayCount > 0) {
@@ -331,6 +337,19 @@ function updateZoneAvailability() {
   });
 }
 
+function applyInitialBookingParams() {
+  const guests = parseInt(initialBookingParams?.guests);
+  if (guests > 0) $('#guestNum').val(guests);
+
+  const start = parseBookingDate(initialBookingParams?.checkIn);
+  const end = parseBookingDate(initialBookingParams?.checkOut);
+  const picker = document.querySelector('#dateRange')?._flatpickr;
+
+  if (!picker || !start || !end || start >= end) return;
+
+  picker.setDate([start, end], true);
+}
+
 // ============================================================
 // 平日 / 假日計算
 // ============================================================
@@ -430,6 +449,13 @@ function updatePriceSummary() {
   $('#confirmBookingBtn').prop('disabled', false);
 }
 
+function updateGuestCapacityLimit() {
+  const zone = currentCamp.zones.find((z) => z.zone_id === selectedZoneId);
+  if (!zone) return;
+
+  $('#guestNum').attr('max', zone.capacity_per_site);
+}
+
 // ============================================================
 // 儲存至 LocalStorage 並前往下一頁
 // ============================================================
@@ -484,6 +510,17 @@ function proceedSaveBooking(zone, checkIn, checkOut) {
   const subtotal = zone.priceWeekday * weekdayCount + zone.priceHoliday * holidayCount;
   const totalDays = weekdayCount + holidayCount;
   const guestCount = parseInt($('#guestNum').val()) || 2;
+  const maxGuests = Number(zone.capacity_per_site || 0);
+
+  if (guestCount < 1) {
+    showToast('請填寫正確的人數。', 'warning');
+    return;
+  }
+
+  if (maxGuests > 0 && guestCount > maxGuests) {
+    showToast(`此營位最多容納 ${maxGuests} 人，請調整人數或選擇其他營位。`, 'warning');
+    return;
+  }
 
   // 建立 bookingCart（camelCase，與 camp-bookings / createBooking 一致）
   // Build bookingCart in camelCase (aligned with camp-bookings schema)
@@ -545,4 +582,10 @@ function formatDateISO(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function parseBookingDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }

@@ -5,7 +5,7 @@
   position: fixed;
   right: var(--yc-space-6);
   bottom: var(--yc-space-8);
-  z-index: var(--yc-z-toast);
+  z-index: var(--yc-z-sticky);
   display: flex;
   flex-direction: column;
   align-items: flex-end;

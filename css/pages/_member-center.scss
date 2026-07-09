@@ -303,7 +303,7 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
 }
 
 .memberTierProgress {
-  background: rgb(255 255 255 / 0.7);
+  background: rgb(255 255 255 / 70%);
   border-radius: var(--yc-radius-pill, 9999px);
   height: 10px;
   overflow: hidden;
@@ -593,6 +593,25 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   margin-top: 0.6rem;
 }
 
+.memberOrderReviewItems {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.memberOrderReviewItem {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.memberOrderReviewItemName {
+  color: $member-muted;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 .memberOrderThumb,
 .memberOrderMore {
   border-radius: $member-radius-lg;
@@ -833,6 +852,110 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   padding: 0.875rem 1rem;
 }
 
+.memberBookingDetailHero {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+}
+
+.memberBookingDetailImage {
+  aspect-ratio: 16 / 9;
+  border: 1px solid color-mix(in srgb, $member-primary 10%, $member-border);
+  border-radius: $member-radius-xl;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.memberBookingDetailContent {
+  align-content: center;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.memberBookingDetailTitle {
+  color: $member-text;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.memberBookingDetailMeta {
+  color: $member-muted;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.memberBookingDetailStats {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.memberBookingDetailStat {
+  background: $member-surface-muted;
+  border: 1px solid color-mix(in srgb, $member-primary 10%, $member-border);
+  border-radius: $member-radius-lg;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.875rem;
+}
+
+.memberBookingDetailStat span,
+.memberBookingDetailStat small {
+  color: $member-muted;
+  line-height: 1.4;
+}
+
+.memberBookingDetailStat strong {
+  color: $member-text;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.memberBookingDetailSection {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.memberBookingDetailLine {
+  align-items: start;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  line-height: 1.5;
+}
+
+.memberBookingDetailLine span {
+  color: $member-text;
+  min-width: 0;
+}
+
+.memberBookingDetailLine strong {
+  color: $member-text;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.memberBookingDetailLine.isDiscount strong {
+  color: $member-danger;
+}
+
+// 預約明細回饋點數：標示本筆裝備租借金額產生的點數，不影響會員總點數。
+.memberBookingDetailReward strong {
+  color: $member-success;
+}
+
+.memberBookingDetailTotal {
+  border-top: 1px solid color-mix(in srgb, $member-primary 18%, $member-border);
+  padding-top: 0.875rem;
+}
+
 // 訂單明細摘要：日期靠左、狀態膠囊靠右，對齊截圖中的首列資訊。
 .memberDetailSummary {
   align-items: center;
@@ -1039,6 +1162,26 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   resize: vertical;
 }
 
+.memberReviewFileInput {
+  padding-block: 0.7rem;
+}
+
+.memberReviewPhotoPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.memberReviewPhotoThumb {
+  aspect-ratio: 1;
+  border: 1px solid $member-border;
+  border-radius: $member-radius-lg;
+  display: block;
+  object-fit: cover;
+  width: 72px;
+}
+
 .memberClipboardProxy {
   opacity: 0;
   position: fixed;
@@ -1077,6 +1220,14 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
   .memberOrderSummary {
     place-items: start start;
   }
+
+  .memberBookingDetailHero {
+    grid-template-columns: 1fr;
+  }
+
+  .memberBookingDetailStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (width <= 440px) {
@@ -1094,6 +1245,15 @@ $member-transition: var(--yc-transition-fast, 150ms ease);
 
   .memberCouponDivider {
     display: none;
+  }
+
+  .memberBookingDetailStats,
+  .memberBookingDetailLine {
+    grid-template-columns: 1fr;
+  }
+
+  .memberBookingDetailLine strong {
+    text-align: left;
   }
 }
 

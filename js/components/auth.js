@@ -1,15 +1,15 @@
 /**
  * 主站與 booking 共用的前端登入狀態模組。
- * 同步 currentUser、yuruiUser、isLoggedIn 與可用時的 AppState。
+ * Auth 以 currentUser 為唯一會員資料來源；yuruiUser 僅在登出時清除舊殘留。
  */
 (function () {
   'use strict';
 
   var STORAGE_KEYS = {
     isLoggedIn: 'isLoggedIn',
-    currentUser: 'currentUser',
-    bookingUser: 'yuruiUser'
+    currentUser: 'currentUser'
   };
+  var LEGACY_AUTH_KEYS = ['yuruiUser'];
 
   function readJsonStorage(key, fallback) {
     try {
@@ -40,6 +40,7 @@
 
   function syncAppState(user) {
     if (!window.AppState) return;
+    // 將登入狀態寫入前端AppState
     window.AppState.isLoggedIn = Boolean(user);
     window.AppState.currentUser = user || null;
     if (typeof window.saveAppState === 'function') window.saveAppState();
@@ -49,10 +50,11 @@
     localStorage.setItem(STORAGE_KEYS.isLoggedIn, JSON.stringify(Boolean(user)));
     if (user) {
       localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(user));
-      localStorage.setItem(STORAGE_KEYS.bookingUser, JSON.stringify(user));
     } else {
       localStorage.removeItem(STORAGE_KEYS.currentUser);
-      localStorage.removeItem(STORAGE_KEYS.bookingUser);
+      LEGACY_AUTH_KEYS.forEach(function (key) {
+        localStorage.removeItem(key);
+      });
     }
     syncAppState(user);
   }
@@ -64,13 +66,30 @@
   }
 
   function readStoredUser() {
-    return readJsonStorage(STORAGE_KEYS.currentUser, null)
-      || readJsonStorage(STORAGE_KEYS.bookingUser, null);
+    return readJsonStorage(STORAGE_KEYS.currentUser, null);
   }
 
   function getUser() {
-    if (window.AppState && window.AppState.isLoggedIn && window.AppState.currentUser) {
-      return window.AppState.currentUser;
+    // 先讀取登入狀態："true"、"false" 或 null。
+    const storedLoginFlag = localStorage.getItem('isLoggedIn');
+
+    // 讀取 AppState 快取狀態。
+    const appStateLoggedIn = window.AppState?.isLoggedIn;
+    const appStateUser = window.AppState?.currentUser;
+
+    // 讀取唯一正式會員資料來源。
+    const currentUser = readStoredUser();
+
+    // 第一優先：localStorage 明確登出時，任何舊 user 都不能復活。
+    if (storedLoginFlag === 'false') {
+      return null;
+    }
+
+    // 第二優先：localStorage 明確登入時，才允許從 storage / AppState 取 user。
+    if (storedLoginFlag === 'true') {
+      const storedUser = currentUser || appStateUser;
+      if (!currentUser && appStateUser && appStateUser.name) persistUser(appStateUser);
+      return storedUser && storedUser.name ? storedUser : null;
     }
     var user = readStoredUser();
     if (user && user.name) persistUser(user);
@@ -114,6 +133,7 @@
 
   function logout(options) {
     options = options || {};
+    // 登出清除AppState and storage
     persistUser(null);
     emitAuthChanged('logout', null);
     if (typeof options.close === 'function') options.close();
@@ -133,4 +153,12 @@
       emitAuthChanged('sync', getUser());
     }
   };
+
+  if (!window.__yuruiAuthStorageBound) {
+    window.__yuruiAuthStorageBound = true;
+    window.addEventListener('storage', syncAuthFromStorageEvent);
+  }
+
+  // Auth 載入完成後補發同步事件，讓較早初始化的主站 header 可改用 YuruiAuth 狀態重畫。
+  window.YuruiAuth.sync();
 }());

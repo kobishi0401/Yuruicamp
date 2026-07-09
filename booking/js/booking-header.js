@@ -52,18 +52,21 @@
   }
 
   function getCurrentUser() {
-    if (window.YuruiAuth && typeof window.YuruiAuth.getUser === 'function') {
-      return window.YuruiAuth.getUser();
+    if (typeof window.YuruiAuth?.getUser !== 'function') {
+      console.warn('YuruiAuth.getUser is not available. Booking header treats user as logged out.');
+      return null;
     }
-    if (localStorage.getItem('isLoggedIn') !== 'true') return null;
-    return readJsonStorage('currentUser', null) || readJsonStorage('yuruiUser', null);
+
+    return window.YuruiAuth.getUser();
   }
 
   function closeUserDropdown() {
     document.querySelectorAll('.bookingHeader .siteUserMenu').forEach(function (menu) {
       var trigger = menu.querySelector('.siteUserTrigger');
       var dropdown = menu.querySelector('.siteUserDropdown');
+
       if (trigger) trigger.setAttribute('aria-expanded', 'false');
+
       if (dropdown) {
         dropdown.hidden = true;
         dropdown.classList.remove('isOpen');
@@ -71,18 +74,15 @@
     });
   }
 
+  // 委派auth.logout 進行統一的清理，不額外在此檔清理造成不同步
   function logout() {
-    if (window.YuruiAuth && typeof window.YuruiAuth.logout === 'function') {
-      window.YuruiAuth.logout({ close: closeUserDropdown });
-      return;
+    if (typeof window.YuruiAuth?.logout !== 'function') {
+      console.warn('YuruiAuth.logout is not available. Booking logout was not executed.');
+      return false;
     }
-    localStorage.setItem('isLoggedIn', 'false');
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('yuruiUser');
-    window.dispatchEvent(new CustomEvent('yurui:auth-changed', { detail: { type: 'logout', user: null } }));
-    closeUserDropdown();
-    checkLoginState();
-    window.showToast && window.showToast('已登出', 'success');
+
+    window.YuruiAuth.logout({ close: closeUserDropdown });
+    return true;
   }
 
   function initUserDropdown() {
@@ -272,6 +272,8 @@
 
     document.getElementById('cartPanelClear')?.addEventListener('click', function () {
       localStorage.removeItem('bookingCart');
+      // 同一分頁修改 localStorage 不會觸發 storage event，因此主動發送 booking cart 事件同步 badge。
+      window.dispatchEvent(new CustomEvent('yurui:booking-cart-changed', { detail: { action: 'clear' } }));
       updateBookingBadge();
       renderCartPanel();
     });
@@ -372,11 +374,31 @@
       closeOffcanvas();
       closeCartPanel();
     });
+    
     window.addEventListener('storage', function (event) {
       if (event.key === 'bookingCart') updateBookingBadge();
-      if (['isLoggedIn', 'currentUser', 'yuruiUser'].indexOf(event.key) !== -1) checkLoginState();
     });
-    window.addEventListener('yurui:auth-changed', checkLoginState);
+
+    window.addEventListener('yurui:booking-cart-changed', function () {
+      updateBookingBadge();
+      if (document.getElementById('cartPanel')?.classList.contains('isOpen')) renderCartPanel();
+    });
+    
+    window.addEventListener('yurui:auth-changed', function (event) {
+      if (event.detail && event.detail.type === 'logout') {
+        closeUserDropdown();
+
+        var loginButton = document.querySelector('.bookingHeader .bookingLoginButton');
+        var userMenu = document.querySelector('.bookingHeader .siteUserMenu');
+
+        if (loginButton) loginButton.hidden = false;
+        if (userMenu) userMenu.hidden = true;
+
+        return;
+      }
+
+      checkLoginState();
+    });
   }
 
   function initBookingHeader() {

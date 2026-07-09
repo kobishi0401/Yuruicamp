@@ -17,6 +17,32 @@
     return Boolean(document.querySelector('.modal.isOpen'));
   }
 
+  function hasSavedPreferences() {
+    try {
+      var profile = JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+      return Boolean(profile && Object.prototype.hasOwnProperty.call(profile, 'preferences'));
+    } catch {
+      return false;
+    }
+  }
+
+  function isCheckoutPage() {
+    return /(?:^|\/)(checkout|booking-checkout)\.html$/.test(window.location.pathname);
+  }
+
+  /**
+   * 條件式開啟偏好設定：預設不自動打擾登入流程，僅由首頁或會員中心明確呼叫。
+   * 套用元件：#personalizationModal。
+   */
+  window.maybeOpenPersonalizationModal = function (options) {
+    options = options || {};
+    if (options.openSurvey !== true && options.source !== 'manual') return false;
+    if (isCheckoutPage() || hasOpenModal() || hasSavedPreferences()) return false;
+    if (typeof window.openPersonalizationModal !== 'function') return false;
+    window.openPersonalizationModal();
+    return true;
+  };
+
   /**
    * 開啟指定 Modal 並避免聚焦時捲動頁面。
    * 套用元件：#loginModal、#personalizationModal、#partnerModal。
@@ -69,8 +95,9 @@
     }
     profile.preferences = preferences;
     localStorage.setItem('yurui_profile', JSON.stringify(profile));
-    localStorage.setItem('preferences', JSON.stringify(preferences));
-    window.syncMemberPreferenceTags && window.syncMemberPreferenceTags(preferences);
+    if (!sessionStorage.getItem('memberPreferenceDraft')) {
+      window.syncMemberPreferenceTags && window.syncMemberPreferenceTags(preferences);
+    }
     window.dispatchEvent(new CustomEvent('yurui:preferences-updated', { detail: preferences }));
   }
 
@@ -80,6 +107,7 @@
         close: function () {
           window.closeModal('loginModal');
         },
+        openSurvey: true,
       });
       window.updateNavbarLoginState?.();
       return;
@@ -98,15 +126,12 @@
     }
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('currentUser', JSON.stringify(user));
-    localStorage.setItem('yuruiUser', JSON.stringify(user));
     window.saveAppState?.();
     window.dispatchEvent(new CustomEvent('yurui:auth-changed', { detail: { type: 'login', user: user } }));
     window.updateNavbarLoginState?.();
     window.closeModal('loginModal');
     window.showToast && window.showToast('已使用 ' + provider + ' 登入', 'success');
-    setTimeout(function () {
-      window.openPersonalizationModal();
-    }, 300);
+    window.maybeOpenPersonalizationModal({ source: 'fallback-login', openSurvey: false });
   }
 
   function validateSurveySelection(count, minimum) {
@@ -171,8 +196,6 @@
         surveyAnswers.equipment = Array.from(equipmentTags).map(function (selectedTag) {
           return selectedTag.dataset.value;
         });
-        if (window.AppState) window.AppState.preferences = surveyAnswers;
-        window.saveAppState?.();
         syncProfilePreferenceStorage(surveyAnswers);
         personalizationCompleted = true;
         window.closeModal('personalizationModal', { force: true });
@@ -185,12 +208,14 @@
     var loginModal = document.getElementById('loginModal');
     if (!loginModal || loginModal.dataset.loginBound === 'true') return;
     loginModal.dataset.loginBound = 'true';
-    loginModal.querySelectorAll('.btnGoogleLogin, .btnFacebookLogin, .btnLineLogin').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault();
-        handleLoginSuccess(getLoginProvider(button));
+    loginModal
+      .querySelectorAll('.btnGoogleLogin, .btnFacebookLogin, .btnLineLogin')
+      .forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          handleLoginSuccess(getLoginProvider(button));
+        });
       });
-    });
   }
 
   function initSurveyCloseConfirmModal() {
@@ -239,4 +264,4 @@
       });
     }
   };
-}());
+})();

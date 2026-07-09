@@ -48,6 +48,7 @@
     <script>
       (function initSuccessPage() {
         const orderNumberDisplay = document.getElementById('orderNumberDisplay');
+        const successMode = readSuccessMode();
         const orderNum = readOrderNumber();
         if (orderNumberDisplay) {
           const normalizedOrderNum = String(orderNum || '--').replace(/^#/, '');
@@ -69,6 +70,14 @@
         const queryOrderNum = params.get('orderNum');
         if (queryOrderNum) return queryOrderNum;
         try {
+          // Booking 共用成功頁：預約結帳會先寫入 lastBookingCheckoutOrder，再回退讀主站 lastCheckoutOrder。
+          const successMode = readSuccessMode();
+          if (successMode === 'booking') {
+            const lastBookingOrder = JSON.parse(localStorage.getItem('lastBookingCheckoutOrder') || 'null');
+            if (lastBookingOrder?.orderNumber || lastBookingOrder?.id) {
+              return lastBookingOrder.orderNumber || lastBookingOrder.id;
+            }
+          }
           const lastOrder = JSON.parse(localStorage.getItem('lastCheckoutOrder') || 'null');
           if (!lastOrder) return '';
           return window.formatOrderDisplayId ? window.formatOrderDisplayId(lastOrder.id) : String(lastOrder.id || '');

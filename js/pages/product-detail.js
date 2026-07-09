@@ -1,6 +1,7 @@
 // Product detail page state and behavior.
 const DEFAULT_PRODUCT_ID = 'P001';
 const FREE_SHIPPING_THRESHOLD = 3000;
+const MEMBER_REVIEW_KEY = 'member_center_reviews';
 
 // Initialize product detail page after shared scripts are available.
 window.initProductDetailPage = async () => {
@@ -63,7 +64,6 @@ function _renderProductInfo(product) {
   // 商品描述支援 Summernote 輸出的 HTML / Support Summernote rich HTML output
   const descEl = document.getElementById('productDescription');
   if (descEl) descEl.innerHTML = product.description || '';
-  _renderRating(product);
   _renderPrice(product);
   _renderTags(product.tags || []);
 }

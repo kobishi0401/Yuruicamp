@@ -72,6 +72,38 @@
     return Math.min(discount, Number(subtotal || 0));
   }
 
+  // 用途：判斷 coupon 是否已過期；到期日當天 23:59:59 前仍可使用。
+  function isCouponExpired(coupon, today = new Date()) {
+    if (!coupon || !coupon.expiry) return false;
+    const expiryDate = new Date(`${coupon.expiry}T23:59:59`);
+    return Number.isFinite(expiryDate.getTime()) && expiryDate < today;
+  }
+
+  // 用途：集中驗證 coupon 的會員、使用狀態、到期日與最低消費，避免 checkout 重算時漏掉規則。
+  function getCouponInvalidReason(coupon, subtotal, options = {}) {
+    if (!coupon) return 'not-found';
+    const userId = options.userId || '';
+    if (userId && coupon.userId && coupon.userId !== userId) return 'wrong-user';
+    if (!userId && coupon.userId) return 'login-required';
+    if (coupon.used === true) return 'used';
+    if (isCouponExpired(coupon, options.today || new Date())) return 'expired';
+    if (Number(subtotal || 0) < Number(coupon.minOrder || 0)) return 'min-order';
+    return '';
+  }
+
+  // 用途：將 coupon 驗證原因轉成使用者可理解的錯誤訊息。
+  function getCouponInvalidMessage(reason) {
+    const messages = {
+      'not-found': '折扣碼無效，請確認後再試',
+      'wrong-user': '此折扣碼不適用於目前會員',
+      'login-required': '請先登入後再使用會員折扣碼',
+      used: '此折扣碼已使用',
+      expired: '此折扣碼已過期',
+      'min-order': '尚未達到此折扣碼的最低消費金額',
+    };
+    return messages[reason] || '折扣碼無法使用';
+  }
+
   function normalizeCouponCodes(codes) {
     const list = Array.isArray(codes) ? codes : [codes];
     return [...new Set(list
@@ -125,6 +157,10 @@
 
     if (coupon.minOrder && Number(subtotal) < Number(coupon.minOrder)) {
       return { valid: false, message: `需滿 NT$ ${_formatMoney(coupon.minOrder)} 才可使用` };
+    }
+    const invalidReason = getCouponInvalidReason(coupon, subtotal, options);
+    if (invalidReason) {
+      return { valid: false, message: getCouponInvalidMessage(invalidReason), reason: invalidReason };
     }
 
     return {
@@ -187,6 +223,7 @@
     calculateDiscount,
     calculateAppliedCoupons,
     validateCoupon,
+    getCouponInvalidReason,
     normalizeCouponCodes,
     saveAppliedCouponCode,
     saveAppliedCouponCodes,

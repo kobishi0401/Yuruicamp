@@ -10,6 +10,11 @@
   width: min(420px, 100vw);
   background: var(--yc-surface);
   box-shadow: var(--yc-shadow-hover);
+
+  // Overlay 字體契約：側邊選單與購物車面板一律使用 UI 字體，避免 booking heading serif 外溢。
+  font-family: var(--yc-font-ui);
+  font-size: var(--yc-text-md);
+  line-height: 1.5;
   transition: transform var(--yc-transition-base);
 }
 
@@ -74,8 +79,12 @@
 .bookingSlidePanelTitle {
   margin: 0;
   color: var(--yc-sage-action);
+
+  // Overlay 標題契約：抽屜標題屬於操作介面，不繼承頁面 h1-h6 的展示字體。
+  font-family: var(--yc-font-ui);
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 // 抽屜內容區：扣除標題列高度後可獨立捲動。
@@ -86,6 +95,10 @@
   height: calc(100% - 72px);
   overflow: auto;
   padding: var(--yc-space-4);
+
+  // Overlay 內容契約：一般內容回到 body 字體，維持主站與 booking 的閱讀節奏一致。
+  font-family: var(--yc-font-body);
+  line-height: 1.5;
 }
 
 @media (prefers-reduced-motion: reduce) {

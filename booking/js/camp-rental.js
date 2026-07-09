@@ -18,6 +18,14 @@ let bookingCart = null; // 從 LocalStorage 讀取的預約資料（camelCase）
 let allRentals = []; // 所有裝備原始資料（完整陣列）
 let selectedRentals = {}; // 已選裝備：{ equipmentId: { ...item, quantity } }
 
+function notifyBookingCartChanged(action) {
+  window.dispatchEvent(
+    new CustomEvent('yurui:booking-cart-changed', {
+      detail: { action: action || 'update' },
+    })
+  );
+}
+
 // ============================================================
 // 頁面初始化 / Page Initialization
 // ============================================================
@@ -106,6 +114,7 @@ function loadRentals(campId) {
 
       // 渲染裝備卡片 / Render rental cards
       renderRentalItems(filtered);
+      restoreSelectedRentals(filtered);
 
       // 更新數量顯示 / Update count badge
       if (filtered.length > 0) {
@@ -121,6 +130,20 @@ function loadRentals(campId) {
       </div>
     `);
     });
+}
+
+function restoreSelectedRentals(availableRentals) {
+  selectedRentals = {};
+
+  (bookingCart.selected_rentals || []).forEach(function (saved) {
+    const source = availableRentals.find((item) => item.equipment_id === saved.equipment_id);
+    if (!source) return;
+
+    const quantity = Math.max(1, Math.min(Number(saved.quantity || 1), Number(source.stock || 1)));
+    selectedRentals[source.equipment_id] = { ...source, quantity };
+  });
+
+  updateRentalCartUI();
 }
 
 // ============================================================
@@ -369,6 +392,49 @@ function updateRentalCartUI() {
   });
 }
 
+function buildRentalPriceSnapshot(item, info) {
+  var original =
+    item.pricing.price_per_day_weekday * info.weekday_count +
+    item.pricing.price_per_day_holiday * info.holiday_count;
+  var discount = Number(item.pricing.discount || 0);
+  return {
+    unit_original_price: Math.max(0, original),
+    unit_discount: Math.max(0, Math.min(discount, original)),
+    unit_final_price: Math.max(0, original - discount),
+  };
+}
+
+function calculateBookingSummary(cart) {
+  var zones = cart.selected_zones || [];
+  var rentals = cart.selected_rentals || [];
+  var zoneTotal = zones.reduce(function (sum, zone) {
+    return sum + Number(zone.subtotal || 0);
+  }, 0);
+  var rentalOriginalTotal = rentals.reduce(function (sum, rental) {
+    return sum + getRentalOriginalUnitPrice(rental) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalDiscountTotal = rentals.reduce(function (sum, rental) {
+    return sum + Number(rental.unit_discount || 0) * Number(rental.quantity || 0);
+  }, 0);
+  var rentalTotal = Math.max(rentalOriginalTotal - rentalDiscountTotal, 0);
+
+  return {
+    zone_total: zoneTotal,
+    rental_original_total: rentalOriginalTotal,
+    rental_discount_total: rentalDiscountTotal,
+    rental_total: rentalTotal,
+    // 相容舊欄位：後續既有頁面仍可讀取 applied_discount，但正式語意以 rental_discount_total 為準。
+    applied_discount: rentalDiscountTotal,
+    final_amount: zoneTotal + rentalTotal,
+  };
+}
+
+function getRentalOriginalUnitPrice(rental) {
+  var quantity = Math.max(Number(rental.quantity || 1), 1);
+  var fallbackFinalUnit = Number(rental.subtotal || 0) / quantity;
+  return Number(rental.unit_original_price || 0) || fallbackFinalUnit + Number(rental.unit_discount || 0);
+}
+
 // ============================================================
 // 儲存裝備選擇並前往結帳頁
 // ============================================================
@@ -398,7 +464,10 @@ function saveRentalsAndNext() {
       name: item.name,
       specLabel: item.specLabel || '',
       quantity: item.quantity,
-      subtotal: perUnit * item.quantity,
+      unit_original_price: price.unit_original_price,
+      unit_discount: price.unit_discount,
+      unit_final_price: price.unit_final_price,
+      subtotal: price.unit_final_price * item.quantity,
     };
   });
 

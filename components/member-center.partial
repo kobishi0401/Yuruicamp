@@ -299,6 +299,7 @@
       <div class="memberModalBody">
         <form class="memberReviewForm" id="reviewForm" novalidate>
           <p class="memberReviewProduct" id="reviewProductName">商品名稱</p>
+          <p class="memberOrderMeta" id="reviewMeta" hidden></p>
           <fieldset class="memberReviewFieldset">
             <legend class="memberReviewLabel">評分</legend>
             <div class="memberRatingControl" id="reviewRatingGroup" role="radiogroup" aria-label="評分">
@@ -311,6 +312,10 @@
           </fieldset>
           <label class="memberReviewLabel" for="reviewContent">評論內容</label
           ><textarea class="memberFormInput memberReviewTextarea" id="reviewContent" rows="4" placeholder="分享這次使用心得"></textarea
+          ><label class="memberReviewLabel" for="reviewPhotos">評價圖片</label
+          ><input class="memberFormInput memberReviewFileInput" id="reviewPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+          <p class="memberOrderMeta" id="reviewPhotoHint">最多 5 張，每張 5MB 以內，支援 JPG、PNG、WebP。</p>
+          <div class="memberReviewPhotoPreview" id="reviewPhotoPreview" aria-live="polite"></div>
           ><button class="memberAction memberActionPrimary memberActionBlock" id="submitReviewBtn" type="submit">送出評價</button>
         </form>
       </div>
