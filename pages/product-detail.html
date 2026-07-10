@@ -10,8 +10,6 @@
     <link rel="preconnect" href="https://picsum.photos" />
     <link rel="dns-prefetch" href="https://picsum.photos" />
     <link rel="stylesheet" href="../css/main.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
       rel="stylesheet"
@@ -69,10 +67,12 @@
       <div class="productDetailContent" id="productDetailContent" hidden>
         <!-- 商品主佈局：左圖 + 右資訊 -->
         <div class="productDetailLayout">
-          <!-- ===== 左側：圖片 Gallery（Swiper 切圖 + GLightbox 放大）===== -->
-          <div class="productGallery" id="productGallery">
-            <!-- 主圖輪播由 JS 填入 / Main slider filled by JS -->
-            <div class="galleryMain" id="galleryMain"></div>
+          <!-- ===== 左側：圖片 Gallery ===== -->
+          <div class="productGallery">
+            <!-- 主圖 Main Image -->
+            <div class="galleryMain">
+              <img class="galleryMainImg" id="galleryMainImg" src="" alt="商品主圖" loading="lazy" />
+            </div>
             <!-- 縮圖列表 Thumbnail List -->
             <div class="galleryThumbs" id="galleryThumbs">
               <!-- 由 JS 動態渲染縮圖 -->
@@ -190,7 +190,7 @@
               商品介紹
             </button>
             <button class="productTabBtn" data-tab="reviews" type="button">
-              商品評價 (<span id="productReviewsTabCount">0</span>)
+              商品評價 (3)
             </button>
           </div>
 
@@ -217,8 +217,78 @@
           <!-- Tab 面板：商品評價 Reviews Panel -->
           <div class="productTabPanel" data-panel="reviews">
             <div class="ratingContainer2" id="productReviewsList">
-              <!-- 評價由 JS 透過 API.products.getReviews 動態載入 -->
+              <!-- 評價卡片 1 Review Card 1 -->
+              <div class="reviewCard">
+                <div class="reviewHeader">
+                  <div class="reviewAvatar">林</div>
+                  <div>
+                    <div class="reviewAuthorName">林小明</div>
+                    <div class="starStyle" data-review-rating="5">★★★★★</div>
+                  </div>
+                  <div class="ratingDate">2026/05/20</div>
+                </div>
+                <p class="reviewText">
+                  商品品質非常好！帳篷搭建超簡單，大概 10
+                  分鐘就完成了。防水效果很棒，之前去大雪山露營遇到大雨完全沒有滲水。強烈推薦給第一次買帳篷的朋友！
+                </p>
+                <div class="reviewImages">
+                  <img
+                    class="ratingImage"
+                    src="https://picsum.photos/seed/review1a/100/100"
+                    alt="評價圖片"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+
+              <!-- 評價卡片 2 Review Card 2 -->
+              <div class="reviewCard">
+                <div class="reviewHeader">
+                  <div class="reviewAvatar">陳</div>
+                  <div>
+                    <div class="reviewAuthorName">陳美美</div>
+                    <div class="starStyle" data-review-rating="4">★★★★☆</div>
+                  </div>
+                  <div class="ratingDate">2026/04/15</div>
+                </div>
+                <p class="reviewText">
+                  整體而言很滿意，重量真的很輕，背包客的好選擇。顏色跟網站圖片一致，包裝也很用心。唯一小缺點是附贈的地釘比較細，建議另外購買品質好一點的地釘搭配使用。
+                </p>
+                <div class="reviewImages">
+                  <img
+                    class="ratingImage"
+                    src="https://picsum.photos/seed/review2a/100/100"
+                    alt="評價圖片"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+
+              <!-- 評價卡片 3 Review Card 3 -->
+              <div class="reviewCard">
+                <div class="reviewHeader">
+                  <div class="reviewAvatar">王</div>
+                  <div>
+                    <div class="reviewAuthorName">王大衛</div>
+                    <div class="starStyle" data-review-rating="5">★★★★★</div>
+                  </div>
+                  <div class="ratingDate">2026/03/08</div>
+                </div>
+                <p class="reviewText">
+                  已經是第三次購買 Yuruicamp
+                  的商品了，品質穩定且一致，客服也非常親切耐心。這款是家庭露營的絕佳選擇，空間寬敞通風，跟老婆小孩一起住很舒適。下次還會再來！
+                </p>
+                <div class="reviewImages">
+                  <img
+                    class="ratingImage"
+                    src="https://picsum.photos/seed/review3a/100/100"
+                    alt="評價圖片"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
             </div>
+            <!-- /reviews grid -->
           </div>
           <!-- /reviews panel -->
         </div>
@@ -232,13 +302,10 @@
     <!-- ===================================================
        Script 載入（依序載入，確保依賴正確）
        =================================================== -->
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
     <script src="../js/config.js" defer></script>
     <script src="../js/storage.js" defer></script>
     <script src="../js/state.js" defer></script>
     <script src="../js/formatters.js" defer></script>
-    <script src="../js/data-paths.js" defer></script>
     <script src="../js/validators.js" defer></script>
     <script src="../js/cart-service.js" defer></script>
     <script src="../js/api-mock.js" defer></script>
@@ -246,7 +313,6 @@
     <script src="../js/components/modal.js" defer></script>
     <script src="../js/components/header.js" defer></script>
     <script src="../js/components/cart.js" defer></script>
-    <script src="../js/components/card-gallery.js" defer></script>
     <script src="../js/pages/product-detail.js" defer></script>
     <script src="../js/main.js" defer></script>
   </body>

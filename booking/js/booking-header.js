@@ -27,10 +27,10 @@
   }
 
   function getBookingCartTotal(cart) {
-    var zoneCount = (cart.selectedZones || []).reduce(function (sum, zone) {
+    var zoneCount = (cart.selected_zones || []).reduce(function (sum, zone) {
       return sum + (zone.quantity || 0);
     }, 0);
-    var rentalCount = (cart.selectedRentals || []).reduce(function (sum, rental) {
+    var rentalCount = (cart.selected_rentals || []).reduce(function (sum, rental) {
       return sum + (rental.quantity || 0);
     }, 0);
     return zoneCount + rentalCount;
@@ -38,13 +38,7 @@
 
   function updateBookingBadge() {
     var badge = document.getElementById('bookingBadge');
-    var cart =
-      typeof window.readBookingCart === 'function'
-        ? window.readBookingCart()
-        : readJsonStorage('bookingCart', null);
-    if (cart && typeof window.normalizeBookingCart === 'function' && !cart.bookingInfo) {
-      cart = window.normalizeBookingCart(cart);
-    }
+    var cart = readJsonStorage('bookingCart', null);
     var total = cart ? getBookingCartTotal(cart) : 0;
     if (!badge) return;
     badge.textContent = total > 9 ? '9+' : String(total);
@@ -107,18 +101,6 @@
     }
   }
 
-  /** 將 header 頭像顯示為圖片或首字 */
-  function renderSiteUserAvatar(el, user) {
-    if (!el || !user) return;
-    var avatar = user.avatar;
-    var isUrl = typeof avatar === 'string' && (/^\//.test(avatar) || /^https?:/.test(avatar));
-    if (isUrl) {
-      el.innerHTML = '<img src="' + String(avatar).replace(/"/g, '&quot;') + '" alt="" loading="lazy" />';
-    } else {
-      el.textContent = String(avatar || user.name.charAt(0)).toUpperCase();
-    }
-  }
-
   function checkLoginState() {
     var loginButton = document.querySelector('.bookingHeader .bookingLoginButton');
     var userMenu = document.querySelector('.bookingHeader .siteUserMenu');
@@ -131,7 +113,7 @@
       var userName = userMenu.querySelector('.siteUserName');
       var userAvatar = userMenu.querySelector('.siteUserAvatar');
       if (userName) userName.textContent = user.name;
-      if (userAvatar) renderSiteUserAvatar(userAvatar, user);
+      if (userAvatar) userAvatar.textContent = String(user.avatar || user.name.charAt(0)).toUpperCase();
       initUserDropdown();
     } else {
       closeUserDropdown();
@@ -205,14 +187,11 @@
   function renderCartPanel() {
     var body = document.getElementById('cartPanelBody');
     var footer = document.getElementById('cartPanelFooter');
-    var cart =
-      typeof window.readBookingCart === 'function'
-        ? window.readBookingCart()
-        : readJsonStorage('bookingCart', null);
+    var cart = readJsonStorage('bookingCart', null);
     var html = '';
     if (!body) return;
 
-    if (!cart || !cart.bookingInfo) {
+    if (!cart) {
       body.innerHTML = [
         '<div class="bookingCartPanelEmpty">',
         '  <i class="bi bi-bag-x" aria-hidden="true"></i>',
@@ -224,9 +203,9 @@
       return;
     }
 
-    var info = cart.bookingInfo || {};
-    var zones = cart.selectedZones || [];
-    var rentals = cart.selectedRentals || [];
+    var info = cart.booking_info || {};
+    var zones = cart.selected_zones || [];
+    var rentals = cart.selected_rentals || [];
     var summary = cart.summary || {};
 
     if (zones.length > 0) {
@@ -234,18 +213,18 @@
       html += '<h3 class="bookingCartPanelLabel">營位</h3>';
       zones.forEach(function (zone) {
         html += renderCartRow(
-          (info.campgroundName || '') + ' - ' + (zone.zoneType || '') + ' x' + (zone.quantity || 0),
+          (info.campground_name || '') + ' - ' + (zone.zone_type || '') + ' x' + (zone.quantity || 0),
           zone.subtotal
         );
       });
-      if (info.checkIn) {
+      if (info.check_in) {
         html +=
           '<p class="bookingCartPanelMeta"><i class="bi bi-calendar3" aria-hidden="true"></i> ' +
-          escapeHtml(info.checkIn) +
+          escapeHtml(info.check_in) +
           ' 至 ' +
-          escapeHtml(info.checkOut || '') +
+          escapeHtml(info.check_out || '') +
           '，共 ' +
-          escapeHtml(info.totalDays || 0) +
+          escapeHtml(info.total_days || 0) +
           ' 晚</p>';
       }
       html += '</section>';
@@ -260,10 +239,10 @@
       html += '</section>';
     }
 
-    if (summary.finalAmount !== undefined) {
+    if (summary.final_amount !== undefined) {
       html +=
         '<div class="bookingCartPanelTotal"><span>合計</span><strong>' +
-        formatMoney(summary.finalAmount) +
+        formatMoney(summary.final_amount) +
         '</strong></div>';
     }
     html += '<button class="bookingCartPanelClear" id="cartPanelClear" type="button">清空預約背包</button>';

@@ -1,9 +1,9 @@
 /**
  * camp-rental.js
  * 功能：裝備租借頁邏輯
- *   ① 讀取 LocalStorage 取得 campgroundId 與日期資訊（camelCase）
+ *   ① 讀取 LocalStorage 取得 campground_id 與日期資訊
  *   ② 過濾只顯示對應營區的可租借裝備
- *   ③ 渲染情境推薦橫幅（依據 terrainTag）
+ *   ③ 渲染情境推薦橫幅（依據 terrain_tag）
  *   ④ 加入 / 移除裝備，即時更新側欄已選清單
  *   ⑤ 確認後更新 LocalStorage 並前往結帳頁
  *
@@ -14,9 +14,9 @@
 // ============================================================
 // 全域狀態 / Global State
 // ============================================================
-let bookingCart = null; // 從 LocalStorage 讀取的預約資料（camelCase）
+let bookingCart = null; // 從 LocalStorage 讀取的預約資料
 let allRentals = []; // 所有裝備原始資料（完整陣列）
-let selectedRentals = {}; // 已選裝備：{ equipmentId: { ...item, quantity } }
+let selectedRentals = {}; // 已選裝備：{ equipment_id: { ...item, quantity } }
 
 function notifyBookingCartChanged(action) {
   window.dispatchEvent(
@@ -30,36 +30,42 @@ function notifyBookingCartChanged(action) {
 // 頁面初始化 / Page Initialization
 // ============================================================
 $(document).ready(function () {
-  // 步驟 1：讀取並正規化 bookingCart（相容舊 snake_case）
-  bookingCart =
-    typeof window.readBookingCart === 'function'
-      ? window.readBookingCart()
-      : null;
+  // 步驟 1：讀取 LocalStorage / Step 1: Read LocalStorage
+  const stored = localStorage.getItem('bookingCart');
 
   // 防呆：若 LocalStorage 無資料，代表使用者跳過了前面的流程
-  if (!bookingCart || !bookingCart.bookingInfo) {
+  // Guard: if no booking data in storage, user skipped the flow
+  if (!stored) {
     showToast('預約資訊已遺失，請重新搜尋營區。', 'warning');
     window.location.href = './camp-search.html';
     return;
   }
 
-  // 若讀到舊格式，立刻寫回 camelCase，之後各頁就不用再轉
-  if (typeof window.writeBookingCart === 'function') {
-    bookingCart = window.writeBookingCart(bookingCart);
+  try {
+    bookingCart = JSON.parse(stored);
+  } catch {
+    showToast('預約資訊異常，請重新搜尋營區。', 'warning');
+    localStorage.removeItem('bookingCart');
+    window.location.href = './camp-search.html';
+    return;
   }
 
-  var info = bookingCart.bookingInfo;
+  if (!bookingCart.booking_info || !bookingCart.booking_info.campground_id) {
+    showToast('預約資訊不完整，請重新搜尋營區。', 'warning');
+    window.location.href = './camp-search.html';
+    return;
+  }
 
-  // 步驟 2：渲染頂部預約摘要列
-  renderSummaryBar(info);
+  // 步驟 2：渲染頂部預約摘要列 / Step 2: Render summary bar
+  renderSummaryBar(bookingCart.booking_info);
 
-  // 修改連結帶上 campgroundId
-  $('#summaryEditLink').attr('href', `./camp-detail.html?id=${info.campgroundId}`);
+  // 修改連結帶上 campground_id / Edit link with campground_id
+  $('#summaryEditLink').attr('href', `./camp-detail.html?id=${bookingCart.booking_info.campground_id}`);
 
-  // 步驟 3：載入裝備資料
-  loadRentals(info.campgroundId);
+  // 步驟 3：載入裝備資料 / Step 3: Load rental data
+  loadRentals(bookingCart.booking_info.campground_id);
 
-  // 步驟 4：綁定「前往結帳」按鈕
+  // 步驟 4：綁定「前往結帳」按鈕 / Step 4: Bind checkout button
   $('#goToBookingCartBtn').on('click', saveRentalsAndNext);
 });
 
@@ -68,20 +74,20 @@ $(document).ready(function () {
 // ============================================================
 
 /**
- * 從 bookingInfo 產生頂部摘要列文字
- * Generate summary bar text from bookingInfo (camelCase)
+ * 從 booking_info 產生頂部摘要列文字
+ * Generate summary bar text from booking_info
  *
- * @param {Object} info - bookingCart.bookingInfo
+ * @param {Object} info - bookingCart.booking_info
  */
 function renderSummaryBar(info) {
   const text = `
-    <strong>${info.campgroundName}</strong>
+    <strong>${info.campground_name}</strong>
     <span class="summarySeparator summarySeparatorBooking">|</span>
-    ${info.checkIn} ～ ${info.checkOut}
+    ${info.check_in} ～ ${info.check_out}
     <span class="summarySeparator summarySeparatorBooking">|</span>
-    共 ${info.totalDays} 晚（平日 ${info.weekdayCount}、假日 ${info.holidayCount}）
+    共 ${info.total_days} 晚（平日 ${info.weekday_count}、假日 ${info.holiday_count}）
     <span class="summarySeparator summarySeparatorBooking">|</span>
-    ${info.guestCount} 人
+    ${info.guest_count} 人
   `;
   $('#summaryText').html(text);
 }
@@ -97,20 +103,22 @@ function renderSummaryBar(info) {
  * @param {string} campId - 要過濾的 campground_id
  */
 function loadRentals(campId) {
-  // 透過 BookingAPI 讀取營區裝備（camp-equipment.json，camelCase 欄位）
-  // Load campground equipment via BookingAPI
-  if (!window.BookingAPI) {
-    console.error('[camp-rental] BookingAPI 未載入');
-    $('#rentalGrid').html('<div class="errorMsg"><i class="bi bi-exclamation-triangle"></i> API 未載入。</div>');
-    return;
-  }
+  // TODO: 未來在此替換為 fetch Java 後端 API
+  // Future backend endpoint: GET /api/rentals?campground_id=C001
+  // Response: { success: true, data: [...rentals] }
+  $.ajax({
+    url: '../data/rentals.json',
+    method: 'GET',
+    dataType: 'json',
+  })
+    .done(function (data) {
+      allRentals = data;
 
-  window.BookingAPI.getEquipment(campId)
-    .then(function (filtered) {
-      allRentals = filtered;
+      // 只保留屬於此 campground 的裝備 / Keep only this campground's rentals
+      const filtered = allRentals.filter((r) => r.campground_id === campId);
 
       // 渲染推薦橫幅 / Render recommendation banner
-      renderRecommendationBanner(filtered, bookingCart.bookingInfo);
+      renderRecommendationBanner(filtered, bookingCart.booking_info);
 
       // 渲染裝備卡片 / Render rental cards
       renderRentalItems(filtered);
@@ -121,8 +129,8 @@ function loadRentals(campId) {
         $('#rentalCount').text(`（共 ${filtered.length} 件）`);
       }
     })
-    .catch(function (err) {
-      console.error('[camp-rental] 裝備資料載入失敗:', err);
+    .fail(function (xhr, textStatus) {
+      console.error('[camp-rental] 裝備資料載入失敗:', textStatus);
       $('#rentalGrid').html(`
       <div class="errorMsg">
         <i class="bi bi-exclamation-triangle"></i>
@@ -165,8 +173,8 @@ function renderRecommendationBanner(rentals, bookingInfo) {
     return;
   }
 
-  // 收集所有不重複的 terrainTag / Collect unique terrainTags
-  const tags = [...new Set(rentals.map((r) => r.terrainTag).filter(Boolean))];
+  // 收集所有不重複的 terrain_tag / Collect unique terrain_tags
+  const tags = [...new Set(rentals.map((r) => r.terrain_tag).filter(Boolean))];
 
   if (tags.length === 0) {
     $banner.hide();
@@ -186,7 +194,7 @@ function renderRecommendationBanner(rentals, bookingInfo) {
       `
     <div class="recommendationBannerContent recommendationBannerContentBooking">
       <div class="recommendationBannerTitle recommendationBannerTitleBooking">
-        <strong>📍 ${bookingInfo.campgroundName}</strong> 的情境推薦裝備
+        <strong>📍 ${bookingInfo.campground_name}</strong> 的情境推薦裝備
       </div>
       <div class="recommendationTags recommendationTagsBooking">${tagsHTML}</div>
     </div>
@@ -221,20 +229,20 @@ function renderRentalItems(rentals) {
     return;
   }
 
-  const info = bookingCart.bookingInfo;
+  const info = bookingCart.booking_info;
 
   rentals.forEach(function (item) {
-    const wPrice = item.pricing.pricePerDayWeekday;
-    const hPrice = item.pricing.pricePerDayHoliday;
+    const wPrice = item.pricing.price_per_day_weekday;
+    const hPrice = item.pricing.price_per_day_holiday;
     const disc = item.pricing.discount;
 
     // 預估本次租借費用（不含數量，數量預設 1）
     // Estimated cost for this trip (quantity = 1 by default)
-    const estimated = Math.max(0, wPrice * info.weekdayCount + hPrice * info.holidayCount - disc);
+    const estimated = Math.max(0, wPrice * info.weekday_count + hPrice * info.holiday_count - disc);
 
-    // terrainTag 推薦標籤：輸出共通語意 class 與 Booking 變體 class，讓樣式責任集中在變體 selector。
-    const tagHTML = item.terrainTag
-      ? `<span class="bookingTag bookingTagRecommend rentalItemCardTag rentalItemCardTagBooking">${item.terrainTag}</span>`
+    // terrain_tag 推薦標籤：輸出共通語意 class 與 Booking 變體 class，讓樣式責任集中在變體 selector。
+    const tagHTML = item.terrain_tag
+      ? `<span class="bookingTag bookingTagRecommend rentalItemCardTag rentalItemCardTagBooking">${item.terrain_tag}</span>`
       : '';
 
     // 折扣說明 / Discount note
@@ -243,21 +251,16 @@ function renderRentalItems(rentals) {
         ? `<span class="rentalItemCardDiscount rentalItemCardDiscountBooking">（已折 NT$${disc.toLocaleString()}）</span>`
         : '';
 
-    const specHTML = item.specLabel
-      ? `<p class="rentalItemCardSpec rentalItemCardSpecBooking">${item.specLabel}</p>`
-      : '';
-
     // 租借卡片使用 base + Booking variant 雙 class；base 表示功能語意，variant 承接 booking 頁面視覺。
     const card = `
-      <div class="rentalItemCard rentalItemCardBooking" data-id="${item.equipmentId}">
-        <img src="${item.imageUrl}"
+      <div class="rentalItemCard rentalItemCardBooking" data-id="${item.equipment_id}">
+        <img src="${item.image_url}"
              alt="${item.name}"
              class="rentalItemCardImage rentalItemCardImageBooking"
              loading="lazy"
-             onerror="this.src='https://picsum.photos/seed/${item.equipmentId}/400/280'">
+             onerror="this.src='https://picsum.photos/seed/${item.equipment_id}/400/280'">
         <div class="rentalItemCardBody rentalItemCardBodyBooking">
           <h4 class="rentalItemCardName rentalItemCardNameBooking">${item.name}</h4>
-          ${specHTML}
           ${tagHTML}
           <p class="rentalItemCardDescription rentalItemCardDescriptionBooking">${item.description}</p>
           <p class="rentalItemCardPrice rentalItemCardPriceBooking">
@@ -271,7 +274,7 @@ function renderRentalItems(rentals) {
           </p>
         </div>
         <div class="rentalItemCardActions rentalItemCardActionsBooking">
-          <button class="btn btnOutline rentalAddButton rentalAddButtonBooking" data-id="${item.equipmentId}">
+          <button class="btn btnOutline rentalAddButton rentalAddButtonBooking" data-id="${item.equipment_id}">
             <i class="bi bi-plus-circle"></i> 加入租借
           </button>
         </div>
@@ -305,7 +308,7 @@ function renderRentalItems(rentals) {
  * @param {string} equipmentId - 裝備的 equipment_id
  */
 function addRentalItem(equipmentId) {
-  const item = allRentals.find((r) => r.equipmentId === equipmentId);
+  const item = allRentals.find((r) => r.equipment_id === equipmentId);
   if (!item) return;
 
   if (selectedRentals[equipmentId]) {
@@ -346,7 +349,7 @@ function removeRentalItem(equipmentId) {
 function updateRentalCartUI() {
   const $list = $('#rentalCartList').empty();
   const items = Object.values(selectedRentals);
-  const info = bookingCart.bookingInfo;
+  const info = bookingCart.booking_info;
 
   // 無選擇時顯示空狀態 / Show empty state if nothing selected
   if (items.length === 0) {
@@ -358,26 +361,16 @@ function updateRentalCartUI() {
   let totalRental = 0;
 
   items.forEach(function (item) {
-    // 單筆小計 = (平日租金 × 平日天數 + 假日租金 × 假日天數 - 折扣) × 數量
-    // Item subtotal = (weekday × wdays + holiday × hdays - discount) × quantity
-    const perUnit = Math.max(
-      0,
-      item.pricing.pricePerDayWeekday * info.weekdayCount +
-        item.pricing.pricePerDayHoliday * info.holidayCount -
-        item.pricing.discount
-    );
-    const subtotal = perUnit * item.quantity;
+    const price = buildRentalPriceSnapshot(item, info);
+    const subtotal = price.unit_final_price * item.quantity;
     totalRental += subtotal;
 
     // 右側租借清單列同樣使用 base + Booking variant，避免樣式綁在結構型 span selector。
     $list.append(`
       <div class="rentalCartItem rentalCartItemBooking">
-        <div class="rentalCartItemText rentalCartItemTextBooking">
-          <span class="rentalCartItemName rentalCartItemNameBooking">${item.name} ×${item.quantity}</span>
-          ${item.specLabel ? `<span class="rentalCartItemSpec rentalCartItemSpecBooking">${item.specLabel}</span>` : ''}
-        </div>
+        <span class="rentalCartItemName rentalCartItemNameBooking">${item.name} ×${item.quantity}</span>
         <span class="rentalCartItemPrice rentalCartItemPriceBooking">NT$${subtotal.toLocaleString()}</span>
-        <button class="rentalRemoveButton rentalRemoveButtonBooking" data-id="${item.equipmentId}" title="移除">
+        <button class="rentalRemoveButton rentalRemoveButtonBooking" data-id="${item.equipment_id}" title="移除">
           <i class="bi bi-x"></i>
         </button>
       </div>
@@ -444,25 +437,16 @@ function getRentalOriginalUnitPrice(rental) {
  * Merge selected rentals into bookingCart, update LocalStorage, redirect
  */
 function saveRentalsAndNext() {
-  const info = bookingCart.bookingInfo;
+  const info = bookingCart.booking_info;
   const items = Object.values(selectedRentals);
 
-  // 計算每件裝備的小計（camelCase 欄位）
+  // 金額契約：每件裝備保存原價、折扣、折扣後單價，背包頁調整數量時才能精準重算。
   const rentalList = items.map(function (item) {
-    const perUnit = Math.max(
-      0,
-      item.pricing.pricePerDayWeekday * info.weekdayCount +
-        item.pricing.pricePerDayHoliday * info.holidayCount -
-        item.pricing.discount
-    );
+    const price = buildRentalPriceSnapshot(item, info);
     return {
-      equipmentId: item.equipmentId,
-      rentalSkuId: item.rentalSkuId,
-      productId: item.productId,
-      variantId: item.variantId,
-      sku: item.sku,
+      equipment_id: item.equipment_id,
       name: item.name,
-      specLabel: item.specLabel || '',
+      image: item.image_url || item.image || '',
       quantity: item.quantity,
       unit_original_price: price.unit_original_price,
       unit_discount: price.unit_discount,
@@ -471,28 +455,16 @@ function saveRentalsAndNext() {
     };
   });
 
-  const rentalTotal = rentalList.reduce((sum, r) => sum + r.subtotal, 0);
-  const zoneTotal = (bookingCart.summary && bookingCart.summary.zoneTotal) || 0;
+  // 更新 bookingCart / Update bookingCart
+  bookingCart.selected_rentals = rentalList;
+  bookingCart.summary = calculateBookingSummary(bookingCart);
 
-  // 計算總折扣（各件裝備的 discount × 數量加總）
-  const totalDiscount = items.reduce((sum, i) => sum + i.pricing.discount * i.quantity, 0);
-
-  // 更新 bookingCart（全程 camelCase）
-  bookingCart.selectedRentals = rentalList;
-  bookingCart.summary = {
-    zoneTotal: zoneTotal,
-    rentalTotal: rentalTotal,
-    appliedDiscount: totalDiscount,
-    finalAmount: zoneTotal + rentalTotal,
-  };
-
-  if (typeof window.writeBookingCart === 'function') {
-    bookingCart = window.writeBookingCart(bookingCart);
-  } else {
-    localStorage.setItem('bookingCart', JSON.stringify(bookingCart));
-  }
+  // 寫回 LocalStorage / Write back to LocalStorage
+  localStorage.setItem('bookingCart', JSON.stringify(bookingCart));
+  notifyBookingCartChanged('rentals-save');
 
   console.log('[camp-rental] 已更新 LocalStorage bookingCart:', bookingCart);
 
+  // 前往結帳頁 / Redirect to checkout
   window.location.href = './booking-cart.html';
 }

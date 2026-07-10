@@ -3,72 +3,86 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Yuruicamp 會員中心 - 管理會員資料、訂單紀錄與露營預約" />
+    <meta name="description" content="Yuruicamp 會員中心 - 管理會員資料、購買紀錄、租借紀錄與折價券" />
     <meta name="theme-color" content="#244d4d" />
-    <title>會員中心 - Yuruicamp 露營選物</title>
+    <title>會員中心 - Yuruicamp 線上購物</title>
     <link rel="preconnect" href="https://picsum.photos" />
     <link rel="dns-prefetch" href="https://picsum.photos" />
     <link rel="stylesheet" href="../css/main.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
     <link rel="icon" href="../assets/icons/camping_icon.png" type="image/png" />
   </head>
   <body>
     <div id="header"></div>
+
     <div id="memberCenterMount" data-component-mount="member-center"></div>
+
     <div id="footer"></div>
+
     <script>
+      // 用途：限制主站會員中心返回連結只能回到主站 pages 內頁，避免任意外部跳轉。
       function resolveMainMemberReturnHref() {
         const params = new URLSearchParams(window.location.search);
         const returnTo = params.get('returnTo');
         const fallback = 'home.html';
+
         if (!returnTo) return fallback;
+
         try {
           const target = new URL(returnTo, window.location.href);
           const allowedPrefix = new URL('./', window.location.href).pathname;
-          const isMainPage = target.origin === window.location.origin && target.pathname.startsWith(allowedPrefix);
+          const isMainPage =
+            target.origin === window.location.origin && target.pathname.startsWith(allowedPrefix);
           const isCurrentPage = target.pathname.endsWith('/pages/member-center.html');
-          return isMainPage && !isCurrentPage ? target.pathname.split('/pages/').pop() + target.search + target.hash : fallback;
-        } catch (error) { return fallback; }
+
+          return isMainPage && !isCurrentPage
+            ? target.pathname.split('/pages/').pop() + target.search + target.hash
+            : fallback;
+        } catch (error) {
+          return fallback;
+        }
       }
-      window.MemberCenterConfig = { dataBasePath: '../data', authStorageKey: 'currentUser', fallbackAuthStorageKey: 'yuruiUser', homeHref: resolveMainMemberReturnHref() };
+
+      // 用途：設定主站會員中心共用元件資料來源與返回頁，讓頁面外殼使用主站 header/footer。
+      window.MemberCenterConfig = {
+        dataBasePath: '../data',
+        authStorageKey: 'currentUser',
+        homeHref: resolveMainMemberReturnHref(),
+      };
+
+      // 用途：載入共用會員中心 partial，保留主站與 booking 使用同一份會員中心內容。
       window.loadMemberCenterComponent = async function () {
         const mount = document.getElementById('memberCenterMount');
         if (!mount) return;
+
         try {
-          const [partialRes, modalRes] = await Promise.all([
-            fetch('../components/member-center.partial', { cache: 'no-store' }),
-            fetch('../components/shipping-address-modal.partial', { cache: 'no-store' }),
-          ]);
-          if (!partialRes.ok) throw new Error('HTTP ' + partialRes.status);
-          mount.innerHTML = await partialRes.text();
-          if (modalRes.ok) {
-            const modalHost = document.createElement('div');
-            modalHost.innerHTML = await modalRes.text();
-            document.body.appendChild(modalHost);
-            window.YuruiShippingAddressUI?.bindModal?.();
-          }
+          const response = await fetch('../components/member-center.partial', { cache: 'no-store' });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          mount.innerHTML = await response.text();
           window.initMemberCenterComponent && window.initMemberCenterComponent();
         } catch (error) {
           console.error('會員中心元件載入失敗', error);
-          mount.innerHTML = '<div class="memberLoginGuard isOpen" role="status" aria-live="polite"><div class="memberLoginGuardCard"><h2 class="memberLoginGuardTitle">會員中心載入失敗</h2><p class="memberLoginGuardText">請確認目前頁面透過本機伺服器開啟。</p></div></div>';
+          mount.innerHTML =
+            '<div class="memberLoginGuard isOpen" role="status" aria-live="polite"><div class="memberLoginGuardCard"><h2 class="memberLoginGuardTitle">會員中心載入失敗</h2><p class="memberLoginGuardText">請確認目前頁面透過本機伺服器開啟。</p></div></div>';
         }
       };
+
       document.addEventListener('DOMContentLoaded', window.loadMemberCenterComponent);
     </script>
     <script src="../js/config.js" defer></script>
     <script src="../js/storage.js" defer></script>
     <script src="../js/state.js" defer></script>
     <script src="../js/formatters.js" defer></script>
-    <script src="../js/shipping-address.js" defer></script>
-    <script src="../js/data-paths.js" defer></script>
-    <script src="../js/booking-api.js" defer></script>
     <script src="../js/validators.js" defer></script>
     <script src="../js/cart-service.js" defer></script>
     <script src="../js/api-mock.js" defer></script>
     <script src="../js/components/toast.js" defer></script>
     <script src="../js/components/modal.js" defer></script>
+    <script src="../js/components/header.js" defer></script>
     <script src="../js/components/cart.js" defer></script>
-    <script src="../js/components/shipping-address-ui.js" defer></script>
     <script src="../js/components/member-center.js" defer></script>
     <script src="../js/main.js" defer></script>
   </body>
