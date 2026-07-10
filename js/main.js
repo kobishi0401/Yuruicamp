@@ -316,7 +316,7 @@ function initFloatingActions() {
 
     <a
       class="floatingLineBtn"
-      href="https://line.me"
+      href="https://lin.ee/NkgGfc4"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="LINE 聯絡"

@@ -212,7 +212,8 @@ textarea {
 .zoomBox img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   transform: scale(1.18);
   transition: transform var(--transition-slow);
 }
@@ -1031,7 +1032,8 @@ main {
 .cardGallery img {
   display: block;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   width: 100%;
 }
 
@@ -1824,7 +1826,8 @@ main {
 .bookingBrandImage {
   width: clamp(48px, 5vw, 70px);
   height: clamp(48px, 5vw, 70px);
-  object-fit: contain;
+  -o-object-fit: contain;
+     object-fit: contain;
 }
 
 .siteBrandText,
@@ -2400,7 +2403,8 @@ main {
 .siteCartItemImage {
   width: 88px;
   aspect-ratio: 1;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   border-radius: var(--yc-radius-button);
 }
 
@@ -2926,7 +2930,8 @@ main {
   z-index: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .heroBanner::after {
@@ -3021,7 +3026,9 @@ main {
   height: 6px;
   background: transparent;
   pointer-events: none;
-  appearance: none;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
   margin: 0;
   padding: 0;
   outline: 3px solid transparent;
@@ -3041,7 +3048,8 @@ main {
 }
 
 .priceRangeTrackWrap input[type=range]::-webkit-slider-thumb {
-  appearance: none;
+  -webkit-appearance: none;
+          appearance: none;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -3100,7 +3108,6 @@ main {
 
 .searchBarInput,
 .searchBarSelect {
-  flex: 1 1 160px;
   padding: 0.6rem 1rem;
   border: 2px solid color-mix(in srgb, var(--yc-on-dark) 30%, transparent);
   border-radius: var(--yc-radius-control);
@@ -3110,6 +3117,10 @@ main {
   outline: 3px solid transparent;
   outline-offset: 2px;
   transition: var(--yc-transition);
+}
+
+.searchBarInput::-moz-placeholder {
+  color: color-mix(in srgb, var(--yc-on-dark) 70%, transparent);
 }
 
 .searchBarInput::placeholder {
@@ -3241,7 +3252,8 @@ main {
 .campCardImageBooking img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .campCardImageBooking:not(.cardGallery) img {
@@ -3457,7 +3469,8 @@ main {
 .galleryImg {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   transition: transform 0.3s ease;
 }
 
@@ -3710,7 +3723,8 @@ main {
 .rentalItemCardImageBooking {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .rentalItemCardBodyBooking {
@@ -4478,7 +4492,9 @@ main {
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-card);
   transition: background 0.15s;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 
 .checkoutPanelHeaderBooking:hover {
@@ -5045,4 +5061,4 @@ main {
   .faqHeroTitle {
     font-size: 1.75rem;
   }
-}
+}/*# sourceMappingURL=booking-main.css.map */
