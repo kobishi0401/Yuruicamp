@@ -212,7 +212,8 @@ textarea {
 .zoomBox img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   transform: scale(1.18);
   transition: transform var(--transition-slow);
 }
@@ -1007,6 +1008,108 @@ main {
     position: static;
   }
 }
+.cardGallery {
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+
+.cardGallery .swiper {
+  height: 100%;
+  width: 100%;
+}
+
+.cardGallery .swiper-slide {
+  height: 100%;
+}
+
+.cardGallery .card-gallery-glightbox {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.cardGallery img {
+  display: block;
+  height: 100%;
+  -o-object-fit: cover;
+     object-fit: cover;
+  width: 100%;
+}
+
+.cardGalleryEmpty {
+  align-items: center;
+  background: var(--yc-surface-soft, #f0ece3);
+  color: var(--yc-text-muted, #888);
+  display: flex;
+  font-size: 0.875rem;
+  height: 100%;
+  justify-content: center;
+  min-height: 10rem;
+}
+
+.cardGallery .swiper-button-prev,
+.cardGallery .swiper-button-next {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: var(--yc-sage-action, #4a5d4e);
+  height: 1.75rem;
+  margin-top: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.75rem;
+}
+.cardGallery .swiper-button-prev::after,
+.cardGallery .swiper-button-next::after {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.cardGallery .swiper-button-prev {
+  left: 0.4rem;
+}
+
+.cardGallery .swiper-button-next {
+  right: 0.4rem;
+}
+
+.cardGallery .swiper-button-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cardGallery .swiper-pagination {
+  bottom: 0.4rem !important;
+  line-height: 0;
+}
+
+.cardGallery .swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.75);
+  opacity: 1;
+}
+
+.cardGallery .swiper-pagination-bullet-active {
+  background: var(--yc-sage-action, #4a5d4e);
+}
+
+.cardGallery .productCardBadge,
+.cardGallery .campCardBadge,
+.cardGallery .campCardBadgeBooking {
+  pointer-events: none;
+  z-index: 2;
+}
+
+.productCard:hover .cardGallery img,
+.homeProductCard:hover .cardGallery img,
+.campCardBooking:hover .cardGallery img {
+  transform: none;
+}
+
+.glightbox-container .gslide-description {
+  display: none !important;
+}
+
 /* Booking Summary：日期摘要區塊，供營區詳情側欄顯示已選日期。 */
 .dateSummary {
   background: var(--yc-sage-soft);
@@ -1723,7 +1826,8 @@ main {
 .bookingBrandImage {
   width: clamp(48px, 5vw, 70px);
   height: clamp(48px, 5vw, 70px);
-  object-fit: contain;
+  -o-object-fit: contain;
+     object-fit: contain;
 }
 
 .siteBrandText,
@@ -2299,7 +2403,8 @@ main {
 .siteCartItemImage {
   width: 88px;
   aspect-ratio: 1;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   border-radius: var(--yc-radius-button);
 }
 
@@ -2814,7 +2919,8 @@ main {
   z-index: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .heroBanner::after {
@@ -2909,7 +3015,9 @@ main {
   height: 6px;
   background: transparent;
   pointer-events: none;
-  appearance: none;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
   margin: 0;
   padding: 0;
   outline: 3px solid transparent;
@@ -2929,7 +3037,8 @@ main {
 }
 
 .priceRangeTrackWrap input[type=range]::-webkit-slider-thumb {
-  appearance: none;
+  -webkit-appearance: none;
+          appearance: none;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -2988,7 +3097,6 @@ main {
 
 .searchBarInput,
 .searchBarSelect {
-  flex: 1 1 160px;
   padding: 0.6rem 1rem;
   border: 2px solid color-mix(in srgb, var(--yc-on-dark) 30%, transparent);
   border-radius: var(--yc-radius-control);
@@ -2998,6 +3106,10 @@ main {
   outline: 3px solid transparent;
   outline-offset: 2px;
   transition: var(--yc-transition);
+}
+
+.searchBarInput::-moz-placeholder {
+  color: color-mix(in srgb, var(--yc-on-dark) 70%, transparent);
 }
 
 .searchBarInput::placeholder {
@@ -3129,7 +3241,11 @@ main {
 .campCardImageBooking img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
+}
+
+.campCardImageBooking:not(.cardGallery) img {
   transition: transform 0.4s ease;
 }
 
@@ -3319,7 +3435,8 @@ main {
 .galleryImg {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   transition: transform 0.3s ease;
 }
 
@@ -3572,7 +3689,8 @@ main {
 .rentalItemCardImageBooking {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .rentalItemCardBodyBooking {
@@ -4325,7 +4443,9 @@ main {
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-card);
   transition: background 0.15s;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 
 .checkoutPanelHeaderBooking:hover {
@@ -4880,6 +5000,4 @@ main {
   .faqHeroTitle {
     font-size: 1.75rem;
   }
-}
-
-/*# sourceMappingURL=booking-main.css.map */
+}/*# sourceMappingURL=booking-main.css.map */
