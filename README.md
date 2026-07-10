@@ -1,21 +1,3 @@
-## Schema / 假資料
-
-| 文件 | 說明 |
-|------|------|
-| [`plans/data-integration-spec.md`](./plans/data-integration-spec.md) | 假資料整合規格（定案摘要） |
-| [`plans/schema-migration-checklist.md`](./plans/schema-migration-checklist.md) | Schema 整合任務清單（可勾選） |
-| [`docs/database-er.md`](./docs/database-er.md) | ER 圖與欄位說明（對齊 `/data/**`） |
-| [`docs/schema.sql`](./docs/schema.sql) | PostgreSQL DDL 草案 |
-| [`docs/schema-enums.md`](./docs/schema-enums.md) | status / category 枚舉 |
-| [`docs/snapshot-fields.md`](./docs/snapshot-fields.md) | 快照欄位 vs FK |
-| [`docs/mock-json-to-sql-seed.md`](./docs/mock-json-to-sql-seed.md) | JSON → SQL seed 對照 |
-
-```bash
-npm run validate:data
-npm run sync:listings
-npm run normalize:data
-```
-
 ## v1.3.76 - 2026/07/06
 
 - 統一主站與 booking 的 `#personalizationModal`、`#surveyCloseConfirmModal` 樣式來源，booking components 入口改載主站 `modal` 與 `auth-modal` 基底。
@@ -269,20 +251,6 @@ npm run normalize:data
 
 > 探索戶外，從這裡開始 🏕️
 
-## Schema / 假資料
-
-假資料已整合至 `/data/**`；後續 PostgreSQL DDL 與 ER 文件如下（給 Java bootcamp 銜接用，前端仍為 Mock）：
-
-| 文件 | 說明 |
-|------|------|
-| [plans/data-integration-spec.md](plans/data-integration-spec.md) | 假資料整合規格與定案摘要 |
-| [plans/schema-migration-checklist.md](plans/schema-migration-checklist.md) | Schema 整合任務勾選清單 |
-| [docs/database-er.md](docs/database-er.md) | ER 圖與欄位說明（CUSTOMERS、快照、衍生表） |
-| [docs/schema.sql](docs/schema.sql) | PostgreSQL DDL（ENUM + 主表 PK/FK） |
-| [docs/schema-enums.md](docs/schema-enums.md) | 狀態／分類枚舉允許值 |
-| [docs/snapshot-fields.md](docs/snapshot-fields.md) | 快照欄位 vs FK |
-| [docs/mock-json-to-sql-seed.md](docs/mock-json-to-sql-seed.md) | JSON → SQL seed 對照表 |
-
 ## 📋 專案概述
 
 Yuruicamp 是一個完整的露營選物電商網站前端實現，包含 `pages/` 下 **11 個**買家功能頁面、Mock API 層、完整 RWD 響應式設計，以及一套獨立的**賣家管理後台**（含員工 ID 登入、**九大管理模組**、逐頁 view/edit 權限、圖表儀表板）。
@@ -348,15 +316,17 @@ Yuruicamp/
 │   │   ├── reviews.html          # 評論管理版面
 │   │   ├── bookings.html         # 預約/租借管理版面
 │   │   └── permissions.html      # 權限管理版面
-│   └── data/                     # 全站共用 Mock JSON（見 js/data-paths.js）
-│       ├── catalog/              # products, campgrounds (C002–C009), camp-equipment
-│       ├── commerce/             # orders, camp-bookings
-│       ├── customers/
-│       ├── admin/                # reviews, movement, min-stock, rental-skus (C001–C009)
-│       ├── marketing/
-│       └── promotions/
+│   └── data/                     # 後台專用 Mock 靜態資料（與買家端 data/ 分離）
+│       ├── orders.json           # 6 筆訂單（含出貨狀態、付款狀態、品項明細）
+│       ├── movement.json         # 20 筆庫存異動主檔（含負責員工 ID 與異動明細清單）
+│       ├── products.json         # 10 筆商品（含 total-stock 與 branch 分店庫存）
+│       ├── reantal.json          # 20 筆租借商品（camp 陣列保存 2~5 個營地與各自數量）
+│       ├── customers.json        # 6 位會員（含等級、點數、優惠券）
+│       ├── coupons.json          # 5 張優惠券（含啟用/停用狀態）
+│       ├── reviews.json          # 5 則評論（含回覆狀態）
+│       └── bookings.json         # 10 筆預約單（含付款/預約狀態、營位與租借明細）
 │
-├── booking/                      # 營地預約子系統（資料讀取共用 /data/catalog）
+├── booking/                      # ⭐ 營地預約子系統（完全獨立模組）
 │   ├── camp-search.html          # 營區搜尋與列表頁
 │   ├── camp-detail.html          # 營區詳情與預約頁
 │   ├── camp-rental.html          # 裝備租借頁
@@ -383,15 +353,9 @@ Yuruicamp/
 │   │   ├── camp-search.js        # 搜尋篩選邏輯
 │   │   ├── camp-detail.js        # 日期選擇 + 庫存連動
 │   │   └── camp-rental.js        # 裝備推薦 + 租借計費
-│   └── pages/                    # 預約流程頁（資料經 BookingAPI + DataPaths）
-│
-├── data/                         # ⭐ 全站唯一 Mock 資料根目錄
-│   ├── catalog/
-│   ├── commerce/
-│   ├── customers/
-│   ├── admin/
-│   ├── marketing/
-│   └── promotions/
+│   └── data/                     # 預約系統專用 Mock 靜態資料（與買家端 data/ 分離）
+│       ├── campgrounds.json      # 8 筆營區資料（含 zones 營位定價）
+│       └── rentals.json          # 8 筆租借裝備資料（依 campground_id 分組）
 │
 ├── css/
 │   ├── variables.scss            # 色彩、字體、間距變量系統
@@ -408,10 +372,7 @@ Yuruicamp/
 │   ├── formatters.js             # formatCurrency、formatDate、debounce、throttle 等工具
 │   ├── validators.js             # Email / phone 驗證
 │   ├── cart-service.js           # 購物車小計與運費計算
-│   ├── data-paths.js             # 統一 JSON 路徑
-│   ├── mock-storage-merge.js     # localStorage overlay 合併
-│   ├── api-mock.js               # Mock API 層（window.API）
-│   ├── booking-api.js            # BookingAPI
+│   ├── api-mock.js               # Mock API 層（window.API，預留後端接入點）
 │   ├── main.js                   # 單一 initApp 入口、共用 partial 載入、Scroll Lock
 │   ├── components/               # 可跨頁面複用的 UI 元件
 │   │   ├── header.js             # 導航欄（PC + Offcanvas 手機版）
@@ -805,7 +766,7 @@ window.AppConfig.API_BASE_URL = 'http://localhost:3000/api'; // 修改此處即�
 | HTML 頁面       | 11 個                                                  | 2 個（login + dashboard）+ 9 個 partials | 6 個                     | 28 個 |
 | JavaScript 模組 | 19 個（6 元件 + 10 頁面 + 3 核心）                     | 10 個（permissions + core + 8 功能）     | 5 個                     | 34 個 |
 | CSS 檔案        | 1 個（main.css）                                       | 1 個（admin.css）                        | 1 個（booking-main.css） | 3 個  |
-| Mock 資料 JSON  | 全站共用 `/data/**`（13 檔，見 `data-paths.js`）       | —                                        | —                        | 13 個 |
+| Mock 資料 JSON  | 6 個（data/）                                          | 8 個（admin/data/）                      | 2 個（booking/data/）    | 16 個 |
 | RWD 斷點        | 6 個（xs / sm / md / lg / xl / xxl）                   | Bootstrap 5 斷點（同套）                 | 768px 主要斷點           | —     |
 | 儲存機制        | localStorage（8 個鍵，含 bookingCart、adminEmployees） | sessionStorage（5 個 key）               | localStorage.bookingCart | —     |
 

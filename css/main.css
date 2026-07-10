@@ -783,17 +783,6 @@ a:focus-visible,
   text-decoration: none;
 }
 
-.siteCartItemSpec,
-.checkoutSummaryItemSpec,
-.memberDetailItemSpec,
-.itemSpecLabel {
-  margin: 0.125rem 0 0.375rem;
-  color: var(--yc-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
 .siteCartItemActions {
   display: flex;
   flex-wrap: wrap;
@@ -2953,7 +2942,7 @@ body.shippingAddressModalOpen {
 .partnerCardTrigger:focus-visible,
 .branchesDirectionsLink:focus-visible,
 .partnerModalClose:focus-visible,
-.partnerModalBookingLink:focus-visible {
+.partnerModalAction:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--yc-sage-action) 35%, transparent);
   outline-offset: 3px;
 }
@@ -3058,9 +3047,9 @@ body.shippingAddressModalOpen {
   padding: var(--yc-space-4, 16px);
 }
 
-.branchesDirectionsLink {
+.branchesDirectionsLink,
+.partnerModalAction {
   display: inline-flex;
-  width: 100%;
   min-height: 44px;
   align-items: center;
   justify-content: center;
@@ -3077,7 +3066,12 @@ body.shippingAddressModalOpen {
   transition: background-color var(--yc-transition-fast, 150ms ease), box-shadow var(--yc-transition-fast, 150ms ease), color var(--yc-transition-fast, 150ms ease);
 }
 
-.branchesDirectionsLink:hover {
+.branchesDirectionsLink {
+  width: 100%;
+}
+
+.branchesDirectionsLink:hover,
+.partnerModalAction:hover {
   background: var(--yc-cta-hover);
   box-shadow: var(--yc-shadow-soft, 0 4px 12px rgba(36, 77, 77, 0.1));
   color: var(--yc-on-cta);
@@ -3247,57 +3241,30 @@ body.shippingAddressModalOpen {
   line-height: 1.8;
 }
 
-/* Modal 底部：地區 + 前往預約（整塊可點） / Booking link row */
-.partnerModalBookingLink {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--yc-space-4, 16px);
+.partnerModalCoupon {
+  display: grid;
+  gap: var(--yc-space-2, 8px);
   border: 1px dashed color-mix(in srgb, var(--yc-sage-action) 32%, var(--yc-border));
   border-radius: var(--yc-radius-button, 8px);
   background: var(--yc-bg);
   padding: var(--yc-space-4, 16px);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color var(--yc-transition-fast, 150ms ease), background-color var(--yc-transition-fast, 150ms ease);
 }
 
-.partnerModalBookingLink:hover {
-  border-color: var(--yc-sage-action);
-  background: var(--yc-sage-soft);
-  text-decoration: none;
-  color: inherit;
-}
-
-.partnerModalBookingMeta {
-  display: grid;
-  gap: var(--yc-space-1, 4px);
-  min-width: 0;
-}
-
-.partnerModalBookingLabel {
+.partnerModalCouponLabel {
   color: var(--yc-sage-action);
   font-size: 0.875rem;
   font-weight: 900;
 }
 
-.partnerModalBookingRegion {
-  color: var(--yc-text);
-  font-size: 1.1rem;
+.partnerModalCouponValue {
+  color: var(--yc-cta);
+  font-size: 1.2rem;
   font-weight: 900;
 }
 
-.partnerModalBookingCta {
-  flex-shrink: 0;
-  color: var(--yc-warning);
-  font-size: 1rem;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.partnerModalBookingLink:hover .partnerModalBookingCta {
-  color: var(--yc-sage-action);
+.partnerModalActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (width <= 1024px) {
@@ -3344,7 +3311,7 @@ body.shippingAddressModalOpen {
   .branchCard,
   .branchesDirectionsLink,
   .partnerCardTrigger,
-  .partnerModalBookingLink,
+  .partnerModalAction,
   .partnerModalClose {
     transition: none;
   }
@@ -5189,10 +5156,11 @@ body.shippingAddressModalOpen {
 
 .homeProductImage:not(.cardGallery) img {
   transition: transform var(--yc-transition-base);
+  width: 100%;
 }
 
-.homeProductCard:hover .homeProductImage:not(.cardGallery) img,
-.homeProductCard:focus-visible .homeProductImage:not(.cardGallery) img {
+.homeProductCard:hover .homeProductImage img,
+.homeProductCard:focus-visible .homeProductImage img {
   transform: scale(1.02);
 }
 
@@ -5242,48 +5210,11 @@ body.shippingAddressModalOpen {
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.4;
-  margin: 0 0 var(--yc-space-2);
+  margin: 0 0 var(--yc-space-3);
   min-block-size: 2.8rem;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.homeProductSpecs {
-  display: grid;
-  gap: 0.35rem;
-  margin-bottom: var(--yc-space-2);
-}
-
-.homeProductSpecGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.homeProductSpecChip {
-  border: 1px solid var(--yc-border);
-  border-radius: 999px;
-  background: var(--yc-surface);
-  color: var(--yc-text);
-  cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0.3rem 0.55rem;
-}
-
-.homeProductSpecChip.isSelected {
-  background: var(--yc-sage-soft);
-  border-color: var(--yc-sage-action);
-  color: var(--yc-sage-dark);
-}
-
-.homeProductSpecPreview {
-  color: var(--yc-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin: 0;
 }
 
 .homeProductRating {
@@ -6536,26 +6467,6 @@ body.shippingAddressModalOpen {
   color: var(--yc-text-muted);
 }
 
-.memberFormInput.isInvalid {
-  background: rgba(220, 53, 69, 0.06);
-  border-color: var(--yc-error);
-}
-
-.memberFormInput.isInvalid:focus-visible {
-  outline-color: rgba(220, 53, 69, 0.35);
-}
-
-.memberFieldError {
-  color: var(--yc-error);
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.memberFieldError[hidden] {
-  display: none;
-}
-
 .memberPreferenceList {
   display: flex;
   flex-wrap: wrap;
@@ -7547,19 +7458,6 @@ main.productDetailContainer {
   border-radius: 12px;
   margin-bottom: 0.75rem;
   overflow: hidden;
-  position: relative;
-}
-
-.galleryMain .cardGallery,
-.galleryMain .card-gallery-swiper,
-.galleryMain .swiper-slide,
-.galleryMain .card-gallery-glightbox {
-  height: 100%;
-}
-
-.galleryMain .cardGallery img {
-  border-radius: 12px;
-  cursor: zoom-in;
 }
 
 .galleryMainImg {
@@ -8877,9 +8775,10 @@ main.productDetailContainer {
 .productCardImageWrap:not(.cardGallery) img {
   transform: scale(1.02);
   transition: transform 350ms ease;
+  width: 100%;
 }
 
-.productCard:hover .productCardImageWrap:not(.cardGallery) img {
+.productCard:hover .productCardImageWrap img {
   transform: scale(1.06);
 }
 
@@ -8908,47 +8807,10 @@ main.productDetailContainer {
   font-weight: 600;
   height: 2.66rem;
   line-height: 1.4;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.75rem;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.productCardSpecs {
-  display: grid;
-  gap: 0.35rem;
-  margin-bottom: 0.5rem;
-}
-
-.productCardSpecGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.productCardSpecChip {
-  border: 1px solid var(--yc-border);
-  border-radius: 999px;
-  background: var(--yc-surface);
-  color: var(--yc-text);
-  cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0.3rem 0.55rem;
-}
-
-.productCardSpecChip.isSelected {
-  background: var(--yc-sage-soft);
-  border-color: var(--yc-sage-action);
-  color: var(--yc-sage-dark);
-}
-
-.productCardSpecPreview {
-  color: var(--yc-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin: 0;
 }
 
 .productCardRating {

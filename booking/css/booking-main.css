@@ -2428,17 +2428,6 @@ main {
   text-decoration: none;
 }
 
-.siteCartItemSpec,
-.checkoutSummaryItemSpec,
-.memberDetailItemSpec,
-.itemSpecLabel {
-  margin: 0.125rem 0 0.375rem;
-  color: var(--yc-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
 .siteCartItemActions {
   display: flex;
   flex-wrap: wrap;
@@ -3260,7 +3249,7 @@ main {
   transition: transform 0.4s ease;
 }
 
-.campCardBooking:hover .campCardImageBooking:not(.cardGallery) img {
+.campCardBooking:hover .campCardImageBooking img {
   transform: scale(1.05);
 }
 
@@ -3274,29 +3263,6 @@ main {
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 20px;
-}
-
-.campCardBadgeFull {
-  top: auto;
-  bottom: 0.75rem;
-  left: auto;
-  right: 0.75rem;
-  background: #f8d7da;
-  color: #842029;
-}
-
-.campCardBadgeClosed {
-  top: auto;
-  bottom: 0.75rem;
-  left: auto;
-  right: 0.75rem;
-  background: #e2d9f3;
-  color: #5a3d8a;
-}
-
-.campCardBooking.isDateFull,
-.campCardBooking.isDateClosed {
-  opacity: 0.85;
 }
 
 .campCardBodyBooking {
@@ -3736,22 +3702,7 @@ main {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--yc-sage-action);
-  margin-bottom: 0.25rem;
-}
-
-.rentalItemCardSpecBooking,
-.rentalCartItemSpecBooking {
-  display: block;
-  color: var(--yc-text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
   margin-bottom: 0.4rem;
-}
-
-.rentalCartItemTextBooking {
-  display: grid;
-  gap: 0.15rem;
-  flex: 1;
 }
 
 .rentalItemCardTagBooking {
@@ -4744,13 +4695,6 @@ main {
   display: none;
 }
 
-/* 成功頁顯示導購區塊 / Show upsell on booking success page */
-.bookingSuccessUpsell {
-  display: block;
-  margin-top: 1.5rem;
-  text-align: left;
-}
-
 .checkoutUpsellSection .cartSectionTitle {
   color: var(--yc-on-cta);
 }
@@ -4765,11 +4709,6 @@ main {
   padding: 0;
   background: none;
   border: none;
-}
-
-.checkoutFillProfileBtn {
-  margin-top: 0.5rem;
-  width: 100%;
 }
 
 .checkoutContactHint {

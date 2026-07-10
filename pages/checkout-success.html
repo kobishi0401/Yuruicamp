@@ -9,34 +9,88 @@
     <link rel="preconnect" href="https://picsum.photos" />
     <link rel="dns-prefetch" href="https://picsum.photos" />
     <link rel="stylesheet" href="../css/main.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏕️</text></svg>" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏕️</text></svg>"
+    />
   </head>
   <body>
+    <!-- 共用頁首：由 main.js 載入 components/header.partial -->
     <div id="header"></div>
+
+    <!-- 訂單成立主內容：顯示訂單編號、出貨流程與後續操作 -->
     <main class="checkoutSuccessPage">
       <section class="checkoutSuccess" aria-labelledby="successTitle">
-        <div class="successIconWrap" aria-hidden="true"><span class="successIcon">✓</span></div>
+        <div class="checkoutSuccessDecoration checkoutSuccessDecorationTop" aria-hidden="true"></div>
+        <div class="checkoutSuccessDecoration checkoutSuccessDecorationBottom" aria-hidden="true"></div>
+
+        <div class="successIconWrap" aria-hidden="true">
+          <span class="successIcon">✓</span>
+        </div>
+
         <div class="successContent">
           <h1 class="successTitle" id="successTitle">訂單成立</h1>
-          <p class="successDescription">感謝您在 Yuruicamp 選購露營用品。我們已收到訂單，將盡快安排備貨與出貨。</p>
+          <p class="successDescription">
+            感謝您在 Yuruicamp 選購露營用品。我們已收到訂單，將盡快安排備貨與出貨。
+          </p>
+
           <dl class="orderNumberPanel">
             <dt class="orderNumberLabel">訂單編號</dt>
             <dd class="orderNumberValue isLoading" id="orderNumberDisplay" aria-live="polite">載入中...</dd>
           </dl>
-          <div class="successActions">
+
+          <ol class="shippingTimeline" aria-label="預計出貨流程">
+            <li class="shippingTimelineItem">
+              <span class="shippingTimelineIcon" aria-hidden="true">1</span>
+              <span class="shippingTimelineLabel">備貨中</span>
+              <span class="shippingTimelineMeta">1-2 工作天</span>
+            </li>
+            <li class="shippingTimelineItem">
+              <span class="shippingTimelineIcon" aria-hidden="true">2</span>
+              <span class="shippingTimelineLabel">配送中</span>
+              <span class="shippingTimelineMeta">2-4 工作天</span>
+            </li>
+            <li class="shippingTimelineItem">
+              <span class="shippingTimelineIcon" aria-hidden="true">3</span>
+              <span class="shippingTimelineLabel">準備收貨</span>
+              <span class="shippingTimelineMeta">確認配送通知</span>
+            </li>
+          </ol>
+
+          <div class="successActions" aria-label="下一步操作">
             <a class="successAction successActionPrimary" href="member-center.html">查看訂單明細</a>
             <a class="successAction successActionSecondary" href="products.html">繼續購物</a>
           </div>
+
+          <p class="serviceHint">
+            有任何問題可聯絡
+            <a
+              class="serviceLink lineServiceLink"
+              href="https://line.me/R/ti/p/@yuruicamp"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LINE 客服
+            </a>
+            或
+            <a class="serviceLink emailSupportLink" href="mailto:support@yuruicamp.com">
+              support@yuruicamp.com
+            </a>
+          </p>
         </div>
       </section>
     </main>
+
     <div id="footer"></div>
+
     <script src="../js/config.js" defer></script>
     <script src="../js/storage.js" defer></script>
     <script src="../js/state.js" defer></script>
     <script src="../js/formatters.js" defer></script>
-    <script src="../js/data-paths.js" defer></script>
     <script src="../js/validators.js" defer></script>
     <script src="../js/cart-service.js" defer></script>
     <script src="../js/api-mock.js" defer></script>
@@ -45,30 +99,38 @@
     <script src="../js/components/header.js" defer></script>
     <script src="../js/components/cart.js" defer></script>
     <script src="../js/main.js" defer></script>
+
     <script>
       (function initSuccessPage() {
         const orderNumberDisplay = document.getElementById('orderNumberDisplay');
         const successMode = readSuccessMode();
         const orderNum = readOrderNumber();
+
+        applySuccessMode(successMode);
+
         if (orderNumberDisplay) {
           const normalizedOrderNum = String(orderNum || '--').replace(/^#/, '');
-          orderNumberDisplay.textContent = normalizedOrderNum === '--' ? '#--' : '#' + normalizedOrderNum;
+          orderNumberDisplay.textContent = normalizedOrderNum === '--' ? '#--' : `#${normalizedOrderNum}`;
           orderNumberDisplay.classList.remove('isLoading');
+          if (!orderNum) {
+            document.querySelector('.checkoutSuccess')?.classList.add('isError');
+          }
         }
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function () {
-            window.initNavbar?.();
-            window.initModalListeners?.();
-            window.initCartListeners?.();
-          }, { once: true });
-        } else {
-          window.initNavbar?.();
-        }
+
+        launchConfetti();
+        initSharedComponents();
       })();
+
+      function readSuccessMode() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('type') === 'booking' || params.get('mode') === 'booking' ? 'booking' : 'shopping';
+      }
+
       function readOrderNumber() {
         const params = new URLSearchParams(window.location.search);
         const queryOrderNum = params.get('orderNum');
         if (queryOrderNum) return queryOrderNum;
+
         try {
           // Booking 共用成功頁：預約結帳會先寫入 lastBookingCheckoutOrder，再回退讀主站 lastCheckoutOrder。
           const successMode = readSuccessMode();
@@ -79,9 +141,87 @@
             }
           }
           const lastOrder = JSON.parse(localStorage.getItem('lastCheckoutOrder') || 'null');
-          if (!lastOrder) return '';
-          return window.formatOrderDisplayId ? window.formatOrderDisplayId(lastOrder.id) : String(lastOrder.id || '');
-        } catch (error) { return ''; }
+          return lastOrder?.orderNumber || lastOrder?.id || '';
+        } catch (error) {
+          console.warn('Failed to read lastCheckoutOrder on checkout success page.', error);
+          return '';
+        }
+      }
+
+      function applySuccessMode(mode) {
+        if (mode !== 'booking') return;
+
+        document.title = '預約成立 - Yuruicamp 預約營地';
+        document.getElementById('successTitle').textContent = '預約成立';
+        document.querySelector('.successDescription').textContent =
+          '感謝您完成 Yuruicamp 預約。我們已收到預約資料，確認信將寄送至您的電子信箱。';
+        document.querySelector('.orderNumberLabel').textContent = '預約編號';
+
+        const timelineItems = document.querySelectorAll('.shippingTimelineItem');
+        const bookingTimeline = [
+          ['預約確認', '系統已建立'],
+          ['營地通知', '確認入住資訊'],
+          ['準備出發', '依預約日期報到'],
+        ];
+        timelineItems.forEach((item, index) => {
+          item.querySelector('.shippingTimelineLabel').textContent = bookingTimeline[index][0];
+          item.querySelector('.shippingTimelineMeta').textContent = bookingTimeline[index][1];
+        });
+
+        const primaryAction = document.querySelector('.successActionPrimary');
+        const secondaryAction = document.querySelector('.successActionSecondary');
+        primaryAction.textContent = '查看預約明細';
+        primaryAction.href = '../booking/pages/member-center.html?returnTo=booking';
+        secondaryAction.textContent = '再預約一次';
+        secondaryAction.href = '../booking/pages/camp-search.html';
+      }
+
+      function initSharedComponents() {
+        const run = () => {
+          window.initNavbar?.();
+          window.initModalListeners?.();
+          window.initCartListeners?.();
+          window.initPersonalizationModal?.();
+          window._appComponentsInitialized = true;
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', run, { once: true });
+          return;
+        }
+
+        run();
+      }
+
+      function launchConfetti() {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.querySelector('.checkoutSuccess')?.classList.add('isReducedMotion');
+          return;
+        }
+
+        const colors = ['var(--yc-success)', 'var(--yc-sage-action)', 'var(--yc-cta)', 'var(--yc-warning)'];
+        const particleCount = 36;
+
+        for (let index = 0; index < particleCount; index += 1) {
+          window.setTimeout(() => {
+            const particle = document.createElement('span');
+            const size = Math.random() * 6 + 6;
+            const duration = Math.random() * 2 + 2.5;
+            const delay = Math.random() * 0.4;
+
+            particle.className = 'confettiParticle';
+            particle.setAttribute('aria-hidden', 'true');
+            particle.style.setProperty('--confetti-left', `${Math.random() * 100}%`);
+            particle.style.setProperty('--confetti-size', `${size}px`);
+            particle.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
+            particle.style.setProperty('--confetti-radius', Math.random() > 0.5 ? '999px' : '2px');
+            particle.style.setProperty('--confetti-delay', `${delay}s`);
+            particle.style.setProperty('--confetti-duration', `${duration}s`);
+
+            document.body.appendChild(particle);
+            window.setTimeout(() => particle.remove(), (duration + delay + 0.5) * 1000);
+          }, index * 30);
+        }
       }
     </script>
   </body>
