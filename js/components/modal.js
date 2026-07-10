@@ -114,7 +114,7 @@
     }
 
     var user = {
-      id: 'U001',
+      id: 'user-001',
       name: provider + ' 使用者',
       email: 'user@' + provider.toLowerCase() + '.example',
       avatar: provider.charAt(0),

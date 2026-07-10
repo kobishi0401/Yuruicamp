@@ -59,20 +59,12 @@
    * 渲染購物車單一商品列，包含數量控制與垃圾桶移除按鈕。
    * 套用元件：#siteCartDrawerBody 內的 .siteCartItem。
    */
-  function findCartItem(productId, variantId) {
-    return window.AppState.cart.find(function (item) {
-      return item.id === productId && (item.variantId || '') === (variantId || '');
-    });
-  }
-
   function renderCartItem(item) {
     var itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
     var detailUrl = getMainPageUrl('product-detail.html') + '?id=' + encodeURIComponent(item.id);
-    var specHtml = window.renderSpecLabelHtml ? window.renderSpecLabelHtml(item.specLabel, 'siteCartItemSpec') : '';
-    var variantId = item.variantId || '';
 
     return [
-      '<article class="siteCartItem" data-product-id="' + escapeCartHtml(item.id) + '" data-variant-id="' + escapeCartHtml(variantId) + '">',
+      '<article class="siteCartItem" data-product-id="' + escapeCartHtml(item.id) + '">',
       '  <a class="siteCartItemImageLink" href="' + detailUrl + '">',
       '    <img class="siteCartItemImage" src="' +
         escapeCartHtml(item.image || 'https://picsum.photos/seed/default/80/80') +
@@ -83,22 +75,18 @@
       '  <div class="siteCartItemContent">',
       '    <div class="siteCartItemBrand">' + escapeCartHtml(item.brand || '') + '</div>',
       '    <a class="siteCartItemName" href="' + detailUrl + '">' + escapeCartHtml(item.name) + '</a>',
-      specHtml,
       '    <div class="siteCartItemPrice">' + window.formatCurrency(Number(item.price || 0)) + '</div>',
       '    <div class="siteCartItemActions">',
       '      <button class="siteCartQuantityDecrease" data-product-id="' +
         escapeCartHtml(item.id) +
-        '" data-variant-id="' + escapeCartHtml(variantId) +
         '" type="button" aria-label="減少數量">−</button>',
       '      <span class="siteCartItemQuantity">' + Number(item.quantity || 0) + '</span>',
       '      <button class="siteCartQuantityIncrease" data-product-id="' +
         escapeCartHtml(item.id) +
-        '" data-variant-id="' + escapeCartHtml(variantId) +
         '" type="button" aria-label="增加數量">+</button>',
       '      <strong class="siteCartItemSubtotal">' + window.formatCurrency(itemTotal) + '</strong>',
       '      <button class="siteCartRemoveButton" data-product-id="' +
         escapeCartHtml(item.id) +
-        '" data-variant-id="' + escapeCartHtml(variantId) +
         '" type="button" aria-label="移除商品">',
       '        <svg class="siteCartRemoveIcon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">',
       '          <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>',
@@ -197,8 +185,9 @@
 
   window.addToCart = function (product, quantity) {
     var amount = quantity || 1;
-    var variantId = product.variantId || '';
-    var existingItem = findCartItem(product.id, variantId);
+    var existingItem = window.AppState.cart.find(function (item) {
+      return item.id === product.id;
+    });
 
     if (existingItem) existingItem.quantity += amount;
     else window.AppState.cart.push(Object.assign({}, product, { quantity: amount }));
@@ -210,9 +199,9 @@
     window.showToast && window.showToast('已加入購物車', 'success');
   };
 
-  window.removeFromCart = function (productId, variantId) {
+  window.removeFromCart = function (productId) {
     window.AppState.cart = window.AppState.cart.filter(function (item) {
-      return !(item.id === productId && (item.variantId || '') === (variantId || ''));
+      return item.id !== productId;
     });
     window.saveAppState();
     window.updateCartBadge();
@@ -221,12 +210,14 @@
     window.showToast && window.showToast('已從購物車移除', 'info');
   };
 
-  window.updateCartQuantity = function (productId, quantity, variantId) {
-    var item = findCartItem(productId, variantId);
+  window.updateCartQuantity = function (productId, quantity) {
+    var item = window.AppState.cart.find(function (cartItem) {
+      return cartItem.id === productId;
+    });
     if (!item) return;
 
     if (quantity <= 0) {
-      window.removeFromCart(productId, variantId);
+      window.removeFromCart(productId);
       return;
     }
     if (quantity <= window.AppConfig.CART.MAX_QUANTITY) {
@@ -295,16 +286,18 @@
       var item;
 
       if (increaseButton) {
-        item = findCartItem(increaseButton.dataset.productId, increaseButton.dataset.variantId);
-        if (item) window.updateCartQuantity(item.id, item.quantity + 1, item.variantId);
+        item = window.AppState.cart.find(function (cartItem) {
+          return cartItem.id === increaseButton.dataset.productId;
+        });
+        if (item) window.updateCartQuantity(item.id, item.quantity + 1);
       }
       if (decreaseButton) {
-        item = findCartItem(decreaseButton.dataset.productId, decreaseButton.dataset.variantId);
-        if (item) window.updateCartQuantity(item.id, item.quantity - 1, item.variantId);
+        item = window.AppState.cart.find(function (cartItem) {
+          return cartItem.id === decreaseButton.dataset.productId;
+        });
+        if (item) window.updateCartQuantity(item.id, item.quantity - 1);
       }
-      if (removeButton) {
-        window.removeFromCart(removeButton.dataset.productId, removeButton.dataset.variantId);
-      }
+      if (removeButton) window.removeFromCart(removeButton.dataset.productId);
     });
   };
 })();

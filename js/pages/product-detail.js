@@ -1,5 +1,5 @@
 // Product detail page state and behavior.
-const DEFAULT_PRODUCT_ID = 'P001';
+const DEFAULT_PRODUCT_ID = 'prod-001';
 const FREE_SHIPPING_THRESHOLD = 3000;
 const MEMBER_REVIEW_KEY = 'member_center_reviews';
 
@@ -10,8 +10,7 @@ window.initProductDetailPage = async () => {
 
   try {
     const product = await window.API.products.getById(productId);
-    const reviews = await window.API.products.getReviews(productId);
-    _renderProductPage(product, reviews);
+    _renderProductPage(product);
     _setProductPageState('ready');
   } catch (error) {
     console.error('Product detail failed to load', error);
@@ -35,13 +34,14 @@ function _setProductPageState(state) {
 }
 
 // Render all product detail sections and bind interactions.
-function _renderProductPage(product, reviews = []) {
+function _renderProductPage(product) {
   _renderProductInfo(product);
   _renderGallery(product);
   _renderSpecOptions(product, 'color');
   _renderSpecOptions(product, 'size');
   _renderSpecTable(product);
-  _renderReviews(reviews);
+  _renderProductReviews(product);
+  _renderRating(product);
   _renderShippingProgress();
   _initShippingProgressSync();
   _initQtyStepper();
@@ -76,49 +76,25 @@ function _setText(id, value) {
 
 // Render rating text from static review cards or product data.
 function _renderRating(product) {
-  const starRating = Number(product.rating) || 0;
-  const ratingText = product.ratingDisplay ?? starRating.toFixed(1);
-  const reviewCount = product.reviewCount ?? product.reviews ?? 0;
-  _setText('productStars', _renderStars(starRating));
-  _setText('productRatingNum', ratingText);
+  const reviewRatings = _getReviewCardRatings();
+  const average = reviewRatings.length ? _average(reviewRatings) : product.rating || 0;
+  const reviewCount = reviewRatings.length || product.reviews || 0;
+  _setText('productStars', _renderStars(average));
+  _setText('productRatingNum', average.toFixed(1));
   _setText('productReviewCount', `\uff08${reviewCount} \u5247\u8a55\u50f9\uff09`);
 }
 
+// Render current, original, and discount prices.
 function _renderPrice(product) {
+  const hasDiscount = product.originalPrice && product.originalPrice > product.price;
   _setText('productPrice', window.formatCurrency(product.price));
-  _setText('productOriginalPrice', '');
-  _setText('productDiscount', '');
-  document.getElementById('productOriginalPrice')?.toggleAttribute('hidden', true);
-  document.getElementById('productDiscount')?.toggleAttribute('hidden', true);
-}
-
-function _renderReviews(reviews) {
-  const container = document.getElementById('productReviewsList');
-  if (!container) return;
-  _updateReviewsTabCount(reviews ? reviews.length : 0);
-  if (!reviews || reviews.length === 0) {
-    container.innerHTML = '<p class="productReviewEmpty">目前尚無評價</p>';
-    return;
-  }
-  container.innerHTML = reviews.map((review) => `
-    <div class="reviewCard">
-      <div class="reviewHeader">
-        <div class="reviewAvatar">${(review.buyerName || '?').charAt(0)}</div>
-        <div>
-          <div class="reviewAuthorName">${review.buyerName || '會員'}</div>
-          <div class="starStyle">${_renderStars(review.rating)}</div>
-        </div>
-        <div class="ratingDate">${(review.createdAt || '').slice(0, 10)}</div>
-      </div>
-      <p class="reviewText">${review.comment || ''}</p>
-    </div>
-  `).join('');
-}
-
-/** 更新 Tab 上的評價數量（依 API 實際筆數）/ Update review count on tab label */
-function _updateReviewsTabCount(count) {
-  const el = document.getElementById('productReviewsTabCount');
-  if (el) el.textContent = String(count);
+  _setText('productOriginalPrice', hasDiscount ? window.formatCurrency(product.originalPrice) : '');
+  _setText(
+    'productDiscount',
+    hasDiscount ? `-${Math.round((1 - product.price / product.originalPrice) * 100)}%` : ''
+  );
+  document.getElementById('productOriginalPrice')?.toggleAttribute('hidden', !hasDiscount);
+  document.getElementById('productDiscount')?.toggleAttribute('hidden', !hasDiscount);
 }
 
 // Render product tags as badges.
@@ -146,83 +122,151 @@ function _getReviewCardRatings() {
     .filter((value) => Number.isFinite(value));
 }
 
-// Keep a reference so thumbnail clicks can drive the Swiper instance.
-// 保留 Swiper 實例，讓縮圖點擊可以切換主圖。
-let _detailGallerySwiper = null;
+// Render member-center test reviews from localStorage for the current product.
+function _renderProductReviews(product) {
+  const container = document.getElementById('productReviewsList');
+  if (!container) return;
+  const reviews = _getStoredReviewsForProduct(product.id);
+  if (!reviews.length) {
+    _updateReviewTabCount(_getReviewCardRatings().length);
+    return;
+  }
 
-// Render image gallery: Swiper main slider + thumbs + GLightbox zoom.
-// 渲染圖片區：主圖輪播、縮圖、點擊放大。
+  container.innerHTML = reviews.map((review) => _buildReviewCard(review)).join('');
+  _updateReviewTabCount(reviews.length);
+}
+
+function _getStoredReviewsForProduct(productId) {
+  let reviews = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MEMBER_REVIEW_KEY) || '[]');
+    reviews = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    reviews = [];
+  }
+  return reviews
+    .filter((review) => review && review.productId === productId && _isValidStoredReview(review))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+}
+
+function _isValidStoredReview(review) {
+  const rating = Number(review.rating);
+  return rating >= 1 && rating <= 5 && String(review.content || '').trim().length > 0;
+}
+
+function _buildReviewCard(review) {
+  const name = _escapeHtml(_getStoredReviewAuthor());
+  const initial = _escapeHtml(name.charAt(0) || '會');
+  const rating = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 0)));
+  const date = _escapeHtml(_formatReviewDate(review.createdAt));
+  return `
+    <div class="reviewCard">
+      <div class="reviewHeader">
+        <div class="reviewAvatar">${initial}</div>
+        <div>
+          <div class="reviewAuthorName">${name}</div>
+          <div class="starStyle" data-review-rating="${rating}">${_renderStars(rating)}</div>
+        </div>
+        <div class="ratingDate">${date}</div>
+      </div>
+      <p class="reviewText">${_escapeHtml(review.content || '')}</p>
+      ${_renderReviewImages(review.photos)}
+    </div>
+  `;
+}
+
+function _getStoredReviewAuthor() {
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    const profile = JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+    return profile.name || (currentUser && currentUser.name) || '會員';
+  } catch {
+    return '會員';
+  }
+}
+
+function _formatReviewDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || '--';
+  return date.toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function _renderReviewImages(photos) {
+  const list = Array.isArray(photos) ? photos : [];
+  if (!list.length) return '';
+  return `
+    <div class="reviewImages">
+      ${list
+        .map((photo, index) => {
+          const src = typeof photo === 'string' ? photo : photo && photo.src;
+          const name =
+            typeof photo === 'string'
+              ? `評價圖片 ${index + 1}`
+              : photo.originalFileName || `評價圖片 ${index + 1}`;
+          if (!src) return '';
+          return `<img class="ratingImage" src="${_escapeHtml(src)}" alt="${_escapeHtml(name)}" loading="lazy">`;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
+function _updateReviewTabCount(count) {
+  const reviewTab = document.querySelector('.productTabBtn[data-tab="reviews"]');
+  if (reviewTab) reviewTab.textContent = `商品評價 (${count})`;
+}
+
+function _escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Render image gallery with semantic thumbnail buttons.
 function _renderGallery(product) {
   const images =
     product.images && product.images.length > 0 ? product.images : [product.image].filter(Boolean);
-  const galleryMain = document.getElementById('galleryMain');
+  const mainImg = document.getElementById('galleryMainImg');
   const thumbs = document.getElementById('galleryThumbs');
-  if (!galleryMain || !thumbs || images.length === 0) return;
+  if (!mainImg || !thumbs || images.length === 0) return;
 
-  // Main area: reuse shared card-gallery markup (no title bar in lightbox)
-  // 主圖區：共用 card-gallery（燈箱不帶標題白條）
-  if (window.buildCardGalleryHtml) {
-    galleryMain.innerHTML = window.buildCardGalleryHtml({
-      images,
-      alt: product.name,
-      galleryId: `product-detail-${product.id}`,
-      wrapClass: 'productDetailGallery',
-    });
-  } else {
-    galleryMain.innerHTML = `<img class="galleryMainImg" src="${images[0]}" alt="${product.name}" loading="lazy">`;
-  }
-
+  _setMainImage(mainImg, images[0], product.name);
   thumbs.innerHTML = images.map((src, index) => _buildGalleryThumb(src, index, product.name)).join('');
-
-  // Init Swiper + GLightbox after DOM is ready / DOM 就緒後初始化
-  window.initCardGalleries?.(document.getElementById('productGallery') || document);
-
-  // Remember the detail-page Swiper for thumbnail sync / 記住詳情頁 Swiper 供縮圖同步
-  const swiperEl = galleryMain.querySelector('.card-gallery-swiper');
-  _detailGallerySwiper = swiperEl?.swiper || null;
-
-  // Sync active thumb when user swipes / 滑動主圖時同步縮圖高亮
-  if (_detailGallerySwiper) {
-    _detailGallerySwiper.on('slideChange', () => {
-      _setActiveThumb(_detailGallerySwiper.activeIndex);
-    });
-  }
-
-  // Thumbnail click → switch main slide (and open is via main image lightbox)
-  // 點縮圖：切換主圖；放大請點主圖
-  thumbs.onclick = (event) => _handleGalleryThumbClick(event);
+  thumbs.addEventListener('click', (event) => _handleGalleryClick(event, mainImg, product.name));
 }
 
-// Highlight the thumbnail that matches the current slide index.
-// 依目前投影片索引高亮對應縮圖。
-function _setActiveThumb(index) {
-  const thumbs = document.querySelectorAll('.galleryThumb');
-  thumbs.forEach((item, i) => {
-    item.classList.toggle('isSelected', i === index);
-  });
+// Set the main gallery image source and alt text.
+function _setMainImage(image, src, name) {
+  image.src = src;
+  image.alt = name;
+  image.classList.remove('isSwitching');
 }
 
 // Build one gallery thumbnail button.
 function _buildGalleryThumb(src, index, name) {
   const active = index === 0 ? ' isSelected' : '';
   return `
-    <button class="galleryThumb${active}" data-index="${index}" type="button" aria-label="${name} ${index + 1}">
+    <button class="galleryThumb${active}" data-src="${src}" type="button" aria-label="${name} ${index + 1}">
       <img src="${src}" alt="" class="galleryThumbImage" loading="lazy">
     </button>
   `;
 }
 
-// Switch the main Swiper slide from a thumbnail click.
-// 點縮圖時切換主圖輪播。
-function _handleGalleryThumbClick(event) {
+// Switch the main gallery image from a thumbnail click.
+function _handleGalleryClick(event, mainImg, productName) {
   const thumb = event.target.closest('.galleryThumb');
   if (!thumb) return;
-  const index = Number(thumb.dataset.index);
-  if (!Number.isFinite(index)) return;
-  _setActiveThumb(index);
-  if (_detailGallerySwiper) {
-    _detailGallerySwiper.slideTo(index);
-  }
+  document.querySelectorAll('.galleryThumb').forEach((item) => item.classList.remove('isSelected'));
+  thumb.classList.add('isSelected');
+  mainImg.classList.add('isSwitching');
+  window.setTimeout(() => _setMainImage(mainImg, thumb.dataset.src, productName), 150);
 }
 
 // Render color or size option groups.
@@ -401,8 +445,17 @@ function _initActionButtons(product) {
 function _addSelectedProductToCart(product) {
   const qty = parseInt(document.getElementById('qtyInput')?.value || '1', 10);
   const specs = _getSelectedSpecs();
-  const variant = window.findProductVariant(product, specs.color, specs.size);
-  window.addToCart(window.buildCartLineFromProduct(product, variant), qty);
+  const specSuffix = [specs.color, specs.size].filter(Boolean).join(' / ');
+  window.addToCart(
+    {
+      id: product.id,
+      name: specSuffix ? `${product.name}\uff08${specSuffix}\uff09` : product.name,
+      price: product.price,
+      image: product.image,
+      brand: product.brand,
+    },
+    qty
+  );
 }
 
 // Get currently selected color and size.

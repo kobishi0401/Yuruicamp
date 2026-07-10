@@ -1007,107 +1007,6 @@ main {
     position: static;
   }
 }
-.cardGallery {
-  height: 100%;
-  position: relative;
-  width: 100%;
-}
-
-.cardGallery .swiper {
-  height: 100%;
-  width: 100%;
-}
-
-.cardGallery .swiper-slide {
-  height: 100%;
-}
-
-.cardGallery .card-gallery-glightbox {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
-.cardGallery img {
-  display: block;
-  height: 100%;
-  object-fit: cover;
-  width: 100%;
-}
-
-.cardGalleryEmpty {
-  align-items: center;
-  background: var(--yc-surface-soft, #f0ece3);
-  color: var(--yc-text-muted, #888);
-  display: flex;
-  font-size: 0.875rem;
-  height: 100%;
-  justify-content: center;
-  min-height: 10rem;
-}
-
-.cardGallery .swiper-button-prev,
-.cardGallery .swiper-button-next {
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  color: var(--yc-sage-action, #4a5d4e);
-  height: 1.75rem;
-  margin-top: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1.75rem;
-}
-.cardGallery .swiper-button-prev::after,
-.cardGallery .swiper-button-next::after {
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.cardGallery .swiper-button-prev {
-  left: 0.4rem;
-}
-
-.cardGallery .swiper-button-next {
-  right: 0.4rem;
-}
-
-.cardGallery .swiper-button-disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.cardGallery .swiper-pagination {
-  bottom: 0.4rem !important;
-  line-height: 0;
-}
-
-.cardGallery .swiper-pagination-bullet {
-  background: rgba(255, 255, 255, 0.75);
-  opacity: 1;
-}
-
-.cardGallery .swiper-pagination-bullet-active {
-  background: var(--yc-sage-action, #4a5d4e);
-}
-
-.cardGallery .productCardBadge,
-.cardGallery .campCardBadge,
-.cardGallery .campCardBadgeBooking {
-  pointer-events: none;
-  z-index: 2;
-}
-
-.productCard:hover .cardGallery img,
-.homeProductCard:hover .cardGallery img,
-.campCardBooking:hover .cardGallery img {
-  transform: none;
-}
-
-.glightbox-container .gslide-description {
-  display: none !important;
-}
-
 /* Booking Summary：日期摘要區塊，供營區詳情側欄顯示已選日期。 */
 .dateSummary {
   background: var(--yc-sage-soft);
@@ -2424,17 +2323,6 @@ main {
   text-decoration: none;
 }
 
-.siteCartItemSpec,
-.checkoutSummaryItemSpec,
-.memberDetailItemSpec,
-.itemSpecLabel {
-  margin: 0.125rem 0 0.375rem;
-  color: var(--yc-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
 .siteCartItemActions {
   display: flex;
   flex-wrap: wrap;
@@ -3242,13 +3130,10 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.campCardImageBooking:not(.cardGallery) img {
   transition: transform 0.4s ease;
 }
 
-.campCardBooking:hover .campCardImageBooking:not(.cardGallery) img {
+.campCardBooking:hover .campCardImageBooking img {
   transform: scale(1.05);
 }
 
@@ -3262,29 +3147,6 @@ main {
   font-weight: 600;
   padding: 0.2rem 0.6rem;
   border-radius: 20px;
-}
-
-.campCardBadgeFull {
-  top: auto;
-  bottom: 0.75rem;
-  left: auto;
-  right: 0.75rem;
-  background: #f8d7da;
-  color: #842029;
-}
-
-.campCardBadgeClosed {
-  top: auto;
-  bottom: 0.75rem;
-  left: auto;
-  right: 0.75rem;
-  background: #e2d9f3;
-  color: #5a3d8a;
-}
-
-.campCardBooking.isDateFull,
-.campCardBooking.isDateClosed {
-  opacity: 0.85;
 }
 
 .campCardBodyBooking {
@@ -3722,22 +3584,7 @@ main {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--yc-sage-action);
-  margin-bottom: 0.25rem;
-}
-
-.rentalItemCardSpecBooking,
-.rentalCartItemSpecBooking {
-  display: block;
-  color: var(--yc-text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
   margin-bottom: 0.4rem;
-}
-
-.rentalCartItemTextBooking {
-  display: grid;
-  gap: 0.15rem;
-  flex: 1;
 }
 
 .rentalItemCardTagBooking {
@@ -4728,13 +4575,6 @@ main {
   display: none;
 }
 
-/* 成功頁顯示導購區塊 / Show upsell on booking success page */
-.bookingSuccessUpsell {
-  display: block;
-  margin-top: 1.5rem;
-  text-align: left;
-}
-
 .checkoutUpsellSection .cartSectionTitle {
   color: var(--yc-on-cta);
 }
@@ -4749,11 +4589,6 @@ main {
   padding: 0;
   background: none;
   border: none;
-}
-
-.checkoutFillProfileBtn {
-  margin-top: 0.5rem;
-  width: 100%;
 }
 
 .checkoutContactHint {
@@ -5046,3 +4881,5 @@ main {
     font-size: 1.75rem;
   }
 }
+
+/*# sourceMappingURL=booking-main.css.map */
