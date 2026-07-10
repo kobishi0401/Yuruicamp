@@ -758,8 +758,7 @@ a:focus-visible,
 .siteCartItemImage {
   width: 88px;
   aspect-ratio: 1;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   border-radius: var(--yc-radius-button);
 }
 
@@ -860,370 +859,6 @@ a:focus-visible,
     width: 72px;
   }
 }
-.shippingAddressBlock {
-  align-items: flex-start;
-  display: flex;
-  gap: 1rem;
-  width: 100%;
-}
-
-.shippingAddressLabel {
-  color: var(--yc-text);
-  flex: 0 0 5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.5;
-  padding-top: 0.125rem;
-}
-
-.shippingAddressMain {
-  align-items: flex-start;
-  display: flex;
-  flex: 1;
-  gap: 0.5rem;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.shippingAddressDisplay {
-  color: var(--yc-text);
-  flex: 1;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  min-width: 0;
-}
-
-.shippingAddressName {
-  color: var(--yc-text);
-  font-weight: 700;
-  margin-bottom: 0.2rem;
-}
-
-.shippingAddressLine {
-  color: var(--yc-text-muted);
-  margin-bottom: 0.15rem;
-}
-
-.shippingAddressContact {
-  color: var(--yc-text-muted);
-  font-size: 0.875rem;
-  opacity: 0.9;
-}
-
-.shippingAddressEmpty {
-  color: var(--yc-text-muted);
-  font-style: italic;
-}
-
-.shippingAddressEditBtn {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  color: var(--yc-sage-action);
-  cursor: pointer;
-  display: inline-flex;
-  flex-shrink: 0;
-  font-size: 1rem;
-  justify-content: center;
-  line-height: 1;
-  min-height: 2rem;
-  min-width: 2rem;
-  padding: 0.25rem;
-  transition: color var(--yc-transition-fast, 150ms ease);
-}
-
-.shippingAddressEditBtn:hover {
-  color: var(--yc-sage-dark);
-}
-
-.shippingAddressEditBtn:focus-visible {
-  outline: 2px solid var(--yc-sage-action);
-  outline-offset: 2px;
-}
-
-.shippingAddressModal {
-  align-items: center;
-  background: rgba(0, 0, 0, 0.45);
-  display: none;
-  inset: 0;
-  justify-content: center;
-  padding: 1rem;
-  position: fixed;
-  z-index: var(--yc-z-modal, 1050);
-}
-
-.shippingAddressModal.isOpen {
-  display: flex;
-}
-
-body.shippingAddressModalOpen {
-  overflow: hidden;
-}
-
-.shippingAddressModalDialog {
-  background: var(--yc-surface);
-  border: 1px solid var(--yc-border);
-  border-radius: var(--yc-radius-card, 12px);
-  box-shadow: var(--yc-shadow-modal, 0 24px 60px rgba(0, 0, 0, 0.22));
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 2rem);
-  max-width: 640px;
-  overflow: hidden;
-  width: 100%;
-}
-
-.shippingAddressModalHeader {
-  align-items: center;
-  border-bottom: 1px solid var(--yc-border);
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-}
-
-.shippingAddressModalTitle {
-  align-items: center;
-  color: var(--yc-sage-action);
-  display: flex;
-  font-size: 1.05rem;
-  font-weight: 700;
-  gap: 0.5rem;
-  margin: 0;
-}
-
-.shippingAddressModalClose {
-  background: transparent;
-  border: 0;
-  color: var(--yc-text-muted);
-  cursor: pointer;
-  font-size: 1.5rem;
-  line-height: 1;
-  min-height: 2rem;
-  min-width: 2rem;
-  padding: 0;
-}
-
-.shippingAddressModalClose:hover {
-  color: var(--yc-text);
-}
-
-.shippingAddressModalForm {
-  overflow: auto;
-  padding: 1rem 1.25rem;
-}
-
-.shippingAddressFormInput.isInvalid,
-.memberFormInput.isInvalid {
-  background: rgba(220, 53, 69, 0.06);
-  border-color: var(--yc-error, #dc3545);
-}
-
-.shippingAddressFormInput.isInvalid:focus,
-.memberFormInput.isInvalid:focus {
-  outline-color: rgba(220, 53, 69, 0.35);
-}
-
-.shippingAddressFieldError,
-.memberFieldError {
-  color: var(--yc-error, #dc3545);
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.shippingAddressFieldError[hidden],
-.memberFieldError[hidden] {
-  display: none;
-}
-
-.shippingAddressFormRow {
-  display: grid;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.shippingAddressFormRowSplit {
-  grid-template-columns: 1fr 1fr;
-}
-
-.shippingAddressFormRowPostal {
-  grid-template-columns: 1fr 2fr;
-}
-
-.shippingAddressFormField {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.shippingAddressFormLabel {
-  color: var(--yc-text);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.shippingAddressFormLabel .requiredMark,
-.memberFormLabel .requiredMark {
-  color: var(--yc-error, #dc3545);
-  font-weight: 700;
-}
-
-.shippingAddressFormInput {
-  background: var(--yc-surface);
-  border: 1px solid var(--yc-border);
-  border-radius: var(--yc-radius-button, 8px);
-  color: var(--yc-text);
-  font-size: 0.9375rem;
-  min-height: 2.5rem;
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-}
-
-.shippingAddressFormInput:focus {
-  border-color: var(--yc-sage-action);
-  outline: 2px solid var(--yc-sage-soft);
-  outline-offset: 0;
-}
-
-.shippingAddressFormInput:disabled {
-  background: var(--yc-surface-soft);
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.shippingAddressModalFooter {
-  border-top: 1px solid var(--yc-border);
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  padding: 1rem 1.25rem;
-}
-
-.checkoutAddressField .shippingAddressBlock {
-  margin-top: 0.25rem;
-}
-
-.checkoutAddressField .shippingAddressLabel {
-  flex-basis: 5.5rem;
-}
-
-@media (max-width: 560px) {
-  .shippingAddressFormRowSplit,
-  .shippingAddressFormRowPostal {
-    grid-template-columns: 1fr;
-  }
-  .shippingAddressBlock {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .shippingAddressLabel {
-    flex: none;
-  }
-}
-.cardGallery {
-  height: 100%;
-  position: relative;
-  width: 100%;
-}
-
-.cardGallery .swiper {
-  height: 100%;
-  width: 100%;
-}
-
-.cardGallery .swiper-slide {
-  height: 100%;
-}
-
-.cardGallery .card-gallery-glightbox {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
-.cardGallery img {
-  display: block;
-  height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
-  width: 100%;
-}
-
-.cardGalleryEmpty {
-  align-items: center;
-  background: var(--yc-surface-soft, #f0ece3);
-  color: var(--yc-text-muted, #888);
-  display: flex;
-  font-size: 0.875rem;
-  height: 100%;
-  justify-content: center;
-  min-height: 10rem;
-}
-
-.cardGallery .swiper-button-prev,
-.cardGallery .swiper-button-next {
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  color: var(--yc-sage-action, #4a5d4e);
-  height: 1.75rem;
-  margin-top: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1.75rem;
-}
-.cardGallery .swiper-button-prev::after,
-.cardGallery .swiper-button-next::after {
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.cardGallery .swiper-button-prev {
-  left: 0.4rem;
-}
-
-.cardGallery .swiper-button-next {
-  right: 0.4rem;
-}
-
-.cardGallery .swiper-button-disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.cardGallery .swiper-pagination {
-  bottom: 0.4rem !important;
-  line-height: 0;
-}
-
-.cardGallery .swiper-pagination-bullet {
-  background: rgba(255, 255, 255, 0.75);
-  opacity: 1;
-}
-
-.cardGallery .swiper-pagination-bullet-active {
-  background: var(--yc-sage-action, #4a5d4e);
-}
-
-.cardGallery .productCardBadge,
-.cardGallery .campCardBadge,
-.cardGallery .campCardBadgeBooking {
-  pointer-events: none;
-  z-index: 2;
-}
-
-.productCard:hover .cardGallery img,
-.homeProductCard:hover .cardGallery img,
-.campCardBooking:hover .cardGallery img {
-  transform: none;
-}
-
-.glightbox-container .gslide-description {
-  display: none !important;
-}
-
 .siteFooter,
 .bookingFooter {
   color: var(--yc-surface);
@@ -1701,8 +1336,7 @@ body.shippingAddressModalOpen {
 .bookingBrandImage {
   width: clamp(48px, 5vw, 70px);
   height: clamp(48px, 5vw, 70px);
-  -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
 }
 
 .siteBrandText,
@@ -2074,8 +1708,7 @@ body.shippingAddressModalOpen {
   border-radius: var(--yc-radius-card, 12px);
   box-shadow: var(--yc-shadow-soft, 0 4px 12px rgba(36, 77, 77, 0.1));
   display: block;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -2113,8 +1746,7 @@ body.shippingAddressModalOpen {
 .blogDetailAuthorAvatar {
   border-radius: 50%;
   height: 36px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 36px;
 }
 
@@ -2199,8 +1831,7 @@ body.shippingAddressModalOpen {
 .blogInlineProductImage {
   aspect-ratio: 1;
   border-radius: var(--yc-radius-button, 8px);
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -2282,8 +1913,7 @@ body.shippingAddressModalOpen {
 .blogRelatedImage {
   aspect-ratio: 16/9;
   display: block;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -2466,8 +2096,7 @@ body.shippingAddressModalOpen {
 .blogFeaturedImage {
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   position: absolute;
   width: 100%;
 }
@@ -2501,7 +2130,6 @@ body.shippingAddressModalOpen {
   justify-content: center;
   min-height: 28px;
   padding: 0.25rem 0.75rem;
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -2553,8 +2181,7 @@ body.shippingAddressModalOpen {
 .blogArticleAuthorAvatar {
   border-radius: 50%;
   flex: 0 0 auto;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .blogFeaturedAuthorAvatar {
@@ -2659,8 +2286,7 @@ body.shippingAddressModalOpen {
 .blogArticleImage {
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -3150,8 +2776,7 @@ body.shippingAddressModalOpen {
   display: block;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .partnerCardContent {
@@ -4050,8 +3675,7 @@ body.shippingAddressModalOpen {
   border-radius: 6px;
   display: block;
   height: 56px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 56px;
 }
 
@@ -4815,8 +4439,7 @@ body.shippingAddressModalOpen {
   block-size: 100%;
   inline-size: 100%;
   inset: 0;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   position: absolute;
   z-index: 0;
 }
@@ -4927,8 +4550,7 @@ body.shippingAddressModalOpen {
 }
 
 .brandMarquee {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
-          mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
   overflow: hidden;
   width: 100%;
 }
@@ -4937,7 +4559,6 @@ body.shippingAddressModalOpen {
   animation: brand-marquee-scroll 25s linear infinite;
   display: flex;
   gap: var(--yc-space-8);
-  width: -moz-max-content;
   width: max-content;
 }
 
@@ -4958,9 +4579,7 @@ body.shippingAddressModalOpen {
   min-block-size: 44px;
   padding-inline: var(--yc-space-4);
   transition: border-color var(--yc-transition-fast), color var(--yc-transition-fast), background-color var(--yc-transition-fast);
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
   white-space: nowrap;
 }
 
@@ -5149,12 +4768,7 @@ body.shippingAddressModalOpen {
 .homeProductImage img {
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
-  width: 100%;
-}
-
-.homeProductImage:not(.cardGallery) img {
+  object-fit: cover;
   transition: transform var(--yc-transition-base);
   width: 100%;
 }
@@ -5486,7 +5100,6 @@ body.shippingAddressModalOpen {
   font-size: 0.8125rem;
   font-weight: 700;
   padding: var(--yc-space-1) var(--yc-space-2);
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -6663,8 +6276,7 @@ body.shippingAddressModalOpen {
 }
 
 .memberOrderThumb {
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
 }
 
 .memberOrderMore {
@@ -6907,8 +6519,7 @@ body.shippingAddressModalOpen {
   border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
   border-radius: var(--yc-radius-card, 12px);
   display: block;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -7050,8 +6661,7 @@ body.shippingAddressModalOpen {
   border: 1px solid color-mix(in srgb, var(--yc-sage-action) 10%, var(--yc-border));
   border-radius: var(--yc-radius-button, 8px);
   display: block;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 56px;
 }
 
@@ -7213,8 +6823,7 @@ body.shippingAddressModalOpen {
   border: 1px solid var(--yc-border);
   border-radius: var(--yc-radius-button, 8px);
   display: block;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 72px;
 }
 
@@ -7464,8 +7073,7 @@ main.productDetailContainer {
   border-radius: 12px;
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   opacity: 1;
   transition: opacity 200ms ease, transform 250ms ease;
   width: 100%;
@@ -7509,8 +7117,7 @@ main.productDetailContainer {
 .galleryThumbImage {
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100%;
 }
 
@@ -7732,9 +7339,7 @@ main.productDetailContainer {
 }
 .shippingProgressBar {
   --shipping-progress-value: 0%;
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
+  appearance: none;
   block-size: 10px;
   border: 0;
   border-radius: 999px;
@@ -8405,8 +8010,7 @@ main.productDetailContainer {
 .ratingImage {
   border-radius: 8px;
   height: 100px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   width: 100px;
 }
 
@@ -8625,7 +8229,6 @@ main.productDetailContainer {
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 0.35rem 0.75rem;
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -8654,8 +8257,7 @@ main.productDetailContainer {
   aspect-ratio: 1;
   border-radius: 8px;
   height: 200px;
-  -o-object-fit: cover;
-     object-fit: cover;
+  object-fit: cover;
   opacity: 0.9;
   width: 200px;
   z-index: 1;
@@ -8767,12 +8369,7 @@ main.productDetailContainer {
 .productCardImageWrap img {
   display: block;
   height: 100%;
-  -o-object-fit: cover;
-     object-fit: cover;
-  width: 100%;
-}
-
-.productCardImageWrap:not(.cardGallery) img {
+  object-fit: cover;
   transform: scale(1.02);
   transition: transform 350ms ease;
   width: 100%;
@@ -9081,7 +8678,6 @@ main.productDetailContainer {
   font-size: 0.72rem;
   font-weight: 700;
   padding: 0.1rem 0.35rem;
-  width: -moz-fit-content;
   width: fit-content;
 }
 
@@ -9547,4 +9143,6 @@ main.productDetailContainer {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     transform: scale(0.98);
   }
-}/*# sourceMappingURL=main.css.map */
+}
+
+/*# sourceMappingURL=main.css.map */
