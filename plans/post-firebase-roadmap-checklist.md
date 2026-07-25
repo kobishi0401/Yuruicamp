@@ -110,7 +110,7 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 7. ~~**CK-5**（ECPay stub 付款閉環）~~ → **已完成**（2026-07-25 IT）  
 8. ~~**I-8** 瀏覽器手動（Firebase 登入＋商城 COD／ECPay＋預約 ECPay）~~ → **已完成**（2026-07-25）  
 9. **BK-1～BK-3**／**CK-1～CK-3**（建單失敗診斷，遇問題再記錄；目前手動已通可略）  
-10. **真實綠界沙箱**（`stub=false`＋公網 Notify URL）← **下一步 B**  
+10. **真實綠界沙箱**（`stub=false`＋公網 Notify URL）← **下一步 B** — 見 [`docs/backend-specs/payment/ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)  
 11. **FA-1**、**FA-3**（可平行）
 
 ---
