@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | 生效中（2026-07-22） |
+| **狀態** | 生效中（2026-07-25） |
 | **Firebase 主線** | **已完成**（見下方「已完成」） |
 | **定位** | 登入／Auth 之後的業務債與加固；**不是**再重做 Firebase 接線 |
 | **相關** | [`docs/frontend-specs/firebase-merge-into-main-notes.md`](../docs/frontend-specs/firebase-merge-into-main-notes.md) |
@@ -70,7 +70,7 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 | ID | 項目 | 狀態 | 說明 |
 |----|------|------|------|
 | **CK-4** | 優惠券套用（後端 F-2） | **已完成** | Backend UI 以券碼取得會員 claim，PATCH `couponClaimId`，成交金額只採後端 `pricing`；支援空 PATCH 移除 |
-| **CK-5** | 付款後續（ECPay／confirm-cod 等） | 延後 | 契約上建立 session ≠ 付完款；見 checkout 規格「後續工作」 |
+| **CK-5** | 付款後續（ECPay／confirm-cod 等） | **已完成** | 2026-07-25 stub 全流程 IT：`launch`→`stub/aio-checkout`→Notify→`paid`；COD `confirm-cod`；預約 Notify 後 `paid`＋`pending`；IT 類別見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) I-7 備註；瀏覽器 Firebase 手動可選補驗 |
 
 ---
 
@@ -107,7 +107,11 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 4. ~~**FA-2**（401 加固）~~ → **已完成**  
 5. **ENG-1**（commit／PR）  
 6. ~~**CK-4**（商城正式優惠券 UI）~~ → **已完成**
-7. 之後再排 CK-5、FA-1、FA-3
+7. ~~**CK-5**（ECPay stub 付款閉環）~~ → **已完成**（2026-07-25 IT）  
+8. ~~**I-8** 瀏覽器手動（Firebase 登入＋商城 COD／ECPay＋預約 ECPay）~~ → **已完成**（2026-07-25）  
+9. **BK-1～BK-3**／**CK-1～CK-3**（建單失敗診斷，遇問題再記錄；目前手動已通可略）  
+10. **真實綠界沙箱**（`stub=false`＋公網 Notify URL）← **下一步 B**  
+11. **FA-1**、**FA-3**（可平行）
 
 ---
 

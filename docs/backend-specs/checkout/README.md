@@ -573,5 +573,7 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 
 ## 9. 後續工作
 
-- 前端／本機「建立 Checkout 失敗」追蹤（先記錄、暫不改 Firebase）：見 [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) **CK-1～CK-5**。
-- D：完成 ECPay Gateway、付款表單、Notify webhook、Return URL 與商城 COD（對應 checklist **CK-5**）。
+- ~~**CK-5** ECPay stub 付款閉環~~ → **已完成**（2026-07-25；見 [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) CK-5 與 [`backend-implementation-checklist.md`](../../../plans/backend-implementation-checklist.md) I-7）。
+- 前端／本機「建立 Checkout 失敗」追蹤（先記錄）：**CK-1～CK-3**（[`post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md)）。
+- ~~**I-8**~~ → **已完成**（2026-07-25 瀏覽器 Firebase 手動：商城 ECPay／COD、預約 ECPay）
+- **下一步 B**：真實綠界沙箱 — 見 [`docs/backend-specs/payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md)

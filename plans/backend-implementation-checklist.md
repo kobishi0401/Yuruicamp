@@ -3,7 +3,7 @@
 | 欄位             | 內容                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
 | **狀態**         | Active                                                                                |
-| **日期**         | 2026-07-20                                                                            |
+| **日期**         | 2026-07-25                                                                            |
 | **對齊**         | [`java-backend-architecture-proposal.md`](./java-backend-architecture-proposal.md) §8 |
 | **API 契約索引** | [`docs/api/README.md`](../docs/api/README.md)（P0+P1 已寫死，欄位策略甲）             |
 | **商品契約**     | [`docs/api/product-api-contract.md`](../docs/api/product-api-contract.md)             |
@@ -21,12 +21,12 @@
 | **A**    | 骨架（Security／Session／Envelope／OpenAPI） | ✅                                                  |
 | **B**    | Catalog 公開讀（商品）                       | 🔄 B-4 已驗收；B-5b、B-7 已實作，待完整驗收           |
 | **C**    | Checkout + 庫存保留 + 15 分排程              | ✅ C-1～C-8 已驗收；C-4 優惠券套用另待 F-2          |
-| **D**    | Payment（ECPay + COD）                       | ⬜（契約已鎖）                                      |
-| **E**    | Booking（營位 + 租借）                       | ✅ E-0～E-7 已完成；Payment Confirmation 延後至線 D |
+| **D**    | Payment（ECPay + COD）                       | ✅ D-1～D-6 stub 驗收完成（2026-07-25）             |
+| **E**    | Booking（營位 + 租借）                       | ✅ E-0～E-7 已完成；Notify 入帳由線 D 負責           |
 | **F**    | Coupon 三種規則                              | ⬜（契約已鎖）                                      |
 | **G**    | Admin 細 RBAC + 後台 CRUD                    | ✅ G-1～G-6 正式接線與整合驗收完成                  |
 | **H**    | calendar／文章／評價                         | ⬜（可延後；契約未寫）                              |
-| **I**    | 共用 REST 基礎 + 商城 Checkout 前端接線      | 🔄 I-1～I-6 已完成；I-8 非付款驗收已完成，I-7 與付款驗收待線 D |
+| **I**    | 共用 REST 基礎 + 商城 Checkout 前端接線      | ✅ I-1～I-8 已完成（2026-07-25 瀏覽器手動驗收）     |
 | **J**    | GCP／Flyway／ADR 收尾                        | ⬜                                                  |
 
 ---
@@ -205,10 +205,11 @@
   - [x] I-5c 移除信用卡欄位與驗證，ECPay 僅顯示下一步提示
   - [x] I-5d Backend 模式停用前端優惠券交易與折扣，等待線 F
 - [x] I-6 CheckoutSession／錯誤／倒數 UI（Draft PATCH、Ready 15 分倒數、Expired／Cancelled 清理與錯誤操作已完成）
-- [ ] I-7 COD 或 ECPay 接線（依賴線 D）
-- [ ] I-8 商城 Checkout 前端整合驗收與文件
+- [x] I-7 COD 與 ECPay 接線（`checkout.js`：`confirmCod`／`createEcpayForm`＋`_submitEcpayForm`；`booking-checkout.js`：`launchEcpayPayment`；2026-07-25 PostgreSQL IT 26 項通過＋live `simulate-paid`；真實綠界 HTTP 與瀏覽器手動見 I-8／部署前）
+- [x] I-8 商城 Checkout 前端整合驗收與文件（2026-07-25 Firebase 登入：商城 ECPay stub→`paid`、COD `confirm-cod`→`completed`+`unpaid`、預約 ECPay→`paid`+`pending`；成功頁以 `GET` session／booking 確認）
 
-> **2026-07-22 線 D 前置驗收**：已完成建立、冪等、防超賣、PATCH、優惠券、GET、取消、逾時，以及 Checkout 狀態頁的 `unpaid`／倒數／取消／逾時／錯誤呈現。I-8 暫不勾選；COD、ECPay、Notify 冪等、付款成功、優惠券 `consumed` 與庫存／租借 fulfilled 必須在線 D 完成後再驗收。
+> **2026-07-25 I-7 驗收**：`EcpayLaunchReturnPostgreSqlIntegrationTest`（launch／stub aio-checkout→paid／Return 不標 paid／COD confirm）、`PaymentNotifyPostgreSqlIntegrationTest`（Notify 冪等／商城 fulfilled／預約 paid+pending）、`CheckoutPostgreSqlIntegrationTest`、`BookingCheckoutIntegrationTest`；live 後端 `POST /api/payments/ecpay/stub/simulate-paid` 通過。  
+> **2026-07-25 I-8 驗收**：瀏覽器手動（Firebase Google 登入）— 商城 ECPay、商城 COD、預約 ECPay 三條路徑通過；下一步見 [`post-firebase-roadmap-checklist.md`](./post-firebase-roadmap-checklist.md) §5 真實綠界沙箱。
 
 > **責任邊界**：I-1 是全域模式基線；I-2a～I-2b 是全前端共用 API 基礎；I-3a～I-8 只負責商城 Checkout。E-7 負責 Booking 前端接線，必須重用 I-2a／I-2b，不可另建 Token、REST、Envelope 或錯誤處理流程。
 
