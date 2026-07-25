@@ -292,7 +292,7 @@ POST /api/booking/checkout/sessions
 | `firstPurchase` | `first_purchase_used = false` |
 | `promotion` | 活動碼；結帳輸入 |
 
-結帳同一交易：`coupon_claims` → `consumed` + `order_coupons` 快照；取消訂單**不退回** claimed（依現有文件）。
+結帳先建立 `order_coupons` 快照；COD／付款成立時 claim → `consumed`。會員主動取消時 claim → `revoked`，Checkout 自動逾時時 claim → `expired`；兩者都不退回 `claimed`。
 
 ### 5.4 後台庫存異動
 

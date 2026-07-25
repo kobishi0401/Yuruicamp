@@ -10,7 +10,8 @@
     ],
     "tags": [
       "帳篷",
-      "Coleman"
+      "Coleman",
+      "熱銷"
     ],
     "specifications": {
       "weight": "4.2 kg",
@@ -62,7 +63,8 @@
       "safety"
     ],
     "tags": [
-      "睡袋"
+      "睡袋",
+      "熱銷"
     ],
     "specifications": {
       "weight": "1.2 kg",
@@ -96,7 +98,8 @@
     ],
     "tags": [
       "炊具",
-      "Snow Peak"
+      "Snow Peak",
+      "熱銷"
     ],
     "specifications": {}
   },
@@ -110,7 +113,8 @@
       "safety"
     ],
     "tags": [
-      "燈具"
+      "燈具",
+      "熱銷"
     ],
     "specifications": {
       "lumens": "300 lm",
@@ -249,7 +253,8 @@
       "backpack"
     ],
     "tags": [
-      "背包"
+      "背包",
+      "熱銷"
     ],
     "specifications": {}
   },
@@ -305,7 +310,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -319,7 +325,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -333,7 +340,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -347,7 +355,8 @@
       "cooking"
     ],
     "tags": [
-      "炊具"
+      "炊具",
+      "新品"
     ],
     "specifications": {}
   },
@@ -361,7 +370,9 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品",
+      "熱銷"
     ],
     "specifications": {}
   },
@@ -375,7 +386,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -389,7 +401,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -403,7 +416,8 @@
       "safety"
     ],
     "tags": [
-      "其他"
+      "其他",
+      "新品"
     ],
     "specifications": {}
   },
@@ -417,7 +431,8 @@
       "cooking"
     ],
     "tags": [
-      "炊具"
+      "炊具",
+      "新品"
     ],
     "specifications": {}
   },
@@ -431,7 +446,8 @@
       "tent"
     ],
     "tags": [
-      "帳篷"
+      "帳篷",
+      "新品"
     ],
     "specifications": {}
   },

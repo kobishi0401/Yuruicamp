@@ -87,6 +87,82 @@ class ProductPaginationIntegrationTest {
 	}
 
 	@Test
+	void createdAtDescendingMatchesProductListingTime() throws Exception {
+		List<String> expected = jdbcTemplate.queryForList(
+				"select p.id " + SELLABLE_FROM_SQL + "order by p.created_at desc, p.id desc",
+				String.class);
+		JsonNode response = getProducts(0, 100, "createdAt,desc");
+		List<String> actual = values(response.path("data"), "id");
+
+		assertFalse(expected.isEmpty(), "PostgreSQL 必須有可供驗收的商品資料");
+		assertEquals(expected, actual, "最新商品必須依 products.created_at 降序排列");
+	}
+
+	@Test
+	void productTagsAndVariantsDoNotContainJoinDuplicates() throws Exception {
+		JsonNode products = getProducts(0, 100, "id,asc").path("data");
+
+		products.forEach(product -> {
+			List<String> tags = values(product.path("tags"), null);
+			List<String> variantIds = values(product.path("variants"), "id");
+			assertEquals(new HashSet<>(tags).size(), tags.size(), "商品標籤不得重複");
+			assertEquals(new HashSet<>(variantIds).size(), variantIds.size(), "商品規格不得因 JOIN FETCH 重複");
+		});
+	}
+
+	@Test
+	void bestsellersMatchValidOrderQuantities() throws Exception {
+		List<String> expected = jdbcTemplate.queryForList("""
+				select p.id
+				from products p
+				join equipment_items i on i.id = p.item_id
+				left join order_items order_item on order_item.product_id = p.id
+				left join orders order_header
+				  on order_header.id = order_item.order_id
+				 and order_header.status not in ('cancelled', 'returned')
+				where p.status = 'active'
+				  and i.active = true
+				  and exists (
+				      select 1
+				      from equipment_tags badge
+				      where badge.item_id = p.item_id
+				        and badge.tag = '熱銷'
+				  )
+				  and exists (
+				      select 1 from product_variants variant
+				      where variant.product_id = p.id and variant.status = 'active'
+				)
+				group by p.id
+				having coalesce(sum(
+				    case when order_header.id is not null then order_item.quantity else 0 end
+				), 0) > 0
+				order by coalesce(sum(
+				    case when order_header.id is not null then order_item.quantity else 0 end
+				), 0) desc,
+				p.id asc
+				limit 6
+				""", String.class);
+
+		MvcResult result = mockMvc.perform(get("/api/products/bestsellers").param("limit", "6"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data").isArray())
+				.andReturn();
+		List<String> actual = values(
+				objectMapper.readTree(result.getResponse().getContentAsByteArray()).path("data"),
+				"id");
+
+		assertFalse(expected.isEmpty(), "PostgreSQL 必須有可供驗收的商品資料");
+		assertEquals(expected, actual, "熱銷商品必須依有效訂單商品數量排序");
+	}
+
+	@Test
+	void bestsellerLimitOutsideRangeReturnsValidationEnvelope() throws Exception {
+		assertValidationError("limit", "0", "/api/products/bestsellers");
+		assertValidationError("limit", "101", "/api/products/bestsellers");
+	}
+
+	@Test
 	void invalidPageAndSizeReturnValidationEnvelope() throws Exception {
 		assertValidationError("page", "-1");
 		assertValidationError("size", "0");
@@ -131,7 +207,11 @@ class ProductPaginationIntegrationTest {
 	}
 
 	private void assertValidationError(String parameter, String value) throws Exception {
-		mockMvc.perform(get("/api/products").param(parameter, value))
+		assertValidationError(parameter, value, "/api/products");
+	}
+
+	private void assertValidationError(String parameter, String value, String path) throws Exception {
+		mockMvc.perform(get(path).param(parameter, value))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
@@ -163,7 +243,7 @@ class ProductPaginationIntegrationTest {
 
 	private static List<String> values(JsonNode array, String field) {
 		List<String> values = new ArrayList<>();
-		array.forEach(node -> values.add(node.path(field).asText()));
+		array.forEach(node -> values.add(field == null ? node.asText() : node.path(field).asText()));
 		return values;
 	}
 }

@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Implemented（D-1～D-6）；W3 Admin 全額退款 port（stub） |
+| **狀態** | Implemented（D-1～D-6）；W3 Admin 全額退款 port（stub）；COD claim 消耗完成 |
 | **日期** | 2026-07-25 |
 | **版本** | 0.3 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
@@ -69,9 +69,21 @@
    - 首次成功：`result=success` → `payment_status=paid`、`paid_at`
    - 重複：既有列／已 paid → **不**改狀態兩次；回 `1|OK`
    - 失敗：`result=failed`
-4. 商城：相關 `product_stock_reservations` → `fulfilled`；有套券則 claim → `consumed`
-5. 預約：維持 `status=pending`，只改 paid
-6. 成功處理後 body 固定純文字 **`1|OK`**
+4. 商城：相關 `product_stock_reservations` → `fulfilled`
+5. 商城有套券時 claim → `consumed`；重複通知不得覆寫第一次 `consumed_at`（`CouponClaim.consume` 冪等）
+6. 預約：維持 `status=pending`，只改 paid
+7. 成功處理後 body 固定純文字 **`1|OK`**
+
+### 4.2 `payment_notifications` 對照（內部，可不直接曝 API）
+
+| DB | 說明 |
+|----|------|
+| `provider` | 固定 `ecpay` |
+| `merchant_trade_no` | 商店訂單號 |
+| `provider_trade_no` | 綠界交易號 |
+| `order_id` XOR `booking_id` | 二擇一 |
+| `raw_payload` | jsonb 原文 |
+| `result` | `success` \| `ignored_duplicate` \| `failed` |
 
 ---
 
@@ -89,6 +101,8 @@
 |------|------------------|------|
 | `confirm-cod` 後 | `unpaid` | 已成立訂單，清掉 Checkout 倒數；庫存保留不設到期 |
 | Admin `complete`（履約完成） | `paid` | `completeCod` 寫 `paid_at` |
+
+若 COD 訂單有 `order_coupons` 快照，`confirm-cod` 成功時會在同一交易將 claim 改為 `consumed` 並設定 `consumed_at`。這代表優惠券已被本次成立的 COD 訂單占用，與貨款尚未收取是兩個不同狀態。
 
 預約任何嘗試設 `cod` → `VALIDATION_ERROR`（D-6；DB 亦有 `ck_bookings_no_cod`）。
 
@@ -119,7 +133,7 @@
 
 | 情境 | 券狀態 |
 |------|--------|
-| 未付款取消（僅 applied／snapshot） | 清除訂單套券；claim 保持 `claimed` |
+| 未付款取消（僅 applied／snapshot） | claim → `revoked`（主動）或 `expired`（逾時） |
 | Notify 後已 `consumed`，之後**全額**退款／取消 | **回滾**為 `claimed`（可再用） |
 | 部分退款 | **不**回滾（維持 `consumed`） |
 
@@ -160,6 +174,6 @@
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
-| 0.3 | 2026-07-25 | W3：Admin 全額退款 port／錯誤碼；stub 退款；§7 規則仍有效 |
-| 0.2 | 2026-07-23 | D-2／D-4 端點；COD／取消退款／券回滾定案；stub aio-checkout |
+| 0.3 | 2026-07-25 | W3：Admin 全額退款 port／錯誤碼；stub 退款；合併 COD claim 消耗語意 |
+| 0.2 | 2026-07-24 | COD 成立時消耗 claim；D-2／D-4 端點；stub aio-checkout |
 | 0.1 | 2026-07-20 | ECPay 真相在 Notify；COD 僅商城 |

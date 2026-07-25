@@ -56,6 +56,7 @@ const elements = new Map([
 
 let selectedPayment = 'credit';
 let couponCatalogLoads = 0;
+let renderedCouponCodes = [];
 const couponUpdateCalls = [];
 const sessionStorage = new Map();
 const context = vm.createContext({
@@ -77,7 +78,28 @@ const context = vm.createContext({
     AppState: { cart: [], currentUser: { id: 'U001' } },
     API: {
       coupons: {
-        getMine: async () => [],
+        getMine: async () => [
+          {
+            id: 71,
+            status: 'claimed',
+            coupon: { id: 7, code: 'WELCOME100' },
+          },
+          {
+            id: 72,
+            status: 'consumed',
+            coupon: { id: 8, code: 'USED200' },
+          },
+          {
+            id: 73,
+            status: 'revoked',
+            coupon: { id: 9, code: 'REVOKED300' },
+          },
+          {
+            id: 74,
+            status: 'expired',
+            coupon: { id: 10, code: 'EXPIRED400' },
+          },
+        ],
         claim: async (couponId) => ({
           id: 71,
           couponId,
@@ -108,9 +130,17 @@ const context = vm.createContext({
     YuruiCoupons: {
       loadCoupons: async () => {
         couponCatalogLoads += 1;
-        return [{ id: 7, code: 'WELCOME100' }];
+        return [
+          { id: 7, code: 'WELCOME100' },
+          { id: 8, code: 'USED200' },
+          { id: 9, code: 'REVOKED300' },
+          { id: 10, code: 'EXPIRED400' },
+          { id: 11, code: 'AVAILABLE500' },
+        ];
       },
-      renderCouponOptions() {},
+      renderCouponOptions: (_id, coupons) => {
+        renderedCouponCodes = coupons.map((coupon) => coupon.code);
+      },
       findCouponByCode: (coupons, code) => coupons.find((coupon) => coupon.code === code) || null,
     },
     formatCurrency: (value) => `NT$${Number(value).toFixed(2)}`,
@@ -162,6 +192,7 @@ assert.equal(elements.get('checkoutCouponInput').disabled, false);
 assert.equal(elements.get('checkoutApplyCouponBtn').disabled, false);
 assert.equal(elements.get('checkoutCouponInput').placeholder, '輸入或選擇一組折扣碼');
 assert.equal(couponCatalogLoads, 1);
+assert.deepEqual(renderedCouponCodes, ['WELCOME100', 'AVAILABLE500']);
 
 elements.get('checkoutCouponInput').value = 'welcome100';
 await context._applyCheckoutCouponCode({ showToast: false });
@@ -173,6 +204,7 @@ assert.equal(elements.get('checkoutDiscount').textContent, '-NT$200.00');
 assert.equal(elements.get('checkoutTotal').textContent, 'NT$3100.00');
 assert.match(elements.get('checkoutAppliedCouponTexts').innerHTML, /WELCOME100/);
 assert.match(elements.get('checkoutCouponMsg').textContent, /已套用/);
+assert.deepEqual(renderedCouponCodes, ['AVAILABLE500']);
 
 const checkoutUpdateRequest = context._buildCheckoutUpdateRequest({
   buyerName: '測試會員',
@@ -180,8 +212,36 @@ const checkoutUpdateRequest = context._buildCheckoutUpdateRequest({
   deliveryAddress: '台北市測試路 1 號',
   pickupBranchId: '',
 });
-assert.equal(checkoutUpdateRequest.couponClaimId, 71);
+assert.equal(
+  Object.hasOwn(checkoutUpdateRequest, 'couponClaimId'),
+  false,
+  '確認結帳不應重送目前 Session 已套用的 couponClaimId'
+);
 
+sessionStorage.set(
+  'lastCheckoutSession',
+  JSON.stringify({
+    orderId: 'O001',
+    couponClaimId: 72,
+  })
+);
+const switchedCouponUpdateRequest = context._buildCheckoutUpdateRequest({
+  buyerName: '測試會員',
+  buyerPhone: '0912345678',
+  deliveryAddress: '台北市測試路 1 號',
+  pickupBranchId: '',
+});
+assert.equal(switchedCouponUpdateRequest.couponClaimId, 71);
+
+sessionStorage.set(
+  'lastCheckoutSession',
+  JSON.stringify({
+    orderId: 'O001',
+    status: 'unshipped',
+    checkoutStep: 'draft',
+    couponClaimId: 71,
+  })
+);
 await context._removeBackendCheckoutCoupon();
 assert.deepEqual(JSON.parse(JSON.stringify(couponUpdateCalls[1])), {
   orderId: 'O001',
@@ -190,6 +250,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(couponUpdateCalls[1])), {
 assert.equal(elements.get('checkoutDiscountRow').hidden, true);
 assert.equal(elements.get('checkoutTotal').textContent, 'NT$3300.00');
 assert.equal(elements.get('checkoutAppliedCouponTexts').hidden, true);
+assert.deepEqual(renderedCouponCodes, ['WELCOME100', 'AVAILABLE500']);
 
 context._showBackendCouponError({ code: 'COUPON_SOLD_OUT' });
 assert.equal(elements.get('checkoutCouponMsg').textContent, '此優惠券已領完');
@@ -253,6 +314,8 @@ assert(!checkoutHtml.includes('id="cardCvv"'));
 assert(checkoutHtml.includes('下一步將前往 ECPay'));
 assert(!checkoutHtml.includes('id="checkoutPricingSource"'));
 assert(!checkoutHtml.includes('id="checkoutActionStatus"'));
+assert.match(checkoutHtml, /id="checkoutCouponInput"[\s\S]*?autocomplete="off"/);
+assert.match(checkoutHtml, /id="checkoutCouponInput"[\s\S]*?name="checkoutCouponCode"/);
 assert(!checkoutSource.includes('lastCheckoutOrder'));
 assert(!checkoutSource.includes('markFirstPurchaseUsed'));
 assert(!checkoutSource.includes('API.orders.create'));

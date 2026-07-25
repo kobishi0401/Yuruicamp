@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | C-2～C-8、商城優惠券、Checkout Read 與 COD Confirm 已實作 |
-| **更新日期** | 2026-07-22 |
+| **更新日期** | 2026-07-24 |
 | **文件定位** | Checkout C-2～C-8 唯一流程與驗收文件 |
 | **持久化策略** | D1.A：待付款 `orders` + `order_items` + `product_stock_reservations` |
 | **保留時間** | 15 分鐘 |
@@ -60,12 +60,14 @@ PATCH 更新資料
 
 COD 確認
 → 僅接受 paymentMethod=cod 且仍可編輯的 Ready Session
+→ 有套券時鎖定 claim 並改為 consumed，寫入 consumed_at
 → paymentStatus 維持 unpaid
 → checkoutExpiresAt 與 active 保留帳 expiresAt 清為 null
 → 回傳 checkoutStep=completed
 
 會員取消
 → 訂單 cancelled
+→ 有套券時 claim 改為 revoked
 → active 保留帳改為 released
 → 寫入 Cancelled by customer 歷程
 
@@ -73,6 +75,7 @@ COD 確認
 → 每分鐘尋找 checkoutExpiresAt <= now 的未付款訂單
 → 鎖定並重新檢查
 → 訂單 cancelled
+→ 有套券時 claim 改為 expired
 → active 保留帳改為 expired
 → 寫入 Checkout expired 歷程
 ```
@@ -115,7 +118,9 @@ COD 確認
 - `shipping.recipientName`、`phone`、`address` 與 `paymentMethod` 採部分更新；未提供欄位保留原值。
 - 支援 `ecpay-credit`、`ecpay-atm`、`ecpay-cvs`、`ecpay-other`、`cod`。
 - 不可在 PATCH 修改商品明細；需要改商品時先取消再建立。
-- `couponClaimId` 目前只接受 `null`；非空值回 `400 VALIDATION_ERROR`，等待 F-2。
+- 非空 `couponClaimId` 會驗證 claim 所有人、狀態、券效期、資格與最低消費，再由後端重算折扣。
+- 同訂單重送相同 claim 時保留原快照並回傳成功；只有切換成另一張券時才先刪除舊快照、Flush，再新增快照。
+- 空 JSON `{}` 代表清除目前套券；只更新配送或付款且未提供 `couponClaimId` 時，保留現有優惠券。
 
 ### 4.4 取消與逾時
 
@@ -124,6 +129,7 @@ COD 確認
 | 會員主動取消 | `cancelled` | `released` | `Cancelled by customer` |
 | 排程自動逾時 | `cancelled` | `expired` | `Checkout expired` |
 
+- 已綁定 claim 在主動取消時改為 `revoked`，自動逾時時改為 `expired`；都不回到可用狀態。
 - 期限等於 `now` 也視為到期。
 - 已付款、未到期或已取消訂單不由逾時流程修改。
 - `checkout_expires_at` 保留原值供稽核。
@@ -330,7 +336,7 @@ Request Body：
 
 目前 PATCH 支援 `ecpay-credit`、`ecpay-atm`、`ecpay-cvs`、`ecpay-other`、`cod`。
 
-#### 6. C-4：驗證優惠券尚未實作
+#### 6. F-2：驗證優惠券套用
 
 對相同 Checkout 執行 PATCH：
 
@@ -340,7 +346,9 @@ Request Body：
 }
 ```
 
-預期 HTTP 400，`error.code` 為 `VALIDATION_ERROR`。目前 `couponClaimId` 只接受 `null`，非空優惠券等待 F-2。
+`1` 必須換成目前會員以 `POST /api/me/coupons/claims` 領取後取得的 claim ID。
+
+預期 HTTP 200，回應 `couponClaimId` 為該 claim，且 `pricing.discount`、`pricing.total` 為後端重算結果。再次送出相同內容仍應 HTTP 200，且資料庫只保留一筆 `order_coupons`；換成另一個有效 claim 時才替換快照。完整步驟見 [`Checkout 優惠券冪等 Swagger 驗證`](../test/checkout-coupon-idempotency-swagger-validation.md)。
 
 #### 7. C-3：驗證庫存不足
 
@@ -517,7 +525,7 @@ WHERE oi.order_id = '你的 orderId';
 - 相同鍵與相同內容：HTTP 200，`orderId` 相同。
 - 相同鍵但不同內容：HTTP 409 `CONFLICT`。
 - 更新本人 Checkout：HTTP 200。
-- 非空優惠券：HTTP 400 `VALIDATION_ERROR`。
+- 有效優惠券首次套用與同 claim 重送：HTTP 200，且訂單只有一筆券快照。
 - 庫存不足：HTTP 409 `STOCK_INSUFFICIENT`。
 - 偽造價格：回應仍使用 DB 價格。
 - 主動取消：HTTP 200，狀態為 `cancelled`。
@@ -546,6 +554,7 @@ WHERE oi.order_id = '你的 orderId';
 | C-6 | 每分鐘掃描、交易內逾時取消與釋放 |
 | C-7 | 偽造前端金額不會覆蓋 DB 計價 |
 | C-8 | 逾時、庫存恢復與重複執行冪等 |
+| F-2 | 同 claim 重送冪等、換券替換快照、折扣由後端重算 |
 
 整合測試使用自己建立的專屬資料，不依賴共用開發 Seed。測試環境停用背景 Scheduler，使用固定 `Clock` 直接呼叫逾時服務，不需要真的等待 15 分鐘。
 
@@ -565,5 +574,4 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 ## 9. 後續工作
 
 - 前端／本機「建立 Checkout 失敗」追蹤（先記錄、暫不改 Firebase）：見 [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) **CK-1～CK-5**。
-- F-2：完成 `couponClaimId` 資格驗證、套用／清除與金額重算（對應 checklist **CK-4**）。
 - D：完成 ECPay Gateway、付款表單、Notify webhook、Return URL 與商城 COD（對應 checklist **CK-5**）。

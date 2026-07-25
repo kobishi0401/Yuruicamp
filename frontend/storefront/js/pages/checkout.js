@@ -14,6 +14,7 @@ const CHECKOUT_LAST_SESSION_STORAGE_KEY = 'lastCheckoutSession';
 const CHECKOUT_IDEMPOTENCY_KEY = 'checkoutIdempotencyKey';
 const CHECKOUT_CART_FINGERPRINT_KEY = 'checkoutCartFingerprint';
 const CHECKOUT_COMPLETED_ORDER_ID_KEY = 'checkoutCompletedOrderId';
+const CHECKOUT_FORM_DRAFT_STORAGE_KEY = 'checkoutFormDraft';
 
 // Load shared shipping address modal partial.
 async function _loadShippingAddressModal() {
@@ -50,6 +51,7 @@ function _initCheckoutShippingAddress() {
       if (window.AppState?.currentUser) {
         window.AppState.currentUser.shippingAddress = addr;
       }
+      _saveCheckoutFormDraft();
     },
   });
 }
@@ -87,11 +89,13 @@ window.initCheckoutPage = async () => {
 
   _renderCheckoutItems();
   _updateCheckoutSummary();
+  _restoreCheckoutFormDraft();
   _restoreCheckoutSession();
   _initAccordionPanels();
   _initShippingMethodChange();
   _initPaymentMethodChange();
   _initCheckoutInputValidation();
+  _initCheckoutFormDraftPersistence();
   _initFillProfileBtn();
   _initConfirmOrderBtn();
   _initCheckoutSessionActions();
@@ -150,7 +154,10 @@ async function _loadCheckoutCouponCatalog() {
     checkoutCouponCatalogPromise = window.YuruiCoupons.loadCoupons()
       .then((coupons) => {
         checkoutCouponCatalog = coupons;
-        window.YuruiCoupons.renderCouponOptions('checkoutCouponCodeOptions', coupons);
+        // Mock 模式沿用完整券目錄；正式模式要等會員 claims 一起載入後再過濾。
+        if (!_isBackendCheckoutMode()) {
+          window.YuruiCoupons.renderCouponOptions('checkoutCouponCodeOptions', coupons);
+        }
         return coupons;
       })
       .catch((error) => {
@@ -290,6 +297,7 @@ function _initShippingMethodChange() {
       _updateCheckoutSummary();
       _syncRadioGroupState('shippingMethod');
       _syncDeliveryAddressState();
+      _saveCheckoutFormDraft();
     });
   });
   _syncRadioGroupState('shippingMethod');
@@ -303,6 +311,7 @@ function _initPaymentMethodChange() {
     radio.addEventListener('change', () => {
       _syncRadioGroupState('paymentMethod');
       _syncPaymentNoticeState();
+      _saveCheckoutFormDraft();
     });
   });
   _syncRadioGroupState('paymentMethod');
@@ -368,6 +377,7 @@ function _initFillProfileBtn() {
       return;
     }
     _fillBuyerFields(window.AppState.currentUser);
+    _saveCheckoutFormDraft();
     window.showToast('\u5df2\u5e36\u5165\u6703\u54e1\u8cc7\u6599', 'success');
   });
 }
@@ -489,6 +499,33 @@ async function _loadCheckoutCouponClaims({ refresh = false } = {}) {
 function _findCheckoutCouponClaimByCode(code) {
   return (
     checkoutCouponClaims.find((claim) => String(claim?.coupon?.code || '').toUpperCase() === code) || null
+  );
+}
+
+// 正式模式只顯示尚未領取或仍為 claimed 的券，並排除本次已套用券碼。
+function _getSelectableBackendCheckoutCoupons() {
+  const selectedCode = String(selectedCheckoutCouponClaim?.coupon?.code || '').toUpperCase();
+  const claimsByCode = new Map(
+    checkoutCouponClaims.map((claim) => [
+      String(claim?.coupon?.code || '').toUpperCase(),
+      String(claim?.status || '').toLowerCase(),
+    ])
+  );
+
+  return checkoutCouponCatalog.filter((coupon) => {
+    const code = String(coupon?.code || '').toUpperCase();
+    if (!code || code === selectedCode) return false;
+
+    const claimStatus = claimsByCode.get(code);
+    return !claimStatus || claimStatus === 'claimed';
+  });
+}
+
+// 依最新的公開券、會員 claims 與本次套用狀態重繪輸入提示選項。
+function _renderBackendCheckoutCouponOptions() {
+  window.YuruiCoupons.renderCouponOptions(
+    'checkoutCouponCodeOptions',
+    _getSelectableBackendCheckoutCoupons()
   );
 }
 
@@ -623,6 +660,8 @@ function _isEditableCheckoutSession(checkoutSession) {
 // 呈現正式模式的單張優惠券與移除操作。
 function _renderBackendSelectedCoupon() {
   if (!_isBackendCheckoutMode()) return;
+  _renderBackendCheckoutCouponOptions();
+
   const container = document.getElementById('checkoutAppliedCouponTexts');
   if (!container) return;
 
@@ -859,6 +898,108 @@ function _readCheckoutFormData() {
   };
 }
 
+// 將目前表單草稿保存在同一分頁，不把個資長期寫入 localStorage。
+function _saveCheckoutFormDraft() {
+  const cartFingerprint = sessionStorage.getItem(CHECKOUT_CART_FINGERPRINT_KEY);
+  const orderId = sessionStorage.getItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
+  const customerId = _getCheckoutUserId();
+  if (!cartFingerprint || !orderId || !customerId) return;
+
+  const formData = _readCheckoutFormData();
+  const draft = {
+    version: 1,
+    cartFingerprint,
+    orderId,
+    customerId,
+    buyerName: formData.buyerName,
+    buyerPhone: formData.buyerPhone,
+    buyerEmail: formData.buyerEmail,
+    userNote: formData.userNote,
+    shippingMethod: selectedShippingMethod,
+    pickupBranchId: formData.pickupBranchId,
+    paymentMethod: formData.paymentMethod,
+    shippingAddress: formData.shippingAddress,
+  };
+
+  try {
+    sessionStorage.setItem(CHECKOUT_FORM_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // 儲存空間不可用時維持原本結帳流程，不阻擋送出。
+  }
+}
+
+// 只還原同會員、同購物車與同一筆 Checkout Session 的草稿。
+function _restoreCheckoutFormDraft() {
+  let draft;
+  try {
+    draft = JSON.parse(sessionStorage.getItem(CHECKOUT_FORM_DRAFT_STORAGE_KEY) || 'null');
+  } catch {
+    _clearCheckoutFormDraft();
+    return false;
+  }
+
+  const matchesCurrentCheckout =
+    draft?.version === 1 &&
+    draft.customerId === _getCheckoutUserId() &&
+    draft.cartFingerprint === sessionStorage.getItem(CHECKOUT_CART_FINGERPRINT_KEY) &&
+    draft.orderId === sessionStorage.getItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
+  if (!matchesCurrentCheckout) {
+    _clearCheckoutFormDraft();
+    return false;
+  }
+
+  _setCheckoutDraftFieldValue('buyerName', draft.buyerName);
+  _setCheckoutDraftFieldValue('buyerPhone', draft.buyerPhone);
+  _setCheckoutDraftFieldValue('buyerEmail', draft.buyerEmail);
+  _setCheckoutDraftFieldValue('buyerNote', draft.userNote);
+
+  const shippingRadio = _findCheckoutRadio('shippingMethod', draft.shippingMethod);
+  if (shippingRadio && !shippingRadio.disabled) {
+    shippingRadio.checked = true;
+    selectedShippingMethod = shippingRadio.value;
+  }
+
+  const paymentRadio = _findCheckoutRadio('paymentMethod', draft.paymentMethod);
+  if (paymentRadio && !paymentRadio.disabled) paymentRadio.checked = true;
+
+  const pickupSelect = document.getElementById('checkoutPickupBranch');
+  const hasPickupBranch = Array.from(pickupSelect?.options || []).some(
+    (option) => option.value === draft.pickupBranchId
+  );
+  if (pickupSelect && hasPickupBranch) pickupSelect.value = draft.pickupBranchId;
+
+  if (draft.shippingAddress && typeof draft.shippingAddress === 'object') {
+    window.YuruiShippingAddressUI?.setAddress?.(draft.shippingAddress);
+  }
+  return true;
+}
+
+// 以純文字 value 還原欄位，避免將暫存內容插入 HTML。
+function _setCheckoutDraftFieldValue(id, value) {
+  const field = document.getElementById(id);
+  if (field && typeof value === 'string') field.value = value;
+}
+
+// 尋找既有 radio 選項，不把暫存值拼進 CSS selector。
+function _findCheckoutRadio(name, value) {
+  return Array.from(document.querySelectorAll(`input[name="${name}"]`)).find(
+    (input) => input.value === value
+  );
+}
+
+// 監聽所有會影響結帳內容的文字欄位與門市選擇。
+function _initCheckoutFormDraftPersistence() {
+  ['buyerName', 'buyerPhone', 'buyerEmail', 'buyerNote'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', _saveCheckoutFormDraft);
+  });
+  document.getElementById('checkoutPickupBranch')?.addEventListener('change', _saveCheckoutFormDraft);
+}
+
+// 清除本分頁內的結帳表單個資草稿。
+function _clearCheckoutFormDraft() {
+  sessionStorage.removeItem(CHECKOUT_FORM_DRAFT_STORAGE_KEY);
+}
+
 function _initCheckoutInputValidation() {
   document.querySelectorAll('input.checkoutInput').forEach((input) => {
     input.addEventListener('input', () => {
@@ -980,8 +1121,13 @@ function _buildCheckoutUpdateRequest(formData) {
     paymentMethod: _getSelectedPaymentCode(),
   };
 
-  // 正式模式已有選券時一併送 claim ID，後端仍是折扣與成交金額真相。
-  if (_isBackendCheckoutMode() && selectedCheckoutCouponClaim?.id) {
+  const checkoutSession = _getStoredCheckoutSession();
+  const selectedClaimId = selectedCheckoutCouponClaim?.id;
+  const couponAlreadyApplied =
+    selectedClaimId && Number(checkoutSession?.couponClaimId) === Number(selectedClaimId);
+
+  // 套券時已單獨 PATCH；確認結帳不重送 Session 目前已有的 claim。
+  if (_isBackendCheckoutMode() && selectedClaimId && !couponAlreadyApplied) {
     request.couponClaimId = selectedCheckoutCouponClaim.id;
   }
 
@@ -1394,6 +1540,7 @@ function _clearCheckoutIdempotencyState() {
   sessionStorage.removeItem(CHECKOUT_CART_FINGERPRINT_KEY);
   sessionStorage.removeItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
   sessionStorage.removeItem(CHECKOUT_LAST_SESSION_STORAGE_KEY);
+  _clearCheckoutFormDraft();
 }
 
 // 提供 facade 在取消成功或收到逾時錯誤時清除 Checkout 狀態。

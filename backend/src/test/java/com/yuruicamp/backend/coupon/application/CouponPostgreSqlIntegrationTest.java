@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
@@ -105,6 +106,73 @@ class CouponPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void applyingSameClaimTwiceKeepsSingleOrderCouponSnapshot() {
+		insertCoupon(99007L, "F-IDEMPOTENT", "promotion", "fixed", "100.00", 2);
+		Long claimId = service.claim("CF001", 99007L).id();
+		Order order = createOrder("OF99007", "coupon-idempotent", "coupon-idempotent-hash");
+
+		service.applyToOrder(order, "CF001", claimId, Instant.now());
+		service.applyToOrder(order, "CF001", claimId, Instant.now());
+		orders.flush();
+
+		assertThat(jdbc.queryForObject(
+				"select count(*) from order_coupons where order_id='OF99007'",
+				Integer.class))
+				.isEqualTo(1);
+		assertThat(jdbc.queryForObject(
+				"select coupon_claim_id from order_coupons where order_id='OF99007'",
+				Long.class))
+				.isEqualTo(claimId);
+		assertThat(order.getDiscount()).isEqualByComparingTo("100.00");
+	}
+
+	@Test
+	void switchingClaimReplacesExistingOrderCouponSnapshot() {
+		insertCoupon(99008L, "F-SWITCH-OLD", "promotion", "fixed", "50.00", 2);
+		insertCoupon(99009L, "F-SWITCH-NEW", "promotion", "fixed", "125.00", 2);
+		Long oldClaimId = service.claim("CF001", 99008L).id();
+		Long newClaimId = service.claim("CF001", 99009L).id();
+		Order order = createOrder("OF99009", "coupon-switch", "coupon-switch-hash");
+
+		service.applyToOrder(order, "CF001", oldClaimId, Instant.now());
+		service.applyToOrder(order, "CF001", newClaimId, Instant.now());
+		orders.flush();
+
+		assertThat(jdbc.queryForObject(
+				"select count(*) from order_coupons where order_id='OF99009'",
+				Integer.class))
+				.isEqualTo(1);
+		assertThat(jdbc.queryForObject(
+				"select coupon_claim_id from order_coupons where order_id='OF99009'",
+				Long.class))
+				.isEqualTo(newClaimId);
+		assertThat(order.getDiscount()).isEqualByComparingTo("125.00");
+	}
+
+	@Test
+	void consumingAppliedClaimTwiceKeepsFirstConsumedTime() {
+		insertCoupon(99010L, "F-CONSUME", "promotion", "fixed", "100.00", 2);
+		Long claimId = service.claim("CF001", 99010L).id();
+		Order order = createOrder("OF99010", "coupon-consume", "coupon-consume-hash");
+		Instant firstConsumedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+
+		service.applyToOrder(order, "CF001", claimId, Instant.now());
+		service.consumeAppliedClaim(order.getId(), firstConsumedAt);
+		service.consumeAppliedClaim(order.getId(), firstConsumedAt.plusSeconds(60));
+
+		assertThat(jdbc.queryForObject(
+				"select status::text from coupon_claims where id=?",
+				String.class,
+				claimId))
+				.isEqualTo("consumed");
+		assertThat(jdbc.queryForObject(
+				"select consumed_at from coupon_claims where id=?",
+				Instant.class,
+				claimId))
+				.isEqualTo(firstConsumedAt);
+	}
+
+	@Test
 	void firstPurchaseCouponRejectsUsedCustomer() {
 		insertCustomer("CF001", "coupon-f1@example.com", true);
 		insertCoupon(99005L, "F-FIRST", "firstPurchase", "fixed", "100.00", 2);
@@ -115,7 +183,7 @@ class CouponPostgreSqlIntegrationTest {
 	}
 
 	@Test
-	void cancelledOrderDoesNotReturnOrConsumeClaim() {
+	void cancelledOrderRevokesClaimWithoutReturningCapacity() {
 		insertCoupon(99006L, "F-CANCEL", "promotion", "fixed", "100.00", 2);
 		Long claimId = service.claim("CF001", 99006L).id();
 		Order order = new Order();
@@ -128,12 +196,54 @@ class CouponPostgreSqlIntegrationTest {
 		service.applyToOrder(order, "CF001", claimId, Instant.now());
 
 		order.cancel();
+		service.invalidateAppliedClaim(
+				order.getId(),
+				com.yuruicamp.backend.coupon.domain.CouponClaimStatus.revoked,
+				Instant.now());
 		orders.saveAndFlush(order);
 
 		assertThat(jdbc.queryForObject("select status::text from coupon_claims where id=?", String.class, claimId))
-				.isEqualTo("claimed");
+				.isEqualTo("revoked");
+		assertThat(jdbc.queryForObject("select revoked_at is not null from coupon_claims where id=?",
+				Boolean.class, claimId))
+				.isTrue();
 		assertThat(jdbc.queryForObject("select claimed_quantity from coupons where id=99006", Integer.class))
 				.isEqualTo(1);
+	}
+
+	@Test
+	void expiredCheckoutExpiresClaim() {
+		insertCoupon(99011L, "F-EXPIRED", "promotion", "fixed", "100.00", 2);
+		Long claimId = service.claim("CF001", 99011L).id();
+		Order order = createOrder("OF99011", "coupon-expired", "coupon-expired-hash");
+		service.applyToOrder(order, "CF001", claimId, Instant.now());
+
+		service.invalidateAppliedClaim(
+				order.getId(),
+				com.yuruicamp.backend.coupon.domain.CouponClaimStatus.expired,
+				Instant.now());
+
+		assertThat(jdbc.queryForObject(
+				"select status::text from coupon_claims where id=?",
+				String.class,
+				claimId))
+				.isEqualTo("expired");
+		assertThat(jdbc.queryForObject(
+				"select revoked_at is not null from coupon_claims where id=?",
+				Boolean.class,
+				claimId))
+				.isTrue();
+	}
+
+	private Order createOrder(String orderId, String idempotencyKey, String requestHash) {
+		Order order = new Order();
+		order.initialize(orderId, "CF001", idempotencyKey, requestHash,
+				"Coupon Tester", "coupon-f1@example.com", "Tester", "Taipei", "0900000000",
+				com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
+				PaymentMethod.ecpay_credit, Instant.now(), Instant.now().plusSeconds(900));
+		order.setPricing(new BigDecimal("1000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+
+		return orders.saveAndFlush(order);
 	}
 
 	private void insertCustomer(String id, String email, boolean firstPurchaseUsed) {

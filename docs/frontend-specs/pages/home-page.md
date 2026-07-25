@@ -81,7 +81,17 @@ URL 參數：
 
 - 準備兩份一模一樣的內容，讓它們連續接在一起移動。第一份移出畫面時，第二份剛好補上，然後動畫重頭開始
 - 做出無限播放的效果
+- Mock 模式讀取`/data/marketing/brands.json`；Backend 模式讀取公開的`GET /api/brands`
+- 公開品牌請求不附登入 Token，避免失效 Session 影響首頁公開內容
+- 第二組重複品牌加上`aria-hidden="true"`，品牌名稱以`textContent`安全建立
+- API 回傳空陣列或載入失敗時顯示狀態文字，跑馬燈容器不可縮成`0px`
 
 ### 最新商品 and 熱銷商品
 
+- Backend 模式以`GET /api/products?page=0&size=12&sort=createdAt,desc`取得最新商品，順序以後端`products.created_at`為準。
+- 前端不得解析商品 ID 推算上架先後；相同建立時間的穩定排序也由後端處理。
+- Mock 資料目前沒有上架時間欄位，離線展示才保留既有商品 ID 排序。
+- Backend 模式的熱銷商品讀取公開`GET /api/products/bestsellers?limit=20`，銷量排序以後端訂單資料為準。
+- Backend 模式不讀取`/api/orders`或本機訂單資料補算熱銷，避免公開首頁收到`401`並誤觸登入過期提示。
+- Mock 模式仍以`/data/commerce/orders.json`計算熱銷，供離線前端開發使用。
 

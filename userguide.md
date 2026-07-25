@@ -395,6 +395,7 @@ await window.API.articles.getAll()              // 取得所有文章
 await window.API.articles.getById(articleId)   // 取得單篇文章
 
 await window.API.branches.getAll()              // 取得所有分店資料
+await window.API.marketing.getBrands()           // 取得首頁合作品牌
 ```
 
 ### 購物車（定義於 `storefront/js/components/cart.js`）

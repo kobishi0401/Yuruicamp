@@ -1,10 +1,10 @@
-# Coupon API Contract（v0.2）
+# Coupon API Contract（v0.4）
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Partially Implemented（商城完成；Booking 關聯 Schema 待決定） |
-| **日期** | 2026-07-21 |
-| **版本** | 0.2 |
+| **狀態** | Partially Implemented（商城套券、消耗與取消失效完成；Booking 關聯 Schema 待決定） |
+| **日期** | 2026-07-24 |
+| **版本** | 0.4 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **DB** | `coupons`、`coupon_claims`、`order_coupons`（及預約側對應若有） |
 | **ENUM** | `coupon_category`、`coupon_status`、`coupon_claim_status`；折扣型別 `fixed`\|`percent` |
@@ -105,7 +105,9 @@
 - 客戶端只傳 `couponClaimId`（狀態須為 `claimed`）  
 - 後端重算 `discount`／`total`（或 booking `applied_discount`／`final_amount`）  
 - 付款成功／COD 確認成立後：claim → `consumed`  
-- 取消結帳／逾時：claim 保持 `claimed`（**不**因取消訂單而「退回名額」— 對齊 schema 註解：consumed 不因取消退回；領取名額已占）
+- 會員主動取消已綁券訂單：claim → `revoked`，設定 `revokedAt`，不退回 `claimed`
+- Checkout 自動逾時取消：claim → `expired`，以 `revokedAt` 保存失效時間，不退回 `claimed`
+- 兩種取消都不退還領券名額；`claimedQuantity` 不會減少
 
 若與 Trigger 衝突，**以 DB 約束為準**，並修 Service。
 
@@ -125,5 +127,7 @@
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| 0.4 | 2026-07-24 | 主動取消將已綁 claim 改為 `revoked`；Checkout 逾時改為 `expired` |
+| 0.3 | 2026-07-24 | COD 成立時消耗 claim 並設定 `consumed_at`；重複消耗保留第一次時間 |
 | 0.2 | 2026-07-21 | F-1、F-3、F-4 與商城 F-2 完成；Booking 套券待關聯 Schema，付款後消耗保留給線 D |
 | 0.1 | 2026-07-20 | 三種 category；claim／consume 分離 |

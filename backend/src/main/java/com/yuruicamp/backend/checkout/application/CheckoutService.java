@@ -34,6 +34,7 @@ import com.yuruicamp.backend.common.api.ApiErrorBody.ErrorDetail;
 import com.yuruicamp.backend.customer.domain.Customer;
 import com.yuruicamp.backend.customer.infrastructure.CustomerRepository;
 import com.yuruicamp.backend.coupon.application.CouponService;
+import com.yuruicamp.backend.coupon.domain.CouponClaimStatus;
 import com.yuruicamp.backend.inventory.domain.InventoryStock;
 import com.yuruicamp.backend.inventory.domain.ProductStockReservation;
 import com.yuruicamp.backend.inventory.infrastructure.InventoryStockRepository;
@@ -222,6 +223,8 @@ public class CheckoutService {
 					"Checkout is incomplete, cancelled or expired");
 		}
 		order.confirmCod();
+		// COD 訂單成立時消耗優惠券；沒有套券時此操作不會修改資料。
+		couponService.consumeAppliedClaim(order.getId(), now);
 		reservations.findActiveByOrderItemIdIn(order.getItems().stream().map(OrderItem::getId).toList())
 				.forEach(ProductStockReservation::confirmWithoutExpiry);
 		histories.save(OrderStatusHistory.of(orderId, OrderStatus.unshipped, now, "COD order confirmed"));
@@ -231,7 +234,7 @@ public class CheckoutService {
 	// 取消會員自己的未付款訂單，並釋放庫存。
 	@Transactional
 	public CheckoutSessionResponse cancel(String customerId, String orderId) {
-		Order order = orders.findForCustomer(orderId, customerId)
+		Order order = orders.findForCustomerForUpdate(orderId, customerId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN,
 						"Order not found or not owned by customer"));
 
@@ -241,6 +244,8 @@ public class CheckoutService {
 
 		Instant now = Instant.now();
 		order.cancel();
+		// 會員主動取消時撤銷已綁定的 claim，避免取消訂單的券再次使用。
+		couponService.invalidateAppliedClaim(order.getId(), CouponClaimStatus.revoked, now);
 		reservations.findActiveByOrderItemIdIn(order.getItems().stream().map(OrderItem::getId).toList())
 				.forEach(reservation -> reservation.release(now));
 		histories.save(OrderStatusHistory.of(orderId, OrderStatus.cancelled, now, "Cancelled by customer"));

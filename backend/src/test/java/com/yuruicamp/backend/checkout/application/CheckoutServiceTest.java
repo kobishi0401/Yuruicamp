@@ -27,6 +27,7 @@ import com.yuruicamp.backend.common.exception.ErrorCode;
 import com.yuruicamp.backend.customer.domain.Customer;
 import com.yuruicamp.backend.customer.infrastructure.CustomerRepository;
 import com.yuruicamp.backend.coupon.application.CouponService;
+import com.yuruicamp.backend.coupon.domain.CouponClaimStatus;
 import com.yuruicamp.backend.inventory.domain.InventoryStock;
 import com.yuruicamp.backend.inventory.infrastructure.InventoryStockRepository;
 import com.yuruicamp.backend.inventory.infrastructure.ProductStockReservationRepository;
@@ -263,6 +264,45 @@ class CheckoutServiceTest {
 						assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
 
 		verify(orders, never()).findForCustomer(any(), any());
+	}
+
+	// COD 成立時應在同一流程消耗目前訂單已套用的優惠券。
+	@Test
+	void confirmCodConsumesAppliedCouponClaim() {
+		Order order = new Order();
+		order.initialize("O-COD", "C001", "cod-key", "cod-request-hash",
+				"Buyer", "buyer@example.com", "Buyer", "Taipei",
+				"0912345678", com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
+				com.yuruicamp.backend.order.domain.PaymentMethod.cod,
+				Instant.now(), Instant.now().plusSeconds(300));
+		order.setPricing(new BigDecimal("100.00"), BigDecimal.ZERO, new BigDecimal("20.00"));
+		when(orders.findForCustomerForUpdate("O-COD", "C001")).thenReturn(Optional.of(order));
+		when(couponService.appliedClaimId("O-COD")).thenReturn(99L);
+		when(reservations.findActiveByOrderItemIdIn(List.of())).thenReturn(List.of());
+
+		CheckoutSessionResponse response = service.confirmCod("C001", "O-COD");
+
+		assertThat(response.checkoutStep()).isEqualTo("completed");
+		assertThat(response.couponClaimId()).isEqualTo(99L);
+		verify(couponService).consumeAppliedClaim(
+				org.mockito.ArgumentMatchers.eq("O-COD"),
+				org.mockito.ArgumentMatchers.any(Instant.class));
+	}
+
+	// 會員主動取消時應撤銷訂單已綁定的優惠券。
+	@Test
+	void cancelRevokesAppliedCouponClaim() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001")).thenReturn(Optional.of(order));
+		when(reservations.findActiveByOrderItemIdIn(List.of())).thenReturn(List.of());
+
+		CheckoutSessionResponse response = service.cancel("C001", "O-C4");
+
+		assertThat(response.status()).isEqualTo("cancelled");
+		verify(couponService).invalidateAppliedClaim(
+				org.mockito.ArgumentMatchers.eq("O-C4"),
+				org.mockito.ArgumentMatchers.eq(CouponClaimStatus.revoked),
+				org.mockito.ArgumentMatchers.any(Instant.class));
 	}
 
 	// 不支援的付款方式應回傳驗證錯誤。

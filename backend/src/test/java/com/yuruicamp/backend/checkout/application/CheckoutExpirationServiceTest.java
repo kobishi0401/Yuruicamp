@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import com.yuruicamp.backend.coupon.application.CouponService;
+import com.yuruicamp.backend.coupon.domain.CouponClaimStatus;
 import com.yuruicamp.backend.inventory.domain.ProductStockReservation;
 import com.yuruicamp.backend.inventory.infrastructure.ProductStockReservationRepository;
 import com.yuruicamp.backend.order.domain.Order;
@@ -37,6 +39,8 @@ class CheckoutExpirationServiceTest {
 
 	private OrderStatusHistoryRepository histories;
 
+	private CouponService couponService;
+
 	private CheckoutExpirationService service;
 
 	// 每個測試開始前建立乾淨的模擬資料庫元件。
@@ -45,7 +49,8 @@ class CheckoutExpirationServiceTest {
 		orders = mock(OrderRepository.class);
 		reservations = mock(ProductStockReservationRepository.class);
 		histories = mock(OrderStatusHistoryRepository.class);
-		service = new CheckoutExpirationService(orders, reservations, histories);
+		couponService = mock(CouponService.class);
+		service = new CheckoutExpirationService(orders, reservations, histories, couponService);
 	}
 
 	// 已到期未付款訂單應取消，active 保留帳應改成 expired。
@@ -66,6 +71,10 @@ class CheckoutExpirationServiceTest {
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.cancelled);
 		assertThat(reservation.getStatus()).isEqualTo("expired");
 		assertThat(reservation.getReleasedAt()).isEqualTo(NOW);
+		verify(couponService).invalidateAppliedClaim(
+				"O-EXPIRY-TEST",
+				CouponClaimStatus.expired,
+				NOW);
 		verify(histories).save(any(OrderStatusHistory.class));
 	}
 

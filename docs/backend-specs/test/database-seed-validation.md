@@ -69,6 +69,12 @@ SELECT COUNT(*) FROM bookings;
 SELECT COUNT(*) FROM booking_selected_zones;
 SELECT COUNT(*) FROM booking_selected_rentals;
 
+SELECT tag, COUNT(*)
+FROM equipment_tags
+WHERE tag IN ('新品', '熱銷')
+GROUP BY tag
+ORDER BY tag;
+
 SELECT COUNT(*) AS orphan_order_items
 FROM order_items i
 LEFT JOIN orders o ON o.id = i.order_id
@@ -86,7 +92,7 @@ GROUP BY customer_id
 HAVING COUNT(*) > 1;
 ```
 
-孤兒與重複預設地址查詢應回 `0`／空集合。庫存與 active 保留的完整查詢以 `docs/seed/README.md` 和庫存資料庫文件為準。
+孤兒與重複預設地址查詢應回 `0`／空集合；商品標籤應為新品 `10`、熱銷 `6`。新品 ID 必須符合可售商品 `created_at DESC, id DESC` 前 10，熱銷 ID 必須符合排除取消／退貨訂單後的 `order_items.quantity` 合計前 6。庫存與 active 保留的完整查詢以 `docs/seed/README.md` 和庫存資料庫文件為準。
 
 ## 6. JPA 與完整整合測試
 
@@ -115,4 +121,3 @@ docker rm --force yuruicamp-seed-verify
 - FK、唯一性、保留量與預設地址檢查通過。
 - Spring Context 與全部 PostgreSQL 整合測試全綠。
 - 驗證沒有停止、重建或污染既有開發／正式資料庫。
-

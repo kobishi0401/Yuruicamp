@@ -68,6 +68,8 @@ coupons
     - 可以更新 orders.status、payment_status、refund_status。
     - 已消耗的 coupon_claims 不得回到 claimed。
     - 不會退回優惠券。
+    - 會員主動取消時，已綁定 claim 改為 revoked。
+    - Checkout 自動逾時時，已綁定 claim 改為 expired。
 
 
 

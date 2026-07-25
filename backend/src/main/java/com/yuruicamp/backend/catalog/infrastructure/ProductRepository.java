@@ -71,12 +71,49 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 			@Param("maxPrice") BigDecimal maxPrice,
 			Pageable pageable);
 
+	/**
+	 * 熱銷商品只保留有效訂單銷量大於零的商品，再依銷量與商品 ID 穩定排序。
+	 */
+	@Query(value = """
+			select p.id
+			from products p
+			join equipment_items i on i.id = p.item_id
+			left join order_items order_item on order_item.product_id = p.id
+			left join orders order_header
+			  on order_header.id = order_item.order_id
+			 and order_header.status not in ('cancelled', 'returned')
+			where p.status = 'active'
+			  and i.active = true
+			  and exists (
+			      select 1
+			      from equipment_tags badge
+			      where badge.item_id = p.item_id
+			        and badge.tag = '熱銷'
+			  )
+			  and exists (
+			      select 1
+			      from product_variants variant
+			      where variant.product_id = p.id
+			        and variant.status = 'active'
+			  )
+			group by p.id
+			having coalesce(sum(
+			    case when order_header.id is not null then order_item.quantity else 0 end
+			), 0) > 0
+			order by coalesce(sum(
+			    case when order_header.id is not null then order_item.quantity else 0 end
+			), 0) desc,
+			p.id asc
+			""", nativeQuery = true)
+	List<String> findBestsellerIds(Pageable pageable);
+
 	/** Pagination phase 2: load complete relations for the IDs in one page. */
 	@Query("""
 			select distinct p from Product p
 			join fetch p.item i
 			left join fetch i.brand
 			left join fetch i.category
+			left join fetch i.tags
 			left join fetch p.variants v
 			where p.id in :ids
 			""")
@@ -90,6 +127,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 			join fetch p.item i
 			left join fetch i.brand
 			left join fetch i.category
+			left join fetch i.tags
 			left join fetch p.variants v
 			where p.status = 'active'
 			  and i.active = true
@@ -101,6 +139,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 			join fetch p.item i
 			left join fetch i.brand
 			left join fetch i.category
+			left join fetch i.tags
 			left join fetch p.variants v
 			where p.id = :id
 			  and p.status = 'active'

@@ -454,3 +454,26 @@ ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     updated_at = now();
 
+-- 商城標籤：每次重跑都依 products.created_at 重新標記最新的 10 件可售商品。
+DELETE FROM public.equipment_tags
+WHERE tag = '新品';
+
+INSERT INTO public.equipment_tags (item_id, tag)
+SELECT newest.item_id, '新品'
+FROM (
+    SELECT product.item_id
+    FROM public.products product
+    JOIN public.equipment_items item ON item.id = product.item_id
+    WHERE product.status = 'active'
+      AND item.active = true
+      AND EXISTS (
+          SELECT 1
+          FROM public.product_variants variant
+          WHERE variant.product_id = product.id
+            AND variant.status = 'active'
+      )
+    ORDER BY product.created_at DESC, product.id DESC
+    LIMIT 10
+) newest
+ON CONFLICT (item_id, tag) DO NOTHING;
+

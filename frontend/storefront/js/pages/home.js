@@ -162,14 +162,41 @@ async function _initBrandMarquee() {
   const track = document.querySelector('.brandMarqueeTrack');
   if (!track || !window.API?.marketing?.getBrands) return;
 
+  const renderStatus = (message) => {
+    const status = document.createElement('div');
+    status.className = 'brandLogoItem brandLogoItemStatus';
+    status.textContent = message;
+    track.replaceChildren(status);
+  };
+
+  const renderBrands = (brands) => {
+    const fragment = document.createDocumentFragment();
+
+    // 兩組相同品牌首尾相接，第二組只供動畫銜接並從輔助技術隱藏。
+    [false, true].forEach((isDuplicate) => {
+      brands.forEach((brand) => {
+        const item = document.createElement('div');
+        item.className = 'brandLogoItem';
+        item.textContent = brand.name || brand.id;
+        if (isDuplicate) item.setAttribute('aria-hidden', 'true');
+        fragment.appendChild(item);
+      });
+    });
+
+    track.replaceChildren(fragment);
+  };
+
   try {
     const brands = await window.API.marketing.getBrands();
-    const items = (brands || []).map((b) => (
-      `<div class="brandLogoItem">${b.name || b.id}</div>`
-    )).join('');
-    track.innerHTML = items + items.replace(/aria-hidden="true"/g, ' aria-hidden="true"');
+    if (!Array.isArray(brands) || brands.length === 0) {
+      renderStatus('合作品牌資料更新中');
+      return;
+    }
+
+    renderBrands(brands);
   } catch (error) {
     console.warn('品牌跑馬燈載入失敗', error);
+    renderStatus('合作品牌暫時無法載入');
   }
 }
 

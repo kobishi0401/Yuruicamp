@@ -1,10 +1,10 @@
-# Product API Contract（v0.4）
+# Product API Contract（v0.8）
 
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Locked（B-1～B-5b 真相來源） |
 | **日期** | 2026-07-20 |
-| **版本** | 0.4 |
+| **版本** | 0.8 |
 | **誰要遵守** | Spring 後端、前端 Mock、OpenAPI／Swagger |
 | **相關清單** | [`plans/backend-implementation-checklist.md`](../../plans/backend-implementation-checklist.md) 線 B |
 | **共用慣例** | [`common-api-conventions.md`](./common-api-conventions.md) |
@@ -43,6 +43,8 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 | 方法 | 路徑 | 認證 | 說明 |
 |------|------|------|------|
 | `GET` | `/api/products?page=0&size=20&sort=id,asc` | **公開**（不必 Token） | 可販售商品分頁列表 |
+| `GET` | `/api/products?page=0&size=12&sort=createdAt,desc` | **公開**（不必 Token） | 首頁最新商品；依商品販售身分建立時間降序 |
+| `GET` | `/api/products/bestsellers?limit=100` | **公開**（不必 Token） | 帶有「熱銷」標籤的商品，依有效訂單銷量排序 |
 | `GET` | `/api/products/{id}` | **公開** | 單筆詳情；`id` = `products.id`（如 `P001`） |
 
 ### 列表規則
@@ -57,6 +59,16 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 - 同上過濾；找不到或不符資格 → HTTP **404**，錯誤碼 `NOT_FOUND`
 - 成功時 `data` 為**單一物件**（不是陣列）
 
+### 熱銷規則
+
+- `limit` 預設為 `6`，必須介於 `1` 至 `100`。
+- 只回傳 `equipment_tags.tag = '熱銷'` 的商品；開發 Seed 依有效訂單商品數量前 6 名重建此標籤。
+- 只統計訂單狀態不是 `cancelled`、`returned` 的 `order_items.quantity`。
+- 有效銷量合計為 `0` 的商品不屬於熱銷清單，不回傳。
+- 依銷量降序排列；銷量相同時依商品 ID 升序，確保結果穩定。
+- 回傳欄位與公開商品列表的 Product 物件相同，但不回傳分頁 `meta`。
+- 非法 `limit` → HTTP `400`，錯誤碼 `VALIDATION_ERROR`。
+
 ### B-3 分頁與排序規則
 
 列表端點支援下列 query parameters；詳情端點不支援。
@@ -65,10 +77,12 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 |------|------|------|
 | `page` | `0` | 從 0 起算，必須大於等於 0 |
 | `size` | `20` | 必須介於 1 至 100 |
-| `sort` | `id,asc` | 格式 `field,asc\|desc`；僅允許 `id` 或 `name` |
+| `sort` | `id,asc` | 格式 `field,asc\|desc`；僅允許 `id`、`name` 或 `createdAt` |
 
 - 非法 `page`、`size` 或 `sort` → HTTP `400`，錯誤碼 `VALIDATION_ERROR`。
 - `name` 排序依 `equipment_items.name`；`price` 是 active variants 最低價的衍生欄位，**v0.3 不支援**排序。
+- `createdAt` 排序依 `products.created_at`；此欄位代表商品販售身分建立／首次上架時間，一般編輯或重新上架不會重設。
+- `createdAt` 相同時會以商品 ID 使用相同方向排序，避免分頁結果不穩定。
 - 列表回應一定帶 `meta`：
 
 ### B-4 篩選規則
@@ -122,6 +136,7 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 | `price` | string | 是 | **衍生**：active variants 的 **最低** `price` | 列表卡片用；**不是**獨立 DB 欄位 |
 | `rating` | string | 是 | **衍生**：正式 `reviews.rating` 平均值 | 固定一位小數；無評論為 `"0.0"` |
 | `reviewCount` | integer | 是 | **衍生**：正式評論數量 | 無評論為 `0` |
+| `tags` | string[] | 是 | `equipment_tags.tag` | 商品查詢／特色標籤；`新品`、`熱銷` 也是此欄位的正式值 |
 | `variants` | array | 是 | 見下節 | 至少 1 筆（否則不應出現） |
 
 \*「必填」指鍵一定要出現；值可以是 `null`。
@@ -164,6 +179,7 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
       "price": "3200.00",
       "rating": "4.6",
       "reviewCount": 35,
+      "tags": ["Coleman", "帳篷", "熱銷"],
       "variants": [
         {
           "id": "V001",
@@ -208,6 +224,7 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
     "price": "3200.00",
     "rating": "4.6",
     "reviewCount": 35,
+    "tags": ["Coleman", "帳篷", "熱銷"],
     "variants": [
       {
         "id": "V001",
@@ -244,10 +261,10 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 | 欄位／概念 | 原因 |
 |------------|------|
 | `rentalId`／`rentalEnabled` | 租借領域，另 API |
-| `interestTags`／`tags`／`specifications` 物件 | 附屬表；不屬於 B-5a 基本 variant 契約，之後可升版擴充 |
+| `interestTags`／`specifications` 物件 | 附屬表；不屬於目前公開契約，之後可升版擴充 |
 | `images[]`（多圖） | v0.3 只主圖 `image` |
 | `totalStock`／`branch`／`variants[].branch` | v0.3 只提供 variant 可售量，不公開庫位分布 |
-| `salesCount` | 訂單衍生；前端可另算 |
+| `salesCount` | 訂單衍生；不公開數值，熱銷排序由 `/api/products/bestsellers` 在後端完成 |
 | `variants[].label` | 用 `specification` 或前端組合 color／size |
 | `price` 排序 | 需以 active variants 最低價做聚合，之後版本再談 |
 
@@ -291,6 +308,10 @@ Envelope／錯誤／金額規則見 **common**；本文件只鎖商品欄位。
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| 0.8 | 2026-07-24 | Product 新增 `tags`；開發 Seed 將 `created_at` 前 10 標為新品、有效訂單數量前 6 標為熱銷 |
+| 0.7 | 2026-07-24 | 熱銷端點上限調整為 100 並排除零銷量；商品列表可取得完整新品與熱銷分類清單 |
+| 0.6 | 2026-07-24 | 商品列表新增 `createdAt,asc\|desc` 白名單排序；首頁最新商品改依 `products.created_at` 降序 |
+| 0.5 | 2026-07-24 | 新增公開熱銷商品端點，由後端依有效訂單明細數量排序，首頁不再讀取訂單端點補算 |
 | 0.4 | 2026-07-23 | 正式 Product API 加入 `rating` 與 `reviewCount`，統一商品卡與商品詳細頁評分來源 |
 | 0.3 | 2026-07-21 | B-4 商品篩選與 B-5b variant 可售量已實作；加入 `availableQuantity`、`inStock` |
 | 0.2 | 2026-07-20 | 文件釐清 B-5：基本 `variants[]` 已隨 B-1／B-2 完成；規格層級可售庫存尚未實作，需升版後才能加入 |

@@ -188,6 +188,12 @@
   white-space: nowrap;
 }
 
+.brandLogoItemStatus {
+  color: var(--yc-text-muted);
+  justify-content: center;
+  min-width: min(24rem, calc(100vw - var(--yc-space-8)));
+}
+
 .brandLogoItem:hover {
   background-color: var(--yc-sage-soft);
   border-color: var(--yc-sage-action);

@@ -12,9 +12,13 @@
 - [資料庫與完整 Seed 驗證](./database-seed-validation.md)
 - [公開／會員 API 驗證](./public-member-api-validation.md)
 - [Booking 營區標籤篩選驗證](./booking-campground-tag-filter-validation.md)
+- [Catalog 最新上架排序驗證](./catalog-product-created-at-sort-validation.md)
+- [Catalog 熱銷商品驗證](./catalog-bestsellers-swagger-validation.md)
 - [會員配送地址 API 驗證](./member-shipping-address-api-validation.md)
+- [Checkout 優惠券冪等、消耗與取消失效 Swagger 驗證](./checkout-coupon-idempotency-swagger-validation.md)
 - [Admin API 驗證](./admin-api-validation.md)
 - 前端瀏覽器驗證見 [`docs/frontend-specs/test/README.md`](../../frontend-specs/test/README.md)。
+- Catalog 商品標籤端到端 Swagger 驗證見 [`catalog-product-tags-swagger-validation.md`](./catalog-product-tags-swagger-validation.md)。
 
 ## 1. 基本啟動
 
@@ -80,7 +84,7 @@ $env:DB_PASSWORD = '<測試資料庫密碼>'
 
 ## 5. 目前未完成邊界
 
-- Payment 線 D：COD 建單確認已實作；ECPay Gateway、付款表單、Notify 驗簽／冪等與 Return 尚未實作。
+- Payment 線 D：COD 建單確認與 claim 消耗已實作；ECPay Gateway、付款表單、Notify 驗簽／通知紀錄與 Return 尚未實作。
 - `GET /api/me/orders` 與會員訂單詳情 Controller 已完成；驗證流程見 [`member-order-api-validation.md`](./member-order-api-validation.md)。
 - Booking Coupon 關聯尚未完成。
 - Articles、Reviews、calendar_dates API 尚未完成。

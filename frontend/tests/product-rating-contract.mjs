@@ -12,6 +12,7 @@ for (const product of products) {
   assert.ok(Number.isInteger(product.reviewCount) && product.reviewCount >= 0);
 }
 assert.match(facade, /'rating', 'reviewCount', 'variants'/);
+assert.match(facade, /hasTags \? \[\.\.\.PRODUCT_CONTRACT_FIELDS, 'tags'\]/);
 assert.match(facade, /enriched\.rating = Number\(product\.rating\)/);
 assert.match(facade, /enriched\.reviewCount = product\.reviewCount/);
 assert.match(facade, /_useMockApi\(\) \? _loadReviews\(\) : Promise\.resolve\(\[\]\)/);

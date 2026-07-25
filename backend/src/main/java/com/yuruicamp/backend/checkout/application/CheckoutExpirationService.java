@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
+import com.yuruicamp.backend.coupon.application.CouponService;
+import com.yuruicamp.backend.coupon.domain.CouponClaimStatus;
 import com.yuruicamp.backend.inventory.infrastructure.ProductStockReservationRepository;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.OrderItem;
@@ -25,13 +27,17 @@ public class CheckoutExpirationService {
 
 	private final OrderStatusHistoryRepository histories;
 
+	private final CouponService couponService;
+
 	// 準備逾時流程需要使用的訂單、保留帳與歷程元件。
 	public CheckoutExpirationService(OrderRepository orders,
 			ProductStockReservationRepository reservations,
-			OrderStatusHistoryRepository histories) {
+			OrderStatusHistoryRepository histories,
+			CouponService couponService) {
 		this.orders = orders;
 		this.reservations = reservations;
 		this.histories = histories;
+		this.couponService = couponService;
 	}
 
 	// 處理期限小於或等於指定時間的未付款結帳，並回傳取消筆數。
@@ -47,6 +53,11 @@ public class CheckoutExpirationService {
 				continue;
 			}
 
+			// 系統逾時時將已綁定的 claim 標記為 expired。
+			couponService.invalidateAppliedClaim(
+					order.getId(),
+					CouponClaimStatus.expired,
+					now);
 			List<Long> orderItemIds = order.getItems().stream()
 					.map(OrderItem::getId)
 					.toList();

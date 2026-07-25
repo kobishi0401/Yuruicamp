@@ -1,8 +1,12 @@
 package com.yuruicamp.backend.catalog.domain;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -43,6 +47,11 @@ public class EquipmentItem {
 
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+
+	@ElementCollection(fetch = FetchType.LAZY)
+	@CollectionTable(name = "equipment_tags", joinColumns = @JoinColumn(name = "item_id"))
+	@Column(name = "tag", nullable = false, length = 100)
+	private Set<String> tags = new HashSet<>();
 
 	public String getId() {
 		return id;
@@ -106,5 +115,9 @@ public class EquipmentItem {
 
 	public void setUpdatedAt(Instant updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public Set<String> getTags() {
+		return tags;
 	}
 }

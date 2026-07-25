@@ -146,6 +146,35 @@ public class ProductCatalogService {
 		return new PagedProducts(data, toMeta(idPage));
 	}
 
+	/**
+	 * 首頁公開熱銷商品。
+	 */
+	@Transactional(readOnly = true)
+	public List<ProductResponse> listBestsellers(int limit) {
+		// 先由資料庫依有效訂單銷量選出商品，再沿用公開商品契約組裝完整資料。
+		List<String> productIds = productRepository.findBestsellerIds(PageRequest.of(0, limit));
+		if (productIds.isEmpty()) {
+			return List.of();
+		}
+
+		Map<String, Product> productById = productRepository.findAllByIdInForCatalog(productIds).stream()
+				.collect(Collectors.toMap(Product::getId, product -> product));
+		List<Product> products = productIds.stream()
+				.map(productById::get)
+				.filter(Objects::nonNull)
+				.toList();
+		Map<String, String> images = loadMainImages(products);
+		Map<String, Long> availability = loadAvailability(products);
+		Map<String, ProductRating> ratings = loadRatings(products);
+
+		return products.stream()
+				.map(product -> withRating(
+						assembler.toResponse(product, images, availability),
+						ratings.getOrDefault(product.getId(), ProductRating.empty(product.getId()))))
+				.filter(dto -> !dto.variants().isEmpty())
+				.toList();
+	}
+
 	private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
 		if ((minPrice != null && minPrice.signum() < 0)
 				|| (maxPrice != null && maxPrice.signum() < 0)
@@ -168,7 +197,7 @@ public class ProductCatalogService {
 
 	private Sort toSort(String sort) {
 		// 用途：把 API 的「欄位,方向」字串轉成 Spring Data Sort。
-		// 核心重點：只允許 id、name 與 asc、desc，避免任意欄位被帶入資料庫排序。
+		// 核心重點：createdAt 對應 products.created_at，首頁可依商品販售身分建立時間排序。
 		String[] parts = sort.split(",", -1);
 		if (parts.length != 2) {
 			throw invalidSort(sort);
@@ -176,10 +205,18 @@ public class ProductCatalogService {
 		String property = switch (parts[0]) {
 			case "id" -> "id";
 			case "name" -> "item.name";
+			case "createdAt" -> "createdAt";
 			default -> throw invalidSort(sort);
 		};
 		try {
-			return Sort.by(Sort.Direction.fromString(parts[1]), property);
+			Sort.Direction direction = Sort.Direction.fromString(parts[1]);
+			Sort requestedSort = Sort.by(direction, property);
+			if ("createdAt".equals(parts[0])) {
+				// 同一時間建立的商品再依 ID 排序，避免跨頁時順序不穩定。
+				return requestedSort.and(Sort.by(direction, "id"));
+			}
+
+			return requestedSort;
 		} catch (IllegalArgumentException ex) {
 			throw invalidSort(sort);
 		}
@@ -190,7 +227,8 @@ public class ProductCatalogService {
 		// 核心重點：使用 VALIDATION_ERROR，並在訊息中列出允許格式供呼叫端修正。
 		return new BusinessException(
 				ErrorCode.VALIDATION_ERROR,
-				"Invalid sort: " + sort + ". Allowed values: id,asc|desc; name,asc|desc");
+				"Invalid sort: " + sort
+						+ ". Allowed values: id,asc|desc; name,asc|desc; createdAt,asc|desc");
 	}
 
 	private PageMeta toMeta(Page<?> page) {
@@ -247,6 +285,7 @@ public class ProductCatalogService {
 				product.price(),
 				rating.rating().setScale(1, java.math.RoundingMode.HALF_UP).toPlainString(),
 				rating.reviewCount(),
+				product.tags(),
 				product.variants());
 	}
 

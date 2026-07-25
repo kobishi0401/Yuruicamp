@@ -1,15 +1,15 @@
-# Checkout API Contract（v0.7）
+# Checkout API Contract（v0.13）
 
-| 欄位 | 內容 |
-|------|------|
-| **狀態** | Implemented（Prepare、Read、Update、COD Confirm、Cancel、ECPay Launch） |
-| **日期** | 2026-07-23 |
-| **版本** | 0.8 |
-| **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
-| **相關** | [`order-api-contract.md`](./order-api-contract.md)、[`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md) |
-| **實作說明** | [`../backend-specs/checkout/README.md`](../backend-specs/checkout/README.md) |
-| **策略** | **D1.A**：待付款 `orders` + `product_stock_reservations`；**不**另建 `checkout_sessions` 表 |
-| **保留時間** | **15 分鐘**（`orders.checkout_expires_at` 與保留帳 `expires_at` 對齊） |
+| 欄位         | 內容                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **狀態**     | Implemented（Prepare、Read、Update、COD Confirm、Cancel、ECPay Launch）                                                                                          |
+| **日期**     | 2026-07-25                                                                                                                                                       |
+| **版本**     | 0.13                                                                                                                                                             |
+| **共用**     | [`common-api-conventions.md`](./common-api-conventions.md)                                                                                                       |
+| **相關**     | [`order-api-contract.md`](./order-api-contract.md)、[`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md) |
+| **實作說明** | [`../backend-specs/checkout/README.md`](../backend-specs/checkout/README.md)                                                                                     |
+| **策略**     | **D1.A**：待付款 `orders` + `product_stock_reservations`；**不**另建 `checkout_sessions` 表                                                                      |
+| **保留時間** | **15 分鐘**（`orders.checkout_expires_at` 與保留帳 `expires_at` 對齊）                                                                                           |
 
 ---
 
@@ -147,26 +147,28 @@ Request 範例：
 - 收件欄位若有提供，不可為空白；長度上限分別為姓名 `100`、電話 `32`、地址 `500`。
 - 更新交易使用訂單悲觀鎖，避免與付款、取消或 C-6 逾時排程互相覆蓋。
 - 回應中的 `couponClaimId` 為目前訂單已套用的 claim；未套券時為 `null`。
+- 同一訂單重送相同 `couponClaimId` 視為冪等成功，保留既有 `order_coupons` 快照；改送另一個 claim 才先刪除舊快照再新增。
 - 不可修改 `items` 數量；要改商品請先 cancel 再重新建立 Checkout。
 
 ---
 
 ## 4. confirm-cod / ecpay / cancel
 
-| 動作 | 條件 | 結果 |
-|------|------|------|
-| `confirm-cod` | `paymentMethod=cod`，`checkoutStep=ready_to_pay` | 確認下單；**仍 unpaid**，清除 Checkout 與 active 保留帳期限，直到履約或取消 |
-| `ecpay` | 非 `cod`，`ready_to_pay` | 回傳綠界表單欄位（見 Payment 契約）；不代表已付款 |
-| `cancel` | unpaid | 訂單取消、保留帳 `released`／`expired` |
+| 動作          | 條件                                             | 結果                                                                        |
+| ------------- | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `confirm-cod` | `paymentMethod=cod`，`checkoutStep=ready_to_pay` | 確認下單；**仍 unpaid**，消耗已套用 claim，清除 Checkout 與 active 保留帳期限 |
+| `ecpay`       | 非 `cod`，`ready_to_pay`                         | 回傳綠界表單欄位（見 Payment 契約）；不代表已付款                           |
+| `cancel`      | unpaid                                           | 主動取消：claim `revoked`、保留帳 `released`；逾時：claim／保留帳 `expired` |
 
 ### 4.1 自動逾時規則
 
 - 排程預設每 `60000` 毫秒掃描一次，期限判斷包含 `checkoutExpiresAt <= now`。
 - 只有 `paymentStatus=unpaid`、尚未取消且已達期限的訂單會被處理。
 - 同一交易內將 `orders.status` 改為 `cancelled`、active 保留帳改為 `expired`，並設定 `releasedAt=now`。
+- 訂單有套券時，同一交易將 claim 改為 `expired` 並設定 `revokedAt=now`。
 - `order_status_history` 新增一筆 `cancelled`，固定 `note="Checkout expired"`。
 - `checkoutExpiresAt` 保留原值供稽核；重複掃描不重複修改資料或新增歷程。
-- 會員主動取消使用 `released`；排程自動逾時使用 `expired`，兩者語意不可混用。
+- 會員主動取消使用 claim `revoked`／保留帳 `released`；排程自動逾時兩者都使用 `expired`，語意不可混用。
 
 ---
 
@@ -205,13 +207,18 @@ Request 範例：
 
 ## Changelog
 
-| 版本 | 日期 | 說明 |
-|------|------|------|
-| 0.8 | 2026-07-23 | `POST …/ecpay` 已接線 D（見 Payment 契約 v0.2） |
-| 0.6 | 2026-07-22 | 完成會員本人 Checkout Session 讀取、Bearer 與 PostgreSQL 驗收 |
-| 0.7 | 2026-07-22 | 新增配送方式／取貨門市契約與 COD 確認，ECPay 維持待實作 |
-| 0.5 | 2026-07-21 | F-2：建立／更新 Checkout 可套用會員 claim，後端重算折扣並保存 `order_coupons` 快照 |
-| 0.4 | 2026-07-21 | C-4：完成收件資料與付款方式 PATCH；優惠券套用明確延後至 F-2 |
-| 0.3 | 2026-07-21 | C-6：鎖定自動逾時條件、`expired` 保留帳、狀態歷程與冪等規則 |
-| 0.2 | 2026-07-20 | C-2：冪等鍵必填、重送回放、Payload 衝突與空值保障 |
-| 0.1 | 2026-07-20 | D1.A + 15 分 + pricing 字串金額 |
+| 版本 | 日期       | 說明                                                                                             |
+| ---- | ---------- | ------------------------------------------------------------------------------------------------ |
+| 0.13 | 2026-07-25 | 合併 ECPay Launch（0.8）與 coupon 生命週期（0.12）                                               |
+| 0.12 | 2026-07-24 | 主動取消將已綁 claim 改為 `revoked`；Checkout 逾時將 claim 改為 `expired`                        |
+| 0.11 | 2026-07-24 | COD 確認成立時於同一交易將已套用 claim 改為 `consumed` 並設定 `consumed_at`                      |
+| 0.10 | 2026-07-24 | 同訂單重送相同 claim 改為冪等成功；只有換券時才替換 `order_coupons` 快照                         |
+| 0.9  | 2026-07-23 | Storefront 新增確認背包頁，進頁以 items 建立 Draft 並鎖庫；正式 Checkout 只 PATCH 配送／付款資料 |
+| 0.8  | 2026-07-23 | `POST …/ecpay` 已接線 D（見 Payment 契約 v0.2）                                                  |
+| 0.7  | 2026-07-22 | 新增配送方式／取貨門市契約與 COD 確認                                                            |
+| 0.6  | 2026-07-22 | 完成會員本人 Checkout Session 讀取、Bearer 與 PostgreSQL 驗收                                    |
+| 0.5  | 2026-07-21 | F-2：建立／更新 Checkout 可套用會員 claim，後端重算折扣並保存 `order_coupons` 快照               |
+| 0.4  | 2026-07-21 | C-4：完成收件資料與付款方式 PATCH；優惠券套用明確延後至 F-2                                      |
+| 0.3  | 2026-07-21 | C-6：鎖定自動逾時條件、`expired` 保留帳、狀態歷程與冪等規則                                      |
+| 0.2  | 2026-07-20 | C-2：冪等鍵必填、重送回放、Payload 衝突與空值保障                                                |
+| 0.1  | 2026-07-20 | D1.A + 15 分 + pricing 字串金額                                                                  |

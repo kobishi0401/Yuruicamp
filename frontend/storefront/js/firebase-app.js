@@ -140,7 +140,7 @@ function buildAuthProvider(providerKey) {
     // 若 LINE 頻道有開 email 權限，可一併請求
     line.addScope('openid');
     line.addScope('profile');
-    line.addScope('email');
+    line.addScope('email')
     return line;
   }
   return new GoogleAuthProvider();

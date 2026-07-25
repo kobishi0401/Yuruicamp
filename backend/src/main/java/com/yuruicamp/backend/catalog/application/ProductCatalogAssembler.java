@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.yuruicamp.backend.catalog.api.ProductResponse;
 import com.yuruicamp.backend.catalog.api.ProductVariantResponse;
@@ -28,6 +29,12 @@ public class ProductCatalogAssembler {
 		// 核心重點：只公開 active 規格、固定規格排序，並集中處理最低價與關聯資料的 null 值。
 		List<ProductVariantResponse> variants = product.getVariants().stream()
 				.filter(v -> "active".equals(v.getStatus()))
+				// 同時 JOIN FETCH tags 與 variants 時 SQL 會產生組合列，先依規格 ID 去重。
+				.collect(Collectors.toMap(
+						ProductVariant::getId,
+						variant -> variant,
+						(first, duplicate) -> first))
+				.values().stream()
 				.sorted(Comparator.comparing(ProductVariant::getId))
 				.map(variant -> toVariant(variant, availabilityByVariantId))
 				.toList();
@@ -48,6 +55,7 @@ public class ProductCatalogAssembler {
 				minPrice(variants),
 				"0.0",
 				0,
+				item.getTags().stream().sorted().toList(),
 				variants);
 	}
 

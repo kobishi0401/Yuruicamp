@@ -63,7 +63,9 @@ public class ProductController {
 			@RequestParam(defaultValue = "0") @Min(value = 0, message = "must be greater than or equal to 0") int page,
 			@Parameter(description = "Page size (1-100)", example = "20")
 			@RequestParam(defaultValue = "20") @Min(value = 1, message = "must be at least 1") @Max(value = 100, message = "must be at most 100") int size,
-			@Parameter(description = "Allowed: id,asc|desc; name,asc|desc", example = "id,asc")
+			@Parameter(
+					description = "Allowed: id,asc|desc; name,asc|desc; createdAt,asc|desc",
+					example = "createdAt,desc")
 			@RequestParam(defaultValue = "id,asc") String sort,
 			@Parameter(description = "分類名稱，忽略大小寫", example = "帳篷")
 			@RequestParam(required = false) String category,
@@ -83,6 +85,19 @@ public class ProductController {
 				maxPrice);
 		PageMeta meta = result.meta();
 		return ApiResponse.ok(result.data(), meta);
+	}
+
+	// 取得熱銷商品，銷量由後端訂單資料計算。
+	@GetMapping("/bestsellers")
+	@Operation(
+			summary = "取得熱銷商品",
+			description = "只回傳有有效訂單銷量的商品，依銷量降序排列且不需要登入。")
+	public ApiResponse<List<ProductResponse>> listBestsellers(
+			@Parameter(description = "回傳筆數（1-100）", example = "20")
+			@RequestParam(defaultValue = "6")
+			@Min(value = 1, message = "must be at least 1")
+			@Max(value = 100, message = "must be at most 100") int limit) {
+		return ApiResponse.ok(productCatalogService.listBestsellers(limit));
 	}
 
 	@GetMapping("/{id}")

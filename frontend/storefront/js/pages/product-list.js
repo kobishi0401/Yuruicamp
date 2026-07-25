@@ -153,6 +153,36 @@ function _readCardSpecSelection(card) {
   };
 }
 
+// 依後端標籤判定新品／熱銷，端點清單只負責提供各自的排序順位。
+function _annotateProductLabels(products, newestProducts, bestsellerProducts) {
+  const newestRanks = new Map(newestProducts.map((product, index) => [product.id, index]));
+  const bestsellerRanks = new Map(bestsellerProducts.map((product, index) => [product.id, index]));
+
+  return products.map((product) => ({
+    ...product,
+    isNew: product.tags.includes('新品'),
+    isBestseller: product.tags.includes('熱銷'),
+    newRank: newestRanks.get(product.id) ?? Number.MAX_SAFE_INTEGER,
+    bestsellerRank: bestsellerRanks.get(product.id) ?? Number.MAX_SAFE_INTEGER,
+  }));
+}
+
+// 建立商品卡左上角的新品與熱銷標籤，同一商品可同時顯示兩種狀態。
+function _buildProductBadges(product) {
+  const badges = [];
+
+  if (product.isNew) {
+    badges.push('<span class="productCardBadge badgeNew">新品</span>');
+  }
+  if (product.isBestseller) {
+    badges.push('<span class="productCardBadge badgeHot">熱銷</span>');
+  }
+
+  return badges.length > 0
+    ? `<div class="productCardBadges">${badges.join('')}</div>`
+    : '';
+}
+
 // Build product card HTML for the products grid.
 function _buildCard(product) {
   const priceFormatted = product.price.toLocaleString('zh-TW');
@@ -168,15 +198,17 @@ function _buildCard(product) {
     ? window.getItemImages(product)
     : [product.image].filter(Boolean).map(_resolveProductImageSrc);
   const fallbackImage = images[0] || _resolveProductImageSrc(product);
+  const badgeHtml = _buildProductBadges(product);
   const imageHtml = window.buildCardGalleryHtml
     ? window.buildCardGalleryHtml({
         images,
         alt: product.name,
         galleryId: `product-${product.id}`,
         wrapClass: 'productCardImageWrap',
+        badgeHtml,
         fallbackSrc: `https://placehold.co/400x300/f2f2f2/999?text=${encodeURIComponent(product.name)}`,
       })
-    : `<div class="productCardImageWrap"><img src="${fallbackImage}" alt="${product.name}" loading="lazy"></div>`;
+    : `<div class="productCardImageWrap"><img src="${fallbackImage}" alt="${product.name}" loading="lazy">${badgeHtml}</div>`;
 
   return `
     <div class="productCard" data-product-id="${product.id}" data-selected-color="${defaultSel.color}" data-selected-size="${defaultSel.size}" role="article">
@@ -317,11 +349,8 @@ function _filterBySelectedOptions(products) {
     const matchBrand = filters.brands.length === 0 || filters.brands.includes(product.brand);
     const matchMin = filters.minPrice === null || product.price >= filters.minPrice;
     const matchMax = filters.maxPrice === null || product.price <= filters.maxPrice;
-    const matchTag = !filters.tag || (
-      filters.tag === 'new'
-        ? _state.allProducts.slice(0, 12).some((p) => p.id === product.id)
-        : product.salesCount > 0
-    );
+    const matchTag = !filters.tag
+      || (filters.tag === 'new' ? product.isNew : product.isBestseller);
     return matchKeyword && matchCategory && matchBrand && matchMin && matchMax && matchTag;
   });
 }
@@ -335,7 +364,13 @@ function _sortProducts(products) {
     rating: (a, b) => b.rating - a.rating,
     reviews: (a, b) => (b.reviewCount ?? b.reviews ?? 0) - (a.reviewCount ?? a.reviews ?? 0),
   };
-  if (sorters[_state.sortBy]) sorted.sort(sorters[_state.sortBy]);
+  if (sorters[_state.sortBy]) {
+    sorted.sort(sorters[_state.sortBy]);
+  } else if (_state.filters.tag === 'new') {
+    sorted.sort((a, b) => a.newRank - b.newRank);
+  } else if (_state.filters.tag === 'bestseller') {
+    sorted.sort((a, b) => a.bestsellerRank - b.bestsellerRank);
+  }
   return sorted;
 }
 
@@ -810,7 +845,17 @@ window.initProductListPage = async () => {
     window.initCartListeners?.();
     window._appComponentsInitialized = true;
 
-    _state.allProducts = await window.API.products.getAll();
+    // 一般清單負責完整商品資料；新品與熱銷端點提供後端認定的分類名單。
+    const [allProducts, newestProducts, bestsellerProducts] = await Promise.all([
+      window.API.products.getAll(),
+      window.API.products.getNewest(100),
+      window.API.products.getBestsellers(100),
+    ]);
+    _state.allProducts = _annotateProductLabels(
+      allProducts,
+      newestProducts,
+      bestsellerProducts
+    );
     _handleUrlParams();
     _initSidebarFilters();
     _initMobileFilterSheet();

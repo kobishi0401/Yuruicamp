@@ -113,6 +113,11 @@
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
+.storefrontCartStepProgress[hidden],
+.storefrontCartLayout[hidden] {
+  display: none;
+}
+
 .storefrontCartItemsCard,
 .storefrontCartSummaryCard,
 .storefrontCartEmpty {

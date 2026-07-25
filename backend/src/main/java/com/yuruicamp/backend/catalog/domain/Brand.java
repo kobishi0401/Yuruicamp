@@ -41,4 +41,12 @@ public class Brand {
 	public String getName() {
 		return name;
 	}
+
+	public String getLogoUrl() {
+		return logoUrl;
+	}
+
+	public int getSortOrder() {
+		return sortOrder;
+	}
 }

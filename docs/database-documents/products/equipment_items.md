@@ -135,6 +135,9 @@ alt_text            圖片替代文字；可為 NULL
 
 * tag               # 查詢、特色標籤；(#防水 #六人用 #親子適用)
                     CHECK BTRIM(tag) <> ''
+                    開發 Seed 另使用「新品」「熱銷」：
+                    新品＝可售商品 created_at 前 10；
+                    熱銷＝有效訂單商品數量前 6
 * created_at        建立時間，預設 now()
 * updated_at        最後更新時間， 預設 now()
                     UPDATE 時自動更新

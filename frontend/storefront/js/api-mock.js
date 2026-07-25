@@ -84,13 +84,22 @@ const _readProductContract = (product) => {
   if (!product || typeof product !== 'object' || Array.isArray(product)) {
     _contractError('product must be an object');
   }
-  _assertExactKeys(product, PRODUCT_CONTRACT_FIELDS, 'product');
+  const hasTags = Object.prototype.hasOwnProperty.call(product, 'tags');
+  _assertExactKeys(
+    product,
+    hasTags ? [...PRODUCT_CONTRACT_FIELDS, 'tags'] : PRODUCT_CONTRACT_FIELDS,
+    'product'
+  );
   if (typeof product.id !== 'string' || typeof product.itemId !== 'string' || product.status !== 'active'
       || typeof product.name !== 'string' || typeof product.price !== 'string'
       || !CONTRACT_MONEY.test(product.price) || !/^\d+\.\d$/.test(product.rating)
       || !Number.isInteger(product.reviewCount) || product.reviewCount < 0
       || !Array.isArray(product.variants) || product.variants.length === 0) {
     _contractError(`invalid product: ${product.id || '(missing id)'}`);
+  }
+  if (hasTags && (!Array.isArray(product.tags)
+      || product.tags.some((tag) => typeof tag !== 'string' || !tag.trim()))) {
+    _contractError(`${product.id}.tags must be a non-empty string array`);
   }
   ['category', 'brand', 'description', 'image'].forEach((field) => {
     if (product[field] !== null && typeof product[field] !== 'string') {
@@ -115,7 +124,10 @@ const _readProductContract = (product) => {
       }
     });
   });
-  return product;
+  return {
+    ...product,
+    tags: hasTags ? product.tags : [],
+  };
 };
 
 /**
@@ -250,9 +262,12 @@ const _normalizeOrder = (order) => {
  */
 const _enrichProduct = async (product, reviews, orders) => {
   const display = await _loadProductDisplay();
+  const displayMetadata = display[product.id] || {};
   const enriched = window.enrichProductForDisplay({
     ...product,
-    ...(display[product.id] || {}),
+    ...displayMetadata,
+    // 正式模式以後端 equipment_tags 為真相；Mock 才讀同步的展示 Seed。
+    tags: _useMockApi() ? (displayMetadata.tags || []) : (product.tags || []),
     // Display metadata must never replace public variant identity or pricing.
     variants: product.variants,
   });
@@ -382,8 +397,10 @@ const _loadProductPage = async ({
   maxPrice = null,
 } = {}) => {
   const [field, direction] = String(sort).split(',');
-  if (!['id', 'name'].includes(field) || !['asc', 'desc'].includes(direction)) {
-    throw new Error('VALIDATION_ERROR: sort must be id,asc|desc or name,asc|desc');
+  if (!['id', 'name', 'createdAt'].includes(field) || !['asc', 'desc'].includes(direction)) {
+    throw new Error(
+      'VALIDATION_ERROR: sort must be id,asc|desc, name,asc|desc, or createdAt,asc|desc'
+    );
   }
 
   if (!_useMockApi()) {
@@ -1159,7 +1176,7 @@ window.API = {
       const [result, reviews, orders] = await Promise.all([
         _loadProductPage(options),
         _useMockApi() ? _loadReviews() : Promise.resolve([]),
-        _loadOrdersSeed(),
+        _useMockApi() ? _loadOrdersSeed() : Promise.resolve([]),
       ]);
       return {
         data: await Promise.all(result.data.map((product) => _enrichProduct(product, reviews, orders))),
@@ -1175,7 +1192,7 @@ window.API = {
       const [raw, reviews, orders] = await Promise.all([
         _loadProductsRaw(),
         _useMockApi() ? _loadReviews() : Promise.resolve([]),
-        _loadOrdersSeed(),
+        _useMockApi() ? _loadOrdersSeed() : Promise.resolve([]),
       ]);
       let products = raw.filter((p) => p.status === 'active');
       products = await Promise.all(products.map((p) => _enrichProduct(p, reviews, orders)));
@@ -1206,7 +1223,7 @@ window.API = {
       if (!product) throw new Error('Product not found');
       const [reviews, orders] = await Promise.all([
         _useMockApi() ? _loadReviews() : Promise.resolve([]),
-        _loadOrdersSeed(),
+        _useMockApi() ? _loadOrdersSeed() : Promise.resolve([]),
       ]);
       return _enrichProduct(product, reviews, orders);
     },
@@ -1274,6 +1291,17 @@ window.API = {
     },
 
     getNewest: async (limit = 12) => {
+      if (!_useMockApi()) {
+        // 正式模式由後端依 products.created_at 排序，不再用商品 ID 猜測上架先後。
+        const result = await window.API.products.getPage({
+          page: 0,
+          size: limit,
+          sort: 'createdAt,desc',
+        });
+        return result.data;
+      }
+
+      // Mock 沒有上架時間欄位，僅保留既有 ID 排序供離線展示。
       const all = await window.API.products.getAll();
       return all
         .slice()
@@ -1286,8 +1314,20 @@ window.API = {
     },
 
     getBestsellers: async (limit = 20) => {
+      if (!_useMockApi()) {
+        // 正式模式由後端依訂單銷量排序，首頁不再讀取受保護的訂單端點。
+        const raw = await window.ApiClient._restRequest(
+          `/products/bestsellers?limit=${encodeURIComponent(limit)}`,
+          { auth: 'none' }
+        );
+        return Promise.all(
+          (raw || []).map((product) => _enrichProduct(_readProductContract(product), [], []))
+        );
+      }
+
       const all = await window.API.products.getAll();
       return all
+        .filter((product) => product.tags.includes('熱銷'))
         .slice()
         .sort((a, b) => {
           if (b.salesCount !== a.salesCount) return b.salesCount - a.salesCount;
@@ -1682,7 +1722,14 @@ window.API = {
   },
 
   marketing: {
-    getBrands: async () => _loadMockOrRest('brands', '/brands'),
+    // 合作品牌是公開內容，不附帶登入 Token，避免失效 Session 阻斷首頁。
+    getBrands: async () => {
+      if (_useMockApi()) {
+        return _fetchJson(_path('brands'));
+      }
+
+      return window.ApiClient._restRequest('/brands', { auth: 'none' });
+    },
   },
 
   handleError: (error) => ({

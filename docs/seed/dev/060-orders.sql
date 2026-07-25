@@ -1850,6 +1850,33 @@ ON CONFLICT (id) DO UPDATE SET
     fulfilled_at = EXCLUDED.fulfilled_at,
     inventory_domain = EXCLUDED.inventory_domain;
 
+-- 商城標籤：依非取消、非退貨訂單的商品數量總和，重新標記前 6 件熱銷商品。
+DELETE FROM public.equipment_tags
+WHERE tag = '熱銷';
+
+INSERT INTO public.equipment_tags (item_id, tag)
+SELECT bestseller.item_id, '熱銷'
+FROM (
+    SELECT product.item_id
+    FROM public.products product
+    JOIN public.equipment_items item ON item.id = product.item_id
+    JOIN public.order_items order_item ON order_item.product_id = product.id
+    JOIN public.orders order_header ON order_header.id = order_item.order_id
+    WHERE product.status = 'active'
+      AND item.active = true
+      AND order_header.status NOT IN ('cancelled', 'returned')
+      AND EXISTS (
+          SELECT 1
+          FROM public.product_variants variant
+          WHERE variant.product_id = product.id
+            AND variant.status = 'active'
+      )
+    GROUP BY product.id, product.item_id
+    ORDER BY sum(order_item.quantity) DESC, product.id ASC
+    LIMIT 6
+) bestseller
+ON CONFLICT (item_id, tag) DO NOTHING;
+
 SELECT setval('public.order_items_id_seq', GREATEST((SELECT max(id) FROM public.order_items), 1), true);
 SELECT setval('public.order_status_history_id_seq', GREATEST((SELECT max(id) FROM public.order_status_history), 1), true);
 SELECT setval('public.order_event_history_id_seq', GREATEST((SELECT max(id) FROM public.order_event_history), 1), true);

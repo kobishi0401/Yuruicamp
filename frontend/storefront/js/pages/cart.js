@@ -87,9 +87,14 @@ function _bindStorefrontCartActions() {
   });
 
   document.getElementById('storefrontCartClearBtn')?.addEventListener('click', () => {
-    _cancelStorefrontCartSession(_readStorefrontCartSession());
+    const previousSession = _readStorefrontCartSession();
+
+    // 先停止舊流程並立即更新空背包畫面，再於背景釋放後端保留庫存。
+    storefrontCartSessionRevision += 1;
+    window.clearCart();
     _clearStorefrontCartSessionState();
-    window.clearCart?.();
+    _renderStorefrontCartPage();
+    _cancelStorefrontCartSession(previousSession);
   });
 
   document.getElementById('storefrontCartCheckoutLink')?.addEventListener('click', (event) => {
@@ -128,12 +133,16 @@ function _bindStorefrontCartActions() {
 
 function _renderStorefrontCartPage() {
   const cart = window.AppState?.cart || [];
+  const hasItems = cart.length > 0;
   const empty = document.getElementById('storefrontCartEmpty');
   const content = document.getElementById('storefrontCartContent');
+  const stepProgress = document.querySelector('.storefrontCartStepProgress');
 
-  if (empty) empty.hidden = cart.length > 0;
-  if (content) content.hidden = cart.length === 0;
-  if (cart.length === 0) return;
+  // 空背包時同步隱藏結帳流程與商品內容，只保留空狀態引導。
+  if (empty) empty.hidden = hasItems;
+  if (content) content.hidden = !hasItems;
+  if (stepProgress) stepProgress.hidden = !hasItems;
+  if (!hasItems) return;
 
   const list = document.getElementById('storefrontCartItems');
   if (list) list.innerHTML = cart.map(_buildStorefrontCartItemHtml).join('');

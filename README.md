@@ -14,7 +14,11 @@
 
 後端程式使用簡短中文註解；流程文件集中在 `docs/backend-specs/`，只保留用途、主要流程與驗證結果。
 
-- Catalog 線 B 已完成：商品列表／詳情支援分頁、排序、分類／品牌／價格篩選，variant 回傳可售數量，並提供公開門市 `GET /api/branches`。
+- Catalog 線 B 已完成：商品列表／詳情支援分頁、排序、分類／品牌／價格篩選，variant 回傳可售數量，並提供公開門市 `GET /api/branches` 與首頁合作品牌 `GET /api/brands`。
+- 首頁品牌跑馬燈在 Backend 模式改由公開 `GET /api/brands` 載入且不附登入 Token；空資料或請求失敗時保留可見狀態，不再讓容器縮成 `0px`。
+- 首頁最新商品在 Backend 模式使用 `GET /api/products?...&sort=createdAt,desc`，由 PostgreSQL `products.created_at` 決定首次上架順序，不再依商品 ID 推算。
+- 首頁熱銷商品在 Backend 模式改由公開 `GET /api/products/bestsellers` 依有效訂單銷量排序，不再呼叫 `/api/orders`，避免 `401` 被誤判為登入過期；Mock 模式才使用本機訂單展示資料。
+- 商品公開 API 會回傳 `equipment_tags`；開發 Seed 將可售商品 `created_at` 前 10 標為新品、有效訂單商品數量前 6 標為熱銷。商品列表頁以標籤篩選，並分別維持建立時間／有效銷量排序。
 - B-4 未指定篩選條件時會使用明確的文字與價格預設值，避免 PostgreSQL 將 `null` 文字參數推斷成 `bytea` 而中斷商品載入。
 - B-3 驗收範圍與執行方式見 [`docs/backend-specs/catalog/b3-product-pagination-validation.md`](./docs/backend-specs/catalog/b3-product-pagination-validation.md)。
 - B-5 商品規格已隨 Product API v0.3 落地：`variants[]` 只回 active variant，並以商城庫存扣除 active 保留帳後回傳 `availableQuantity` 與 `inStock`。
@@ -35,7 +39,7 @@
 - Checkout Session Read 已完成：`GET /api/checkout/sessions/{orderId}` 只讀取 Firebase Principal 本人的最新快照，不延長期限或修改庫存；未登入回 `401`，他人與不存在統一回 `403`。
 - Checkout C-2～C-8 的完整流程、規則與驗收入口見 [`docs/backend-specs/checkout/README.md`](./docs/backend-specs/checkout/README.md)。
 - Checkout 線 C 的 C-4 與 Coupon 線 F 已完成：會員可 PATCH 自己尚未到期的 Checkout 收件資料、付款方式及 `couponClaimId`，折扣由後端重算並保存 `order_coupons` 快照。
-- Coupon 線 F 的 F-1、F-3、F-4 與商城 F-2 已完成：公開券、我的券、領券、三種資格、名額 Trigger、重複領券與取消規則已通過 PostgreSQL 驗證；Booking 因缺少 Coupon 關聯 Schema 尚未開放，付款後 `consumed` 由線 D 接續。
+- Coupon 線 F 的 F-1、F-3、F-4 與商城 F-2 已完成：公開券、我的券、領券、三種資格、名額 Trigger、重複領券與取消規則已通過 PostgreSQL 驗證；COD 成立後 claim 改為 `consumed`，會員取消改為 `revoked`，Checkout 逾時改為 `expired`，都不會退回可用狀態。
 - Checkout 線 C 的 C-3、C-5、C-7 已完成：PostgreSQL 併發防超賣、取消釋放保留帳及後端價格重算均已通過整合測試。
 - Checkout 線 C 的 C-6、C-8 已完成：每分鐘掃描滿 15 分鐘的未付款訂單，交易內取消訂單、將保留帳改為 `expired` 並釋放庫存；PostgreSQL 逾時與冪等驗收已通過。
 - Booking 線 E 的 E-0 已完成：`bookings` 加入 Checkout 冪等 key、request hash 與會員範圍唯一約束。
@@ -46,7 +50,7 @@
 - Booking 線 E 的 E-5 已完成：會員可分頁查看自己的預約列表、完整詳情與 Checkout 快照；後端不接受任意 customerId，讀取他人與不存在的預約都回 404。
 - Booking 線 E 的 E-6 已完成：會員可主動取消 pending／unpaid 預約；排程每分鐘處理逾時 Checkout，同交易恢復營位占用、釋放 active 租借保留並寫入狀態歷程，E-1～E-6 共 46 項 PostgreSQL 回歸測試通過。
 - Booking 線 E 的 E-7 已完成：`BookingAPI` 在 Backend 模式統一呼叫 `/api/booking/**`，可用性、價格、Booking ID、本人列表／詳情／取消與 15 分鐘倒數都使用後端結果；不再寫入 `mockBookings` 或自行標記 paid。進入 `booking-cart.html` 即建立 Checkout Session 並顯示庫存不足提示，數量變更會重新鎖位；`booking-checkout.html` 的「前往 ECPay」只使用已建立的 `bookingId` 取得後端簽章表單，不再建立第二筆 Session。訂購人欄位預設空白且只由「帶入會員資料」填入，實際 ECPay 端點、Notify 與付款確認仍待線 D。
-- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨與 COD 確認：進入 `storefront/pages/cart.html` 即建立 Draft Session 並鎖庫 15 分鐘；確認背包與結帳頁採節點式流程列，商品數量支援按鈕與直接輸入；`checkout.html` 的主要按鈕固定顯示「確認結帳」，資料不完整時只以 toast 與紅色欄位提示，送出時只 PATCH 既有 Session，再接續 `confirm-cod` 或 ECPay，不重複建單。COD 成立後仍為 `unpaid` 且不再受 Checkout 期限限制。
+- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨與 COD 確認：進入 `storefront/pages/cart.html` 即建立 Draft Session 並鎖庫 15 分鐘；確認背包與結帳頁採節點式流程列，商品數量支援按鈕與直接輸入；`checkout.html` 的主要按鈕固定顯示「確認結帳」，資料不完整時只以 toast 與紅色欄位提示，送出時只 PATCH 既有 Session，再接續 `confirm-cod` 或 ECPay，不重複建單。COD 成立後仍為 `unpaid` 且不再受 Checkout 期限限制；若有套券，claim 會改為 `consumed`。
 - 商城取消訂單入口已移至會員中心：待出貨且未付款的商品訂單可在訂單明細最下方取消；COD 成立頁會提示前往會員中心，購物車 Drawer 的圖層亦高於 Toast，避免提示遮住操作。
 - 商品詳情頁的「立即購買」會以商品 ID 與 variant ID 檢查購物車；相同品項已存在時保留原數量並直接前往確認背包，只有「加入購物車」會繼續累加數量。
 - 商品訂單的 canonical `cancelled` 狀態已與預約訂單對齊，會員中心及後台商品訂單列表、詳情與篩選器統一顯示「已取消」。
@@ -66,13 +70,15 @@
 - 會員中心儲存 `#profileName` 後會同步共用登入狀態與跨分頁 storage，主站及 Booking Header 的 `.siteUserName` 會立即顯示相同姓名。
 - Booking 會員中心會依登入管道控制 `#profileEmail`：Google 登入使用唯讀信箱且不送入會員更新，其他登入管道仍可編輯。
 - 前端 `window.API.checkout` 已提供建立、讀取、更新、取消、COD 與 ECPay 六個契約方法；adapter 路徑不重複加入 `/api`。
-- 前端正式優惠券已接線：`API.coupons.getMine/claim` 只透過 `ApiClient` 呼叫會員 API；Checkout 輸入活動碼後會取得 `couponClaimId`、PATCH 既有 Session，套用與移除都只採後端 `pricing`，一單限用一張券。
+- 前端正式優惠券已接線：`API.coupons.getMine/claim` 只透過 `ApiClient` 呼叫會員 API；Checkout 輸入活動碼後會取得 `couponClaimId`、PATCH 既有 Session，套用與移除都只採後端 `pricing`，一單限用一張券；輸入框選項會排除 `consumed/revoked/expired` 與本次已套用的券碼，並關閉瀏覽器 autocomplete 以免舊券碼輸入紀錄混入。
+- Checkout 優惠券套用具備前後端雙層冪等保護：確認結帳不重送 Session 已綁定的 claim；後端收到同訂單、同 claim 時保留快照，只有換券才替換 `order_coupons`。
 - 會員中心正式優惠券已接線：Backend 模式以 `GET /api/me/coupons` 顯示會員本人 claims，包含 Checkout 領取的 `promotion` 券；`claimed` 顯示為可用，`consumed/revoked/expired` 顯示為不可用，不再依前端靜態會員資料推算資格。
 - Checkout Mock 與 Backend 共用 `CheckoutSession`：Mock 由商品契約重算價格、支援冪等並寫入獨立 `mockCheckoutSessions`；Backend 模式禁止 Legacy `orders.create()`。
 - Storefront 確認背包頁呼叫 `API.checkout.createSession()`；Request 只含規格 ID、數量與冪等鍵，不傳會員 ID、商品快照、前端價格、總額、狀態或點數。正式 Checkout 頁只 PATCH 配送與付款資料。
 - Checkout 冪等鍵由 `crypto.randomUUID()` 產生並暫存在 sessionStorage；網路重試與連點沿用同一 key，成功保存後端 `orderId`，購物車變更、取消或逾時才清除。
 - Checkout I-5／CK-4 已完成：建立成功後摘要只採用後端 `CheckoutSession.pricing`；Backend 模式不建立 Legacy Order，優惠券以會員 claim 套用，ECPay 也不在本站收集卡號、到期日或 CVV。
 - Checkout I-6 已完成：Draft 可 PATCH 補資料，Ready 顯示後端金額與 15 分鐘倒數；逾時／取消會清除 Session、保留購物車，並依後端錯誤碼提供重新登入、調整庫存或重建 Checkout 操作。
+- Checkout 表單草稿會以 `sessionStorage.checkoutFormDraft` 綁定會員、購物車指紋與訂單 ID；同一分頁重新整理可還原填寫內容，換會員、換購物車、取消、逾時或完成時清除，且不保存卡號、到期日或 CVV。
 - Checkout 庫存不足明細會顯示 `equipment_items.name` 與目前可用數量，不向買家顯示內部 `variantId`；操作按鈕顯示「商品剩餘數量不足請重新調整數量」。
 - COD 確認成功後才清空共用購物車與本次 Checkout 暫存；成功頁以 URL 的 `orderId` 重新向後端讀取，因此下一次 Checkout 不會還原上一筆 completed Session。
 - 開發 Seed 已建立 `main`、`branch-001`～`branch-003` 四個商城庫位與 156 筆 variant 庫存；扣除 98 件 active 訂單保留後，active catalog 可用量總計 399，可直接從 Swagger 驗證 Checkout。
@@ -855,6 +861,7 @@ window.throttle(fn, 100); // 節流（滾動事件使用）
 | `checkoutIdempotencyKey`   | String | 建立 Checkout 使用的 UUID |
 | `checkoutCartFingerprint`  | String | 購物車規格與數量指紋      |
 | `checkoutCompletedOrderId` | String | 建立成功的後端訂單 ID     |
+| `checkoutFormDraft`        | JSON   | 同一分頁的結帳表單草稿；綁定會員、購物車與訂單 |
 
 後台：
 

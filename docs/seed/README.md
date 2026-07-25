@@ -63,13 +63,13 @@ docs/seed/
 
 `010-reference.sql` 目前包含 12 個前端公開品牌（另保留 `yuruicamp` 站內品牌）、8 個 active 營區 `C002`～`C009`、13 個 active zone `Z001`～`Z013`、5 個環境標籤、7 個設施標籤與 3 個門市。資料值與固定 ID 對齊 `frontend/data/catalog/campgrounds.json`、`frontend/data/marketing/brands.json`、`frontend/data/marketing/branches.json`；跨層 ID 仍以 [`json-seed-id-mapping.md`](../data/json-seed-id-mapping.md) 為準。
 
-`030-catalog.sql` 已包含 28 個租借 SKU 與 37 個 canonical 租借規格。`040-inventory.sql` 已包含 `main`、`branch-001`～`branch-003` 四個商城據點、39 規格 × 4 據點的 156 筆商城庫存，以及 C001～C009 的 9 個租借庫位、16 筆有明確定價的 listing 與 333 筆前端對照租借庫存。租借庫存中 9 筆已依 active 預訂的區間重疊下限調整，避免載入後立即超賣；`rental-skus.json` 已同步。沒有定價來源的 SKU 不自行建立 listing；最低庫存仍待獨立搬移。
+`030-catalog.sql` 已包含 28 個租借 SKU 與 37 個 canonical 租借規格，並會刪除既有「新品」標籤後，依可售商品的 `products.created_at DESC, products.id DESC` 重新標記前 10 件。`040-inventory.sql` 已包含 `main`、`branch-001`～`branch-003` 四個商城據點、39 規格 × 4 據點的 156 筆商城庫存，以及 C001～C009 的 9 個租借庫位、16 筆有明確定價的 listing 與 333 筆前端對照租借庫存。租借庫存中 9 筆已依 active 預訂的區間重疊下限調整，避免載入後立即超賣；`rental-skus.json` 已同步。沒有定價來源的 SKU 不自行建立 listing；最低庫存仍待獨立搬移。
 
 `020-identity.sql` 已包含固定會員 U001～U050、18 個偏好選項、200 筆會員偏好、50 筆預設配送地址、3 個會員標籤與 56 筆標籤指派；資料使用 `example.com` 與固定假電話，不含 Firebase UID。這批周邊資料對齊 `frontend/data/customers/*.json`，但不參與訂單／預訂成立條件。地址 JSON 的 `email` 取自 `customers.email`，資料庫地址表不重複保存。`050-coupons.sql` 已包含固定 ID 1～7 的 7 張優惠券，但目前沒有領券案例，因此不建立 `coupon_claims`，`claimed_quantity` 為 `0`。Seed 重跑只更新券主檔，不覆寫既有已領數。
 
 `coupon_claims` 不是為了補齊關聯而建立的展示資料。只有來源同時能確認會員、券、領券時間、claim 狀態，以及 consumed claim 對應的訂單與折扣快照時，才可另行加入；否則 `coupon_claims`、`order_coupons` 與 Seed 訂單折扣都維持空／`0`。`claimed_quantity` 必須由 claim Trigger 配額流程產生，不可只修改主檔計數。
 
-`060-orders.sql` 已包含訂單 1～222、435 筆商品快照、431 筆狀態歷程、607 筆舊付款／建立事件與 435 筆商城庫存保留；商品 FK／SKU 已轉為 canonical variant。`070-bookings.sql` 已包含預訂 1～90、90 筆 zone、40 筆租借快照、190 筆狀態歷程與 40 筆租借庫存保留。訂單保留以固定主倉 `main` 履約；商城庫存的 on-hand 已加回 active 保留量，扣除後 active 商品可用量維持 JSON 的 399。
+`060-orders.sql` 已包含訂單 1～225、442 筆商品快照、439 筆狀態歷程、614 筆付款／建立／退款事件與 442 筆商城庫存保留；其中 1～222 對應前端 JSON，223～225 是 Firebase 測試會員「粉紅雞」的固定隨機訂單，分別呈現已完成、已出貨、已退貨。商品 FK／SKU 已轉為 canonical variant。此片段載入訂單後會刪除既有「熱銷」標籤，再排除 `cancelled`、`returned` 訂單，依 `order_items.quantity` 合計降序重新標記前 6 件商品。`070-bookings.sql` 已包含預訂 1～90、90 筆 zone、40 筆租借快照、190 筆狀態歷程與 40 筆租借庫存保留。訂單保留以固定主倉 `main` 履約；商城庫存的 on-hand 已加回 active 保留量，扣除後 active 商品可用量維持 JSON 的 399。
 
 `frontend/data/admin/reviews.json` 的評價已盡量對到真實 `order_items`，由 `080-reviews.sql` 載入；另有 `090-w1-manual-fixtures.sql` 提供 W1 手動驗收固定 ID（`W1-ORD-NOTE`／`W1-BK-NOTE`／`W1-REV-DEL` 等）。步驟見 [`../../plans/admin-post-g6/w1/W1-manual-qa.md`](../../plans/admin-post-g6/w1/W1-manual-qa.md)。`movement.json` 仍不搬移：141 筆明細全部缺 variantId，其中 24 筆對到多規格商品，26 張表頭混合異動語意，員工 01～03 也沒有可追溯的 `admin_users` 主檔。
 

@@ -168,9 +168,14 @@ const colors = {
 - 頁面金額在送出前只是預估；建立成功後以 `CheckoutSession.pricing.subtotal`、`shippingFee`、`discount`、`total` 覆蓋摘要。
 - Backend 模式不寫 `mockOrders`、不產生前端訂單 ID、不標記付款，也不把 CheckoutSession 當成 Legacy Order。
 - 完整 Session 只暫存在 `sessionStorage.lastCheckoutSession`，供目前分頁重新整理時還原。
+- 尚未送出的表單內容暫存在 `sessionStorage.checkoutFormDraft`，並綁定會員 ID、購物車指紋與訂單 ID；重新整理同一分頁時可還原姓名、手機、Email、備註、地址、配送／門市與付款選擇。
+- 表單草稿不寫入 `localStorage`，也不保存卡號、到期日或 CVV；換會員、購物車內容改變、取消、逾時或完成訂單時必須清除。
 - `ecpay-credit` 不收集或傳送卡號、到期日與 CVV，只顯示「下一步將前往 ECPay」；實際導向等待 I-7。
 - Backend 模式由 `API.coupons.getMine()` 讀會員 claims；輸入尚未領取的有效活動碼時以 `API.coupons.claim(couponId)` 領券，再將唯一一張 `couponClaimId` PATCH 至既有 Session。
+- `#checkoutCouponInput` 的 datalist 以公開可領券目錄交叉比對會員 claims，只列出尚未領取或狀態仍為 `claimed` 的券；`consumed`、`revoked`、`expired` 與本次已套用的券碼不出現在選項中。
+- `#checkoutCouponInput` 使用 Checkout 專用欄位名稱並關閉瀏覽器 autocomplete，避免舊輸入紀錄（例如 `YURUI100`、`CAMP200`）混入 API 產生的 datalist；後台 `CAMP200` placeholder 保持不變。
 - 套券成功後只使用 response `pricing.discount/total`；空 PATCH `{}` 清除訂單套券，但不刪除會員 claim 或退還發行名額。
+- 確認結帳前會比對 `lastCheckoutSession.couponClaimId`；若與目前選券相同，只 PATCH 配送與付款資料，不重送 claim。只有 Session 尚未套用或使用者換券時才附上 `couponClaimId`。
 - `COUPON_SOLD_OUT`、`COUPON_NOT_ELIGIBLE`、`COUPON_NOT_APPLICABLE`、`COUPON_ALREADY_USED`、`UNAUTHORIZED` 與 `CHECKOUT_EXPIRED` 必須顯示可理解的行內錯誤。
 - `#confirmOrderBtn` 在 Draft 與 Ready 狀態都固定顯示「確認結帳」；Draft 只 PATCH 收件資料與付款方式，不重新建立訂單。
 - Ready to pay 依後端 `checkoutExpiresAt` 每秒顯示 `mm:ss`，倒數歸零切換 Expired 並清除舊 Session。
@@ -191,3 +196,5 @@ const colors = {
 - [ ] 設計 Token 符合 Yuruicamp AI 樣式規範。
 - [ ] 單元測試或 smoke test 已涵蓋必填 Props 與主要事件。
 - [ ] `#confirmOrderBtn` 不呼叫建立 Session，只 PATCH 既有 Draft 或接續付款動作。
+- [ ] 已套用優惠券後確認結帳，不會再次傳送相同的 `couponClaimId`。
+- [ ] 同會員、同購物車與同一筆 Checkout Session 重新整理後可還原表單草稿；任一識別不符時不可套用舊草稿。

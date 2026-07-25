@@ -56,6 +56,8 @@ public class SecurityConfig {
 						// 線 B：商品公開讀（Product API Contract v0.1）— 不必登入
 						.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
+						// 首頁合作品牌為公開行銷資料，不要求會員登入。
+						.requestMatchers(HttpMethod.GET, "/api/brands").permitAll()
 						// 線 F：只公開有效優惠券主檔，會員 claim 仍需登入。
 						.requestMatchers(HttpMethod.GET, "/api/coupons").permitAll()
 						// 線 E-1：只開放明確的營區、裝備、政策與公休讀取端點。

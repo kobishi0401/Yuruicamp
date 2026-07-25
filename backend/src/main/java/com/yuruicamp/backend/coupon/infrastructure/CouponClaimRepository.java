@@ -22,4 +22,8 @@ public interface CouponClaimRepository extends JpaRepository<CouponClaim, Long> 
 	@Query("select claim from CouponClaim claim where claim.id=:id and claim.customerId=:customerId")
 	Optional<CouponClaim> findOwnedForUpdate(@Param("id") Long id,
 			@Param("customerId") String customerId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select claim from CouponClaim claim where claim.id=:id")
+	Optional<CouponClaim> findByIdForUpdate(@Param("id") Long id);
 }

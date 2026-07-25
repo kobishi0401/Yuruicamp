@@ -3468,6 +3468,11 @@ body.shippingAddressModalOpen {
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
+.storefrontCartStepProgress[hidden],
+.storefrontCartLayout[hidden] {
+  display: none;
+}
+
 .storefrontCartItemsCard,
 .storefrontCartSummaryCard,
 .storefrontCartEmpty {
@@ -5764,6 +5769,12 @@ body.shippingAddressModalOpen {
   transition: border-color var(--yc-transition-fast), color var(--yc-transition-fast), background-color var(--yc-transition-fast);
   user-select: none;
   white-space: nowrap;
+}
+
+.brandLogoItemStatus {
+  color: var(--yc-text-muted);
+  justify-content: center;
+  min-width: min(24rem, calc(100vw - var(--yc-space-8)));
 }
 
 .brandLogoItem:hover {
@@ -10272,6 +10283,21 @@ main.productDetailContainer {
   position: absolute;
   top: 0.75rem;
   z-index: 2;
+}
+
+.productCardBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  left: 0.75rem;
+  position: absolute;
+  top: 0.75rem;
+  z-index: 2;
+}
+.productCardBadges .productCardBadge {
+  left: auto;
+  position: static;
+  top: auto;
 }
 
 .badgeNew {

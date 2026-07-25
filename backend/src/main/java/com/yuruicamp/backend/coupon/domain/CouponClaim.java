@@ -87,4 +87,22 @@ public class CouponClaim {
 	public Instant getConsumedAt() {
 		return consumedAt;
 	}
+
+	// 取消或逾時時將 claim 標記為不可再使用，並保留失效時間。
+	public boolean invalidate(CouponClaimStatus nextStatus, Instant now) {
+		if (nextStatus != CouponClaimStatus.revoked && nextStatus != CouponClaimStatus.expired) {
+			throw new IllegalArgumentException("Coupon claim terminal status is invalid");
+		}
+		if (status == nextStatus
+				|| status == CouponClaimStatus.revoked
+				|| status == CouponClaimStatus.expired) {
+			return false;
+		}
+
+		status = nextStatus;
+		consumedAt = null;
+		revokedAt = now;
+
+		return true;
+	}
 }

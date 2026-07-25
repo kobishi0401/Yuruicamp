@@ -20,5 +20,7 @@ public record ProductResponse(
 		@Schema(description = "Min active variant price (string money)", example = "3200.00") String price,
 		@Schema(description = "Average formal review rating, fixed to one decimal", example = "4.6") String rating,
 		@Schema(description = "Formal review count", example = "35") long reviewCount,
+		@Schema(description = "商品標籤；新品與熱銷由 Seed 寫入 equipment_tags", example = "[\"新品\", \"熱銷\"]")
+		List<String> tags,
 		List<ProductVariantResponse> variants) {
 }

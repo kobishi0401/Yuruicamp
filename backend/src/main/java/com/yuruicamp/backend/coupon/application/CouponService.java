@@ -104,8 +104,18 @@ public class CouponService {
 		validateApplicable(customer, claim, coupon, order.getSubtotal(), now);
 
 		BigDecimal discount = calculateDiscount(coupon, order.getSubtotal());
-		orderCoupons.findByOrderId(order.getId())
-				.ifPresent(existing -> orderCoupons.deleteByOrderId(order.getId()));
+		OrderCoupon existing = orderCoupons.findByOrderId(order.getId()).orElse(null);
+		if (existing != null && couponClaimId.equals(existing.getCouponClaimId())) {
+			// 同一訂單重送同一張券時保留原快照，讓套券操作可安全重試。
+			order.setPricing(order.getSubtotal(), order.getShippingFee(), discount);
+
+			return couponClaimId;
+		}
+		if (existing != null) {
+			// 換券時先確實刪除舊快照，避免 Flush 將新增排在刪除之前。
+			orderCoupons.delete(existing);
+			orderCoupons.flush();
+		}
 		try {
 			orderCoupons.saveAndFlush(OrderCoupon.snapshot(order.getId(), coupon, couponClaimId, discount, now));
 		}
@@ -124,6 +134,53 @@ public class CouponService {
 		return orderCoupons.findByOrderId(orderId)
 				.map(OrderCoupon::getCouponClaimId)
 				.orElse(null);
+	}
+
+	// 訂單成立後消耗已套用的 claim；重複付款通知會保留第一次消耗時間。
+	@Transactional
+	public Long consumeAppliedClaim(String orderId, Instant now) {
+		OrderCoupon appliedCoupon = orderCoupons.findByOrderId(orderId).orElse(null);
+		if (appliedCoupon == null) {
+			return null;
+		}
+
+		CouponClaim claim = claims.findByIdForUpdate(appliedCoupon.getCouponClaimId())
+				.orElseThrow(() -> new BusinessException(
+						ErrorCode.COUPON_NOT_APPLICABLE,
+						"Applied coupon claim not found"));
+		if (claim.getStatus() == CouponClaimStatus.consumed) {
+			return claim.getId();
+		}
+		if (claim.getStatus() != CouponClaimStatus.claimed) {
+			throw new BusinessException(
+					ErrorCode.COUPON_NOT_APPLICABLE,
+					"Applied coupon claim cannot be consumed");
+		}
+
+		claim.consume(now);
+
+		return claim.getId();
+	}
+
+	// 主動取消使用 revoked，自動逾時使用 expired；兩者都不退回 claimed。
+	@Transactional
+	public Long invalidateAppliedClaim(String orderId, CouponClaimStatus nextStatus, Instant now) {
+		if (nextStatus != CouponClaimStatus.revoked && nextStatus != CouponClaimStatus.expired) {
+			throw new IllegalArgumentException("Coupon claim terminal status is invalid");
+		}
+
+		OrderCoupon appliedCoupon = orderCoupons.findByOrderId(orderId).orElse(null);
+		if (appliedCoupon == null) {
+			return null;
+		}
+
+		CouponClaim claim = claims.findByIdForUpdate(appliedCoupon.getCouponClaimId())
+				.orElseThrow(() -> new BusinessException(
+						ErrorCode.COUPON_NOT_APPLICABLE,
+						"Applied coupon claim not found"));
+		claim.invalidate(nextStatus, now);
+
+		return claim.getId();
 	}
 
 	private static void validateClaimable(Customer customer, Coupon coupon, Instant now) {

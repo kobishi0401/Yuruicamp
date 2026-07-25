@@ -154,6 +154,9 @@ const colors = {
 * 共用 CSS 來源：`css/main.css`。
 * 共用元件：`components/header.partial`、`components/footer.partial`。
 * 關鍵 UI 區域：`adCarousel`、`filterSidebar`、`productsGrid`、`pagination`。
+* Backend 模式以公開商品契約的 `tags` 判定 `isNew`、`isBestseller`；`API.products.getNewest(100)` 與 `API.products.getBestsellers(100)` 只提供各分類的排序順位。
+* 開發 Seed 的新品為可售商品 `products.created_at desc, id desc` 前 10 件；熱銷為排除取消／退貨訂單後，依 `order_items.quantity` 合計前 6 件。
+* 新品維持 `created_at` 降序，熱銷維持有效訂單數量降序。商品卡可同時顯示兩種標籤；URL 與側欄篩選不得用列表位置或前端自行推測標籤。
 * 產生新 UI 前，必須先閱讀 `docs/ai-style-sheet.md` 與 `docs/ai-style-tokens.css`。
 * 未解決問題：沒有提供 Figma 設計稿，因此既有程式碼是設計上的唯一依據。
 * 實作本規格時，**不得**替換既有頁面外殼、storage key、mock data 資料契約，或 partial loader 的載入模式。
@@ -166,3 +169,4 @@ const colors = {
 * [ ] 螢幕閱讀器能正確宣告內容。
 * [ ] 設計 Token 符合 Yuruicamp AI 樣式規範。
 * [ ] 單元測試或 smoke test 已涵蓋必填 Props 與主要事件。
+* [ ] 新品與熱銷商品卡有正確標籤，URL 與側欄快速篩選會顯示完整對應清單，不受首頁展示筆數限制。

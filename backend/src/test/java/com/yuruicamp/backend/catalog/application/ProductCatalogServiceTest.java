@@ -16,7 +16,9 @@ import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 class ProductCatalogServiceTest {
 
@@ -62,5 +64,29 @@ class ProductCatalogServiceTest {
 				() -> service.listProducts(0, 20, "price,asc", null, null, null, null));
 
 		assertEquals(ErrorCode.VALIDATION_ERROR, error.getErrorCode());
+	}
+
+	@Test
+	void listProductsMapsCreatedAtToStableDatabaseSort() {
+		ProductRepository productRepository = mock(ProductRepository.class);
+		when(productRepository.findActiveIdsForCatalog(any(), any(), any(), any(), any(Pageable.class)))
+				.thenReturn(Page.empty(PageRequest.of(0, 12)));
+		ProductCatalogService service = new ProductCatalogService(
+				productRepository,
+				mock(EquipmentImageRepository.class),
+				mock(ProductCatalogAssembler.class),
+				mock(VariantAvailabilityRepository.class),
+				mock(ProductRatingRepository.class));
+
+		service.listProducts(0, 12, "createdAt,desc", null, null, null, null);
+
+		Sort expectedSort = Sort.by(Sort.Direction.DESC, "createdAt")
+				.and(Sort.by(Sort.Direction.DESC, "id"));
+		verify(productRepository).findActiveIdsForCatalog(
+				eq(""),
+				eq(""),
+				eq(java.math.BigDecimal.ZERO),
+				eq(new java.math.BigDecimal("9999999999.99")),
+				eq(PageRequest.of(0, 12, expectedSort)));
 	}
 }
