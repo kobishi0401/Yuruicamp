@@ -55,10 +55,18 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 				       ('W406-NOPERM', 'W406 NoPerm', 'w406-noperm@example.test', 'operator', true, 'uid-w406-noperm')
 				ON CONFLICT (id) DO UPDATE SET active = true, firebase_uid = EXCLUDED.firebase_uid
 				""");
+		// operator 角色可能已有 analytics.view；以個人覆寫明確開／關以驗收 RBAC
+		jdbc.update("""
+				INSERT INTO admin_user_permissions (admin_user_id, permission_code, allowed)
+				VALUES ('W406-ANALYTICS', 'analytics.view', true),
+				       ('W406-NOPERM', 'analytics.view', false)
+				ON CONFLICT (admin_user_id, permission_code)
+				DO UPDATE SET allowed = EXCLUDED.allowed
+				""");
 		jdbc.update("""
 				INSERT INTO customers (id, name, email, registered_at, points, first_purchase_used, auth_provider, firebase_uid, status)
 				VALUES ('W406-CUST', 'W406 Customer', 'w406-cust@example.test', now(), 0, false, 'google', 'uid-w406-cust', 'active')
-				ON CONFLICT (id) DO UPDATE SET status = 'active'
+				ON CONFLICT (id) DO UPDATE SET status = 'active', deleted_at = NULL
 				""");
 
 		insertOrder("W406-O-S1", "shipped", "paid", "none", "2099-06-01", 1000);
@@ -66,11 +74,12 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 		insertOrder("W406-O-R1", "cancelled", "refunded", "refunded", "2099-06-03", 200);
 		insertOrder("W406-O-U1", "unshipped", "paid", "none", "2099-06-04", 300);
 
+		jdbc.update("DELETE FROM order_items WHERE order_id LIKE 'W406-%'");
 		jdbc.update("""
-				INSERT INTO order_items (order_id, product_id, variant_id, sku_snapshot, product_name_snapshot,
+				INSERT INTO order_items (id, order_id, product_id, variant_id, sku_snapshot, product_name_snapshot,
 				 specification_snapshot, brand_name_snapshot, image_url_snapshot, unit_price_snapshot, quantity)
-				VALUES ('W406-O-S1', 'P-W406', 'V-W406', 'SKU', 'W406 Tent', 'spec', 'Brand', '/img.jpg', 1000.00, 1),
-				       ('W406-O-S2', 'P-W406', 'V-W406', 'SKU', 'W406 Tent', 'spec', 'Brand', '/img.jpg', 500.00, 1)
+				VALUES (9406001, 'W406-O-S1', 'P001', 'V001', 'SKU', 'W406 Tent', 'spec', 'Brand', '/img.jpg', 1000.00, 1),
+				       (9406002, 'W406-O-S2', 'P001', 'V001', 'SKU', 'W406 Tent', 'spec', 'Brand', '/img.jpg', 500.00, 1)
 				""");
 
 		jdbc.update("""
@@ -93,13 +102,16 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 
 	@Test
 	void shopSummaryAggregatesKpisAndTopProducts() throws Exception {
+		long pendingShipment = jdbc.queryForObject(
+				"SELECT count(*) FROM orders WHERE status = 'unshipped'", Long.class);
+
 		mockMvc.perform(get("/api/admin/analytics/shop-summary")
 					.header("Authorization", ANALYTICS_TOKEN)
 					.param("from", "2099-06-01")
 					.param("to", "2099-06-30"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.kpis.orderCount").value(4))
-				.andExpect(jsonPath("$.data.kpis.pendingShipmentCount").value(1))
+				.andExpect(jsonPath("$.data.kpis.pendingShipmentCount").value((int) pendingShipment))
 				.andExpect(jsonPath("$.data.kpis.refundCount").value(1))
 				.andExpect(jsonPath("$.data.kpis.soldQuantity").value(2))
 				.andExpect(jsonPath("$.data.kpis.revenueTotal").value(1500))
@@ -108,13 +120,16 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 
 	@Test
 	void bookingSummaryAggregatesKpis() throws Exception {
+		long pendingBookings = jdbc.queryForObject(
+				"SELECT count(*) FROM bookings WHERE status = 'pending'", Long.class);
+
 		mockMvc.perform(get("/api/admin/analytics/booking-summary")
 					.header("Authorization", ANALYTICS_TOKEN)
 					.param("from", "2099-06-01")
 					.param("to", "2099-06-30"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.kpis.periodBookingCount").value(3))
-				.andExpect(jsonPath("$.data.kpis.pendingCount").value(1))
+				.andExpect(jsonPath("$.data.kpis.pendingCount").value((int) pendingBookings))
 				.andExpect(jsonPath("$.data.kpis.cancelledCount").value(1))
 				.andExpect(jsonPath("$.data.kpis.revenueTotal").value(1000))
 				.andExpect(jsonPath("$.data.kpis.rentalAmount").value(200));
@@ -160,7 +175,9 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 		jdbc.update("DELETE FROM order_items WHERE order_id LIKE 'W406-%'");
 		jdbc.update("DELETE FROM orders WHERE id LIKE 'W406-%'");
 		jdbc.update("DELETE FROM bookings WHERE id LIKE 'W406-%'");
-		jdbc.update("DELETE FROM customers WHERE id = 'W406-CUST'");
+		jdbc.update("DELETE FROM admin_user_permissions WHERE admin_user_id IN ('W406-ANALYTICS', 'W406-NOPERM')");
 		jdbc.update("DELETE FROM admin_users WHERE id IN ('W406-ANALYTICS', 'W406-NOPERM')");
+		jdbc.query("SELECT soft_delete_customer('W406-CUST')", resultSet -> {
+		});
 	}
 }
