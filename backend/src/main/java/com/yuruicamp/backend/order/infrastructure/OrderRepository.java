@@ -31,6 +31,11 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 	Optional<Order> findForCustomerForUpdate(@Param("id") String id,
 			@Param("customerId") String customerId);
 
+	// ECPay Notify 不帶會員身分，以訂單主鍵鎖定避免與逾時／取消競爭。
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select o from Order o where o.id=:id")
+	Optional<Order> findByIdForUpdate(@Param("id") String id);
+
 	// 使用會員與冪等鍵尋找已建立的訂單。
 	@Query("select distinct o from Order o left join fetch o.items where o.customerId=:customerId and o.checkoutIdempotencyKey=:idempotencyKey")
 	Optional<Order> findByCheckoutIdempotencyKey(@Param("customerId") String customerId,

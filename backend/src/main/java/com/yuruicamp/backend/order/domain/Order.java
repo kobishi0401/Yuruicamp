@@ -298,4 +298,24 @@ public class Order {
 	public void changePaymentMethod(PaymentMethod paymentMethod) {
 		this.paymentMethod = paymentMethod;
 	}
+
+	/**
+	 * ECPay Notify 首次成功：標記已付款並清掉 Checkout 倒數。
+	 * 已付過則回 false（呼叫端應走冪等 ignored_duplicate）。
+	 * 已取消訂單不可再標 paid。
+	 */
+	public boolean markPaid(Instant now) {
+		if (paymentStatus == PaymentStatus.paid) {
+			return false;
+		}
+		if (status == OrderStatus.cancelled) {
+			return false;
+		}
+
+		paymentStatus = PaymentStatus.paid;
+		paidAt = now;
+		checkoutExpiresAt = null;
+
+		return true;
+	}
 }

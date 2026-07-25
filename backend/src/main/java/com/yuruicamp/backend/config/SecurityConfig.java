@@ -69,6 +69,13 @@ public class SecurityConfig {
 						.permitAll()
 						// 線 E-2：可用性只查詢，不建立預約或鎖位，因此允許公開呼叫。
 						.requestMatchers(HttpMethod.POST, "/api/booking/check-availability").permitAll()
+						// 線 D：綠界 Notify 是 Server-to-Server，沒有會員 Bearer；靠 CheckMacValue 驗真。
+						.requestMatchers(HttpMethod.POST, "/api/payments/ecpay/notify").permitAll()
+						// D-4：瀏覽器從綠界導回，無 Bearer。
+						.requestMatchers(HttpMethod.GET, "/api/payments/ecpay/return").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/payments/ecpay/return").permitAll()
+						// 本機 stub 模擬付款（stub=false 時 Controller 會拒絕）。
+						.requestMatchers("/api/payments/ecpay/stub/**").permitAll()
 						// 管理員先通過白名單身分，再由 Controller 的方法權限檢查細項權限。
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						// Other /api/** still require customer auth until more public GETs are added

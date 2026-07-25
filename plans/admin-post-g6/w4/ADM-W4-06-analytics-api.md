@@ -3,65 +3,62 @@
 | 欄位 | 內容 |
 |------|------|
 | **波次** | W4｜P3 |
-| **狀態** | ⬜ 未開始 |
+| **狀態** | ✅ 完成 |
+| **Spec** | [`ADM-W4-06-analytics-api-spec.md`](./ADM-W4-06-analytics-api-spec.md) |
+| **Tickets** | [`.scratch/w4-06-analytics/`](../../../.scratch/w4-06-analytics/README.md)（4 張） |
 | **總覽** | [`../../admin-post-g6-task-list.md`](../../admin-post-g6-task-list.md) § ADM-W4-06 |
 | **索引** | [`../README.md`](../README.md) |
-| **Dependencies** | 建議 **W3 之後**（退款／取消口徑穩定）；訂單／預約資料可用 |
+| **Dependencies** | W3 ✅；W4-04／05 ⏭️ 不阻塞 |
 
 ---
 
 ## 0. 開工前必讀
 
-- [ ] 現況：Dashboard 用 Orders／Products／Bookings 列表在瀏覽器聚合
-- [ ] 目標：伺服器端彙總，減少拉全量與權限過粗
-- [ ] 契約必須寫死口徑：是否含 cancelled／refunded
+- [x] Grilling 口徑已定 → 見 **Spec**
+- [x] 現況：Dashboard 用 Orders／Bookings 列表在瀏覽器聚合
+- [x] 目標：伺服器端彙總 + 僅 `analytics.view`
 
 ---
 
 ## 1. 契約
 
-- [ ] 例如 `GET /api/admin/analytics/summary?from=&to=`
-- [ ] 回應：營收、單量、預約數、熱銷等（精簡甲欄位）
-- [ ] 權限：`orders.view` 或新建 `analytics.view`（若新建需改 seed／RBAC）
-- [ ] 快取：可先無快取，但註明未來可加
+- [x] Admin **v0.23**：`GET /api/admin/analytics/shop-summary`、`booking-summary`
+- [x] 口徑／366 天／Asia/Taipei — 見 Spec
+- [x] RBAC：`analytics.view`
 
 ---
 
 ## 2. Schema
 
-- [ ] 通常不需新表；用 SQL 聚合既有 orders／bookings
-- [ ]（可選）物化視圖 — 非本波必須
+- [x] 不需改表
 
 ---
 
 ## 3. 後端
 
-- [ ] AnalyticsService 查詢（注意時區 Asia/Taipei）
-- [ ] 口徑與契約一致
-- [ ] RBAC＋OpenAPI
+- [x] Controller／Service／Repository（JDBC 聚合）
+- [x] OpenAPI
 
 ---
 
 ## 4. 前端
 
-- [ ] Analytics 頁改打彙總端點
-- [ ] readiness note：由 list 聚合改為 API
-- [ ] 載入／錯誤狀態
+- [x] `AdminAPI.analytics.*`；`analytics.summary=true`
+- [x] `analytics.js` 改打 summary；低庫存／甜甜圈 v1 仍前端
 
 ---
 
 ## 5. 測試與驗收
 
-- [ ] 已知 fixture 區間數字與手工 SQL／試算一致
-- [ ] 無權限 403
-- [ ] 大區間不超時（可接受的上限寫進契約或限制 max range）
+- [x] `AdminAnalyticsPostgreSqlIntegrationTest`（主接縫；需 `RUN_BACKEND_IT=true` + PostgreSQL）
+- [x] `npm run test:admin-analytics` facade
 
 ---
 
 ## 6. 收尾
 
-- [ ] 總覽 W4-06；本檔 ✅
-- [ ] W4 全完成 → 勾總覽 W4 門檻＋「主檔改後台 vs 仍需工程師」短說明
+- [x] 總覽 W4-06；本檔 ✅
+- [x] W4 收尾說明（04／05 延後、06 完成）
 
 ---
 
@@ -69,4 +66,5 @@
 
 | 日期 | 執行者 | 結果 | 備註 |
 |------|--------|------|------|
-|  |  | ⬜／✅ |  |
+| 2026-07-25 | Agent | 📋 | Spec 已寫入；待實作 |
+| 2026-07-25 | Agent | ✅ | 後端 summary API + 前端改打 + facade；IT 需本機 Postgres |

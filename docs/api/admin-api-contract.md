@@ -1,10 +1,10 @@
-# Admin API Contract（v0.15）
+# Admin API Contract（v0.23）
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Locked（G-1～G-6 已實作；W1-01～W1-07 已定案） |
-| **日期** | 2026-07-23 |
-| **版本** | 0.15 |
+| **狀態** | Locked（G-1～G-6 已實作；W1～W3；W4-01～03；W4-06 Analytics） |
+| **日期** | 2026-07-25 |
+| **版本** | 0.23 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **Base** | `/api/admin` |
 | **認證** | Bearer Firebase ID Token + `admin_users` 白名單 + `active=true` |
@@ -308,6 +308,7 @@ Request：
 | `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、狀態歷程與 `internalNote` |
 | `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped` |
 | `POST` | `/api/admin/orders/{id}/complete` | `orders.edit` | `shipped` → `completed`；COD 同交易標記 paid |
+| `POST` | `/api/admin/orders/{id}/cancel` | `orders.edit` | 未出貨取消 O1（W3-01）；已付款線上單同交易退款 O3 |
 | `PATCH` | `/api/admin/orders/{id}/internal-note` | `orders.edit` | 覆寫主檔內部備註；不改履約／付款狀態 |
 
 列表支援 `q`、可重複的 `status`／`paymentStatus`／`paymentMethod`、`placedFrom`／`placedTo` 與 `sort`。排序白名單為 `placedAt`、`total`、`updatedAt`。
@@ -316,6 +317,28 @@ Request：
 
 訂單本體欄位對齊 [`order-api-contract.md`](./order-api-contract.md) 的 `Order`。  
 狀態轉換必須走狀態機；禁止任意字串 PATCH。
+
+### 未出貨取消（Orders／W3-01＋W3-02）
+
+`POST /api/admin/orders/{id}/cancel`
+
+Request（可省略 body；與 ship／complete 相同）：
+
+```json
+{ "note": "客人要求取消，未出貨" }
+```
+
+| 規則 | 說明 |
+|------|------|
+| 允許狀態 | 僅 `status=unshipped`；已 `cancelled` → **冪等回放**（200＋現況） |
+| 禁止 | `shipped`／`completed`／`returned` → `409 CONFLICT`（本波不做 O2 退貨） |
+| COD unpaid | 本地取消＋釋放 **active** 保留；**不**呼叫綠界；清 `order_coupons`（claim 維持 `claimed`） |
+| 線上 unpaid | 同 COD unpaid（會員 Checkout cancel 只覆蓋未付款；本命令亦可由客服執行） |
+| 線上 paid | **先**呼叫綠界全額退款（見 [`payment-api-contract.md`](./payment-api-contract.md) §7／§9）；成功後：`status=cancelled`、`payment_status=refunded`、`refund_status=refunded`；券若已 `consumed` → 回滾 `claimed`；**fulfilled** 保留帳維持終態（可用量只扣 `active`） |
+| 退款失敗 | **不**改訂單狀態；`409`＋`PAYMENT_REFUND_FAILED`（或 `PAYMENT_PROVIDER_CONFLICT`） |
+| 歷程 | 寫 `order_status_history`（cancelled）；退款另寫 `order_event_history`（`event_type=refund`，`source_history_id`＝該次 status history id） |
+| 權限 | `orders.edit` |
+| 交叉引用 | Payment §7；本波 **不**另開獨立 `POST .../refunds/*`（取消已付款＝同交易退款） |
 
 ### 內部備註（Orders）
 
@@ -346,13 +369,33 @@ Request：
 | `GET` | `/api/admin/bookings/{id}` | `bookings.view` | 營位、租借快照、狀態歷程與 `internalNote` |
 | `POST` | `/api/admin/bookings/{id}/confirm` | `bookings.edit` | 已付款 `pending` → `confirmed` |
 | `POST` | `/api/admin/bookings/{id}/complete` | `bookings.edit` | 已退房 `confirmed` → `completed` |
+| `POST` | `/api/admin/bookings/{id}/cancel` | `bookings.edit` | 已付款取消 B1（W3-03）；同交易退款 |
 | `PATCH` | `/api/admin/bookings/{id}/internal-note` | `bookings.edit` | 覆寫主檔內部備註；不改履約／付款狀態 |
 
 列表支援 `q`、可重複的 `status`／`paymentStatus`／`campgroundId`／`region`、`hasRental`、入住／建立日期範圍與 `sort`。排序白名單為 `createdAt`、`checkIn`、`checkOut`、`finalAmount`、`updatedAt`。
 
-Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借保留標記為 fulfilled；已付款取消與退款留給線 D。
+Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借保留標記為 fulfilled。
 
 欄位對齊 Booking 契約精簡形狀。
+
+### 已付款取消（Bookings／W3-03）
+
+`POST /api/admin/bookings/{id}/cancel`
+
+Request（可省略 body）：
+
+```json
+{ "note": "客服取消，全額退款" }
+```
+
+| 規則 | 說明 |
+|------|------|
+| 允許 | `payment_status=paid` 且 `status` 為 `pending` 或 `confirmed` |
+| 禁止 | `unpaid`（請走會員 Checkout cancel／逾時）；`completed`／已 `cancelled` 以外非法 → `409`；已 `cancelled` → 冪等回放 |
+| 退款 | 同訂單：先綠界全額退款成功，再改本地；失敗不改狀態 |
+| 成功後 | `status=cancelled`、`payment_status=refunded`；釋放營位占用＋ **active** `rental_stock_reservations` → `released` |
+| 權限 | `bookings.edit` |
+| 交叉引用 | [`payment-api-contract.md`](./payment-api-contract.md) §7／§9 |
 
 ### 內部備註（Bookings）
 
@@ -407,14 +450,15 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 - 建立商品時不傳商品、裝備與規格 ID；ID 全由後端產生。
 - 更新時既有規格必須帶回 `id`，新規格省略 `id`；DB 已存在但 Request 未出現的規格改為 `inactive`，不硬刪。
 - `categoryId` 與 `brandId` 使用 lookup ID。SKU 不可重複，價格不可為負數，同一商品的規格組合不可重複。
+- Request 可選 `variants[].stockLocations[]`：`{ locationId, onHandQuantity }`（ADM-W2-08）；省略整段＝不改庫存；明示 `0` 才清零。商城 on-hand 由 Products 寫入；稽核單走 `product_stock_update`（post 不定庫存）。
 - 圖片依陣列順序寫入 `sort_order`，第一張是主圖；G-2c 只接受 `/assets/**` 或 HTTP(S) URL，不處理檔案上傳。
-- Request 僅接受上例欄位，**不接受** `branch`、`totalStock`、`inventory`、`rentalEnabled`、`camp`、評價或銷售衍生欄位。
+- Request **不接受** `branch`、`totalStock`、`inventory`、`rentalEnabled`、`camp`、評價或銷售衍生欄位（庫存請用 `stockLocations`）。
 
 ### 回應與資料責任
 
 回應以 `equipment_items` → `products` → `product_variants` → `equipment_images` 組合，並多回 `itemId`、分類／品牌名稱、`createdAt`／`updatedAt`。`variants[]` 會包含 inactive variant，以及由 `inventory_stocks` 與 active reservation 計算的 `onHandQuantity`、`reservedQuantity`、`availableQuantity`、`stockLocations[]`。
 
-庫存欄位在 G-2c **一律唯讀**；建立商品不建立初始庫存，盤點、進貨、損耗與調撥由 G-3 的庫存異動負責。前端只有在後端成功回應後才能更新 cache，錯誤時必須保留原 cache 與 Modal 輸入。
+庫存寫入語意以 **ADM-W2-08／契約 v0.17** 為準：商城 on-hand 可經 Products 寫入；異動頁 `product_stock_update` 只做稽核定稿。前端只有在後端成功回應後才能更新 cache，錯誤時必須保留原 cache 與 Modal 輸入。
 
 公開讀形狀仍見 Product 契約；inactive 商品的 `GET /api/products/{id}` 回 `404`，既有訂單繼續使用自己的商品與規格快照。
 
@@ -493,47 +537,70 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 | `GET` | `/api/admin/inventory-movements/{id}` | `movement.view` | 表頭、操作者與 SKU／品名快照明細 |
 | `POST` | `/api/admin/inventory-movements` | `movement.edit` | 建立 draft，不改庫存 |
 | `POST` | `/api/admin/inventory-movements/{id}/items` | `movement.edit` | 只對 draft 新增明細 |
-| `POST` | `/api/admin/inventory-movements/{id}/post` | `movement.edit` | 悲觀鎖後原子過帳；重送冪等 |
+| `POST` | `/api/admin/inventory-movements/{id}/post` | `movement.edit` | 定稿；語意依 movementType（見下） |
 | `POST` | `/api/admin/inventory-movements/{id}/cancel` | `movement.edit` | 作廢 draft；重送冪等 |
+| `PATCH` | `/api/admin/inventory-movements/{id}` | `movement.edit` | 改表頭 `reason`（draft／posted） |
+| `PATCH` | `/api/admin/inventory-movements/{id}/items/{itemId}` | `movement.edit` | 改列 `lineReason`／`lineNature` |
 
 列表支援 `page`、`size`、`q`、`inventoryDomain`、`status`、`movementType` 與 `sort`。排序白名單為 `occurredAt`、`createdAt`、`updatedAt`、`movementNo`，預設 `occurredAt,desc`。
 
-### 建立 draft
+### 新建允許的類型（W2-08 後）
+
+| `inventoryDomain` | `movementType` | 表頭庫位 | `post` 行為 |
+|-------------------|----------------|----------|-------------|
+| `store` | `product_stock_update` | 必須雙 NULL；列級 from／to | **只定稿，不改** `inventory_stocks`（商城 on-hand 由 Products 寫） |
+| `rental` | `transfer` | 必填兩個不同租借庫位 | **悲觀鎖後改** `rental_sku_variant_stocks`（營地↔營地） |
+
+禁止新建：`receipt`／`write_off`／`store`+`transfer`／跨領域 conversion（請走 `/inventory-conversions`）。
+歷史列仍可列表篩選。跨領域 store→rental 仍走 conversions；**禁止**租借→商城。
+
+### 建立 draft — 商城稽核
 
 ```json
 {
   "inventoryDomain": "store",
-  "movementType": "transfer",
-  "sourceLocationId": "STORE-MAIN",
-  "destinationLocationId": "STORE-TAIPEI",
-  "reason": "門市補貨",
+  "movementType": "product_stock_update",
+  "reason": "門市盤點／調撥稽核",
   "occurredAt": "2026-07-22T04:00:00Z"
 }
 ```
 
-`inventoryDomain` 支援 `store`、`rental`。G-3 開放同領域 `receipt`、`write_off`、`transfer`：入庫只有目的庫位、出庫／損耗只有來源庫位、調撥必須有兩個不同且同領域的庫位。跨領域 `conversion_out`／`conversion_in` 不在本契約內。
-
-### 新增明細
+### 建立 draft — 營地互轉
 
 ```json
 {
-  "variantId": "V001",
+  "inventoryDomain": "rental",
+  "movementType": "transfer",
+  "sourceLocationId": "RENTAL-C001",
+  "destinationLocationId": "RENTAL-C002",
+  "reason": "營地互轉",
+  "occurredAt": null
+}
+```
+
+### 新增明細
+
+`product_stock_update` 明細需列級 `sourceLocationId` 與／或 `destinationLocationId`（正整數 `quantity`；可選 `lineReason`／`lineNature`）。
+
+`rental` `transfer` 明細只帶規格＋數量（庫位已在表頭）：
+
+```json
+{
+  "variantId": "RSV-R001-001",
   "quantity": 5
 }
 ```
 
-商城使用 `product_variants.id`，租借使用 `rental_sku_variants.id`。同一異動單不得重複加入同一規格；後端寫入當下 SKU 與品名快照。posted／cancelled 後不得新增明細。
+商城使用 `product_variants.id`，租借使用 `rental_sku_variants.id`。同一異動單不得重複加入同一規格（rental transfer）。posted／cancelled 後不得新增明細。
 
 ### 過帳規則
 
-- 交易先悲觀鎖定異動表頭，再依 `variantId`、`locationId` 固定順序建立零庫存列並鎖定。
-- 所有明細驗證通過後才更新 `inventory_stocks` 或 `rental_sku_variant_stocks`，最後把表頭改為 posted 並記錄 `employeeId`、`postedAt`。
-- 來源庫存扣減後不得小於 0，也不得低於 active 保留量；任何一筆不足會回 `409 CONFLICT` 並整筆 rollback。
-- posted 重送回放目前結果，不重複加減；cancelled 不得過帳。posted 不可取消，cancelled 重送回放目前結果。
-- G-2c 不建立初始庫存；新商品必須由 receipt 草稿加入明細後過帳。
-- 租借 active 保留跨日期，G-3 採保守下限：所有 active 租借保留量都視為不可扣除。
+- 交易先悲觀鎖定異動表頭；`posted` 重送回放；`cancelled` 不得過帳；posted 不可取消。
+- **`product_stock_update`**：只更新 `status`／`employeeId`／`postedAt`，**不**加減 `inventory_stocks`。
+- **`rental` `transfer`**：依 `variantId`、`locationId` 固定順序建立零庫存列並鎖定 → 驗證來源扣減後不得 < 0 且不得低於 active `rental_stock_reservations` → 更新兩邊 `rental_sku_variant_stocks` → 表頭改 posted。任一筆不足回 `409 CONFLICT` 並整筆 rollback。
+- 租借 active 保留跨日期，採保守下限：所有 active 租借保留量都視為不可扣除。
 
-異動單本身是不可變庫存歷程；Schema 現有 `employee_id` 保存最後執行過帳或作廢的管理員。若要完整保存建立者與每次狀態事件，需另立 audit history Schema，不在 G-3 現有表結構內。
+異動單本身是不可變庫存歷程；Schema 現有 `employee_id` 保存最後執行過帳或作廢的管理員。
 
 ---
 
@@ -638,7 +705,205 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 
 ---
 
-## 11. G-6 前端正式 Runtime
+## 11. Campgrounds（營區主檔｜ADM-W4-01）
+
+權限：`booking-calendar.view`／`booking-calendar.edit`（與公休同一組，不另立 permission code）。
+
+| 方法 | 路徑 | 權限 | 說明 |
+|------|------|------|------|
+| `GET` | `/api/admin/campgrounds` | `booking-calendar.view` | 列表；**含停用**；依 `id` 升序 |
+| `GET` | `/api/admin/campgrounds/{id}` | `booking-calendar.view` | 詳情 |
+| `POST` | `/api/admin/campgrounds` | `booking-calendar.edit` | 建立（客戶端提供 slug `id`） |
+| `PATCH` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 部分更新；傳 `active` 即啟停 |
+| `DELETE` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 無引用才可硬刪；有引用 → `409`，改 `active=false` |
+
+### 欄位策略（與公開 Booking 對齊「策略甲」）
+
+| 欄位 | Admin | 公開 `GET /api/booking/campgrounds` |
+|------|-------|--------------------------------------|
+| `id`／`name`／`region`／`description`／`active` | 讀寫 | 只回 `active=true`；列表省略 `zones` |
+| `createdAt`／`updatedAt` | 唯讀 | 不回 |
+| `environmentTags`／`facilityTags` | **本版不做**（M:N 另開） | 公開仍回既有 seed／既有寫入 |
+| `zones` | **W4-02 見 §11.1** | 詳情才回 active zones |
+
+### 11.1 Campground zones（營位／區域｜ADM-W4-02）
+
+路徑掛在營區底下；權限同 §11（`booking-calendar.view`／`booking-calendar.edit`）。
+
+| 方法 | 路徑 | 權限 | 說明 |
+|------|------|------|------|
+| `GET` | `/api/admin/campgrounds/{campgroundId}/zones` | `booking-calendar.view` | 該營區全部營位（**含停用**）；依 `id` 升序 |
+| `GET` | `/api/admin/campgrounds/{campgroundId}/zones/{zoneId}` | `booking-calendar.view` | 詳情 |
+| `POST` | `/api/admin/campgrounds/{campgroundId}/zones` | `booking-calendar.edit` | 建立（客戶端提供 slug `id`） |
+| `PATCH` | `/api/admin/campgrounds/{campgroundId}/zones/{zoneId}` | `booking-calendar.edit` | 部分更新；傳 `active` 即啟停 |
+| `DELETE` | `/api/admin/campgrounds/{campgroundId}/zones/{zoneId}` | `booking-calendar.edit` | 無引用才可硬刪；有引用 → `409`，改 `active=false` |
+
+欄位（對齊公開 `Zone`／`campground_zones`）：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `id` | string | 建立後不可改 |
+| `campgroundId` | string | 路徑帶入；建立後不可改 |
+| `type` | string | 例：草皮區 |
+| `capacityPerSite` | int | `> 0`；預設 `1` |
+| `priceWeekday`／`priceHoliday` | decimal string | 固定兩位小數；`≥ 0`；UI 分別顯示 **一般價**／**特殊節日價**（見 [`booking-api-contract.md`](./booking-api-contract.md) §0.1；**非**週一～日自動切換） |
+| `totalSites` | int | 每晚可賣上限；`> 0` |
+| `active` | boolean | 啟停 |
+| `createdAt`／`updatedAt` | instant | 唯讀 |
+
+Create Request（`campgroundId` 由路徑決定，body 不送）：
+
+```json
+{
+  "id": "C010-Z1",
+  "type": "草皮區",
+  "capacityPerSite": 4,
+  "priceWeekday": "1000.00",
+  "priceHoliday": "1500.00",
+  "totalSites": 5,
+  "active": true
+}
+```
+
+**容量調降規則（對齊 `get_zone_availability`）**
+
+- 更新 `totalSites` 時，後端以 **Asia/Taipei 今日起** 至政策最遠可訂日，逐日計算  
+  `peakUsage = max(booked_quantity + blocked_quantity)`（不含公休日）。
+- 若新 `totalSites < peakUsage` → `409 CONFLICT`（避免 pending／confirmed 變成幽靈超訂）。
+- 調升容量或只改價格／類型／啟停：不額外擋。
+
+硬刪引用檢查（任一 > 0 → `409`，改 `active=false`）：
+
+- `booking_selected_zones`
+- `zone_blocks`
+
+**與 `POST /api/booking/check-availability`**
+
+- 只計 **active** 營位；`availableQuantity = totalSites - booked - blocked`（公休日為 0）。
+- 新建 active zone 後，公開 `GET /api/booking/campgrounds/{id}` 詳情與 check-availability 應立刻反映（不需重啟）。
+
+### 11.2 Calendar dates（特殊節日曆｜ADM-W4-03）
+
+決定「哪一晚走**特殊節日價** tier」（見 [`booking-api-contract.md`](./booking-api-contract.md) §0.1；**不是**週六日自動切換）。與 **§10 公休**（能不能訂）無關。
+
+權限：`booking-calendar.view`／`booking-calendar.edit`。
+
+| 方法 | 路徑 | 權限 | 說明 |
+|------|------|------|------|
+| `GET` | `/api/admin/calendar-dates?from=&to=` | `booking-calendar.view` | 區間內**每一天**一列；`from`／`to` 含當日；最長 366 天 |
+| `PUT` | `/api/admin/calendar-dates/{date}` | `booking-calendar.edit` | 標記或更新；`isHoliday=false` → **刪除列**（恢復一般日） |
+| `DELETE` | `/api/admin/calendar-dates/{date}` | `booking-calendar.edit` | 取消標記（同 `isHoliday=false`） |
+
+Response 單日：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `calendarDate` | date | `YYYY-MM-DD` |
+| `isHoliday` | boolean | `true`＝該晚走特殊節日價 |
+| `holidayName` | string \| null | 顯示用；非特殊節日必為 null |
+| `sourceVersion` | string \| null | 有 DB 列才有；Admin 寫入固定 `admin-manual` |
+| `effectiveAt`／`updatedAt` | instant \| null | 有 DB 列才有 |
+
+PUT Request：
+
+```json
+{
+  "isHoliday": true,
+  "holidayName": "國慶日"
+}
+```
+
+- `isHoliday`：必填。
+- `holidayName`：可省略；僅 `isHoliday=true` 時可填。
+- `isHoliday=false`：忽略 `holidayName`，刪除該日列。
+
+**與 Booking 結帳**
+
+- `BookingCheckoutRepository.countHolidayDates` 只計 `is_holiday=true` 的住宿日。
+- Admin 標記後，新建預約的 `holidayCount`／金額立刻反映；**已建立訂單快照不變**。
+
+Create Request（營區）：
+
+```json
+{
+  "id": "C010",
+  "name": "新營區",
+  "region": "東部",
+  "description": "可選說明",
+  "active": true
+}
+```
+
+- `id`：必填，`varchar(32)`；建立後不可改。
+- `name`／`region`：必填。
+- `description`：可省略或 `null`。
+- `active`：可省略，預設 `true`。
+
+Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻看不到）；`active: true`＝復用。
+
+硬刪前引用檢查（任一 > 0 → `409 CONFLICT`，訊息引導 `active=false`）：
+
+- `campground_zones`
+- `bookings`
+- `campground_closures`
+- `rental_listings`
+- `campground_rental_locations`
+
+（環境／設施標籤為 `ON DELETE CASCADE`，不擋硬刪。）
+
+---
+
+### 11.3 Analytics summaries（分析報表彙總｜ADM-W4-06）
+
+伺服器端聚合；**取代**為報表拉 orders／bookings 全列表。自然日邊界：**Asia/Taipei**。Query `from`／`to` 含當日；最長 **366** 天；`to < from` 或缺參 → 400。
+
+權限：僅 **`analytics.view`**（唯讀；v1 不用 `analytics.edit`）。
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `GET` | `/api/admin/analytics/shop-summary?from=&to=` | 商城 KPI、折線 bucket、Top10 |
+| `GET` | `/api/admin/analytics/booking-summary?from=&to=` | 預約 KPI、折線、營地／地區 |
+
+#### 共通 Response
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `period` | object | `{ from, to }` date |
+| `granularity` | string | `day` 或 `week`（區間 >60 天為 `week`） |
+| `kpis` | object | 見下表 |
+| `timeSeries` | array | `{ bucket, revenue }` |
+| Shop | `topProducts[]` | `{ productId, name, revenue, quantity }` Top10 |
+| Booking | `byCampground[]` | `{ campgroundId, campgroundName, region, revenue }` |
+| Booking | `byRegion[]` | `{ region, revenue }` |
+
+上期比較：v1 前端以等長上期再呼叫一次 summary。
+
+#### Shop 口徑（DB 期間欄=`placed_at`）
+
+| KPI | 規則 |
+|-----|------|
+| `orderCount` | 期間內所有 status |
+| `pendingShipmentCount` | 全量 `unshipped` |
+| `refundCount` | 期間 `cancelled` 且（`payment_status=refunded` 或 `refund_status≠none`） |
+| `refundRatePercent` | 整數百分比；分母 0 → 0 |
+| `soldQuantity` | 期間 `shipped`／`completed` 的 line quantity 加總 |
+| 折線／Top10 | 期間 `shipped`／`completed` 的 `total`／line 金額 |
+| `returned` | v1 不計入主退款 KPI |
+
+#### Booking 口徑（DB 期間欄=`created_at`）
+
+| KPI | 規則 |
+|-----|------|
+| `periodBookingCount` | 期間內所有 status |
+| `pendingCount` | 全量 `pending` |
+| `cancelledCount`／`cancelRatePercent` | 期間 cancelled ÷ 期間總筆數 |
+| `completedCount` | 期間 `completed` |
+| `revenueTotal`／折線 | 期間且目前 `payment_status=paid` 的 `final_amount` |
+| `rentalAmount`／`rentalRatioPercent` | 同上 `rental_total` |
+
+---
+
+## 12. G-6 前端正式 Runtime
 
 - `AppConfig.ADMIN.USE_BACKEND=true` 時，`AdminRuntime` 統一啟用 `/api/admin`，頁面不得各自切換。
 - 登入只使用 Firebase Google；development 可用後端 `dev:` stub。登入後呼叫 `POST /api/admin/auth/firebase/session`，以 `effectivePermissions` 初始化 UI。
@@ -649,13 +914,21 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 - 會員標籤池與指派均已就緒（`customers.tagPool=true`、`customers.tagAssign=true`）。
 - 會員預設地址可編已就緒（`customers.defaultAddress=true`）；成功後刷新詳情，失敗保留草稿。
 - 會員偏好可編已就緒（`customers.preferences=true`）；選項來源 `GET /preference-options`。
-- 最低庫存閾值已就緒（`products.minStock=true`）；on-hand 仍唯讀，須經 G-3 異動。
+- 最低庫存閾值已就緒（`products.minStock=true`）；閾值只改 min-stocks；商城 on-hand 經 Products `stockLocations`（W2-08）。
+- 租借列表／詳情回傳唯讀庫存：`variants[].onHandQuantity`／`stockLocations[]`（`locationId` 如 `RENTAL-C002`）；寫庫存走 W2-05 conversions（store→rental）與 `rental`+`transfer`（營地互轉）。
 - SessionStorage 權限只控制 UI；後端每次請求仍依資料庫 RBAC 判斷。
-- **已知延後（W2 UI，詳見 [`plans/admin-post-g6/w2/W2-ui-followups.md`](../../plans/admin-post-g6/w2/W2-ui-followups.md)）**：舊版 `products.js` 租借整頁（定價／上架）尚未改新資料模型；「調撥到租借」Modal 仍是前端記憶體、尚未打 `inventory-conversions`。
+- W2 UI follow-up：見 [`plans/admin-post-g6/w2/W2-ui-followups.md`](../../plans/admin-post-g6/w2/W2-ui-followups.md)（上架 Modal：規格卡＋勾選 C002–C009、`discount` 固定 0、不編裝備 specs／tags；調撥＝conversions＋rental transfer）。
+- 商品 Modal（正式）：規格卡可編各分店數量；存檔帶 `stockLocations`；「產生異動紀錄」打 `product_stock_update` 稽核單。
+- 租借上架 Modal（正式）：一次列出全部規格；每規格一組**一般價／特殊節日價**＋勾選上架營區（不含主倉 C001）；`PUT .../listings` 只送有勾選的列；前端不呼叫 equipment specs／tags。
+- 分類／品牌主檔（正式）：商品頁單一「分類／品牌」按鈕 → Modal 內 tab（`products.categoryMaster`／`products.brandMaster`）；API 仍為 `/api/admin/categories`、`/api/admin/brands`。
+- 營區主檔（正式｜W4-01）：預約排程頁「營區維護」Modal（`booking-calendar.campgrounds=true`）；API `/api/admin/campgrounds`；不含 tags。
+- 營位主檔（正式｜W4-02）：同上 Modal「營位」tab（`booking-calendar.zones=true`）；API `/api/admin/campgrounds/{id}/zones`；降容量低於占用 → 409。
+- 特殊節日曆（正式｜W4-03）：預約排程頁「特殊節日曆」Modal（`booking-calendar.calendarDates=true`）；API `/api/admin/calendar-dates`；影響特殊節日價 tier。
+- Analytics 彙總（正式｜W4-06）：分析報表 `analytics.summary=true`；API `/api/admin/analytics/*-summary`；僅需 `analytics.view`。
 
 ---
 
-## 12. 共用列表慣例
+## 13. 共用列表慣例
 
 - 分頁：`page`／`size`／`meta`（common）  
 - 篩選：各資源自訂 query，白名單欄位  
@@ -663,13 +936,13 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 
 ---
 
-## 13. v0.1 不做
+## 14. v0.1 不做
 
 | 項目 | 原因 |
 |------|------|
 | HTML partial 當 API | 前端 `core.js` 舊路徑；後端只供 JSON |
-| 圖檔上傳 Cloud Storage | P3 |
-| 完整 analytics 報表 API | 可後補；先用既有列表聚合 |
+| 圖檔上傳 Cloud Storage | P3；延後 GCP（W4-05） |
+| 營區 tags／zones 寫入 | tags 另開；zones → W4-02 |
 
 ---
 
@@ -692,3 +965,12 @@ Admin 不能把 unpaid 預約改成 paid。完成預約時會將 active 租借�
 | 0.13 | 2026-07-23 | W1-04：`PUT /api/admin/customers/{id}/default-shipping-address`；不改訂單 snapshot；readiness `customers.defaultAddress` |
 | 0.14 | 2026-07-23 | W1-05：`PUT /api/admin/customers/{id}/preferences` 集合取代；`GET /preference-options` lookup；只能掛 active options |
 | 0.15 | 2026-07-23 | W1-06：`GET`／`DELETE /api/admin/reviews`；硬刪整則；不做回覆／軟隱藏 |
+| 0.16 | 2026-07-24 | 租借列表／詳情回傳唯讀 `variants[].stockLocations`／onHand；寫庫存仍走 G-3／W2-05 |
+| 0.17 | 2026-07-24 | W2-08：新建 `product_stock_update`（post 不定商城庫存）；**例外**允許 `rental`+`transfer` 過帳改 `rental_sku_variant_stocks`（營地互轉） |
+| 0.18 | 2026-07-25 | 文件：租借上架 Modal UX（規格卡＋C002–C009 勾選、`discount=0`、不編裝備 specs／tags）；API 路徑不變 |
+| 0.18a | 2026-07-25 | 文件：分類／品牌主檔合併為單一按鈕＋Modal tab；API 路徑不變 |
+| 0.19 | 2026-07-25 | W3：`POST .../orders/{id}/cancel`（未出貨；已付款同交易退款）；`POST .../bookings/{id}/cancel`（已付款取消＋退款） |
+| 0.20 | 2026-07-25 | W4-01：`/api/admin/campgrounds` CRUD／啟停；RBAC `booking-calendar.*`；有引用禁硬刪；不含 tags／zones |
+| 0.21 | 2026-07-25 | W4-02：`/api/admin/campgrounds/{id}/zones` CRUD／啟停；降 `totalSites` 低於占用峰值 → 409；對齊 check-availability |
+| 0.22 | 2026-07-25 | W4-03：`/api/admin/calendar-dates` 特殊節日曆；PUT 標記／DELETE 取消；Booking `holidayCount` 連動 |
+| 0.23 | 2026-07-25 | W4-06：`/api/admin/analytics/shop-summary`、`booking-summary`；口徑／366 天／`analytics.view` |

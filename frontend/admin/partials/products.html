@@ -202,11 +202,11 @@
         <!-- 規格下拉：多規格商品必選；庫存讀寫皆依所選規格（不動 schema）-->
         <!-- Variant select: transfer stock is read/written at selected variant level -->
         <div class="mb-3">
-          <label for="transferVariantSelect" class="form-label">規格</label>
+          <label for="transferVariantSelect" class="form-label">商店規格</label>
           <select class="form-select form-select-sm" id="transferVariantSelect">
-            <!-- 由 openTransferToRentalModal() 動態填入：value=variant.id -->
+            <!-- 由 openTransferToRentalModal() 動態填入：value=商店 variant.id；data-rental-variant-id=租借規格 -->
           </select>
-          <small class="text-muted">調撥會作用在所選規格的庫存上</small>
+          <small class="text-muted">調撥會作用在所選規格的庫存上；正式模式會對應到租借規格 ID</small>
         </div>
 
         <!-- 來源分店 + 目前庫存（數字依「規格 × 分店」更新）-->
@@ -222,6 +222,13 @@
             <!-- 隨來源分店／規格選取自動更新；Mode 2（營地互轉）時由 JS 隱藏此欄 -->
             <p class="form-control-plaintext fw-semibold text-center" id="transferSourceStock">0</p>
           </div>
+        </div>
+
+        <!-- 正式模式過帳理由（寫入 inventory_conversions.reason） -->
+        <div class="mb-3 d-none" id="transferConversionReasonWrap">
+          <label for="transferConversionReason" class="form-label">調撥原因</label>
+          <input type="text" class="form-control form-control-sm" id="transferConversionReason"
+                 maxlength="1000" placeholder="例如：補營區租借庫存">
         </div>
 
         <!-- 目標營地分配（多行動態清單，由 JS 管理） -->
@@ -292,6 +299,67 @@
           </div>
         </form>
         <ul class="list-group list-group-flush" id="catalogMasterList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- W2-04：租借上架／定價＋裝備規格／標籤（正式模式） -->
+<!-- Rental listings + equipment specs/tags modal (backend mode) -->
+<div class="modal fade" id="rentalListingsModal" tabindex="-1"
+     aria-labelledby="rentalListingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold" id="rentalListingsModalLabel">
+          <i class="fas fa-tags me-2"></i>租借上架與定價
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3" id="rentalListingsProductName">—</p>
+
+        <div class="mb-3">
+          <label for="rentalListingVariantSelect" class="form-label fw-semibold">租借規格</label>
+          <select class="form-select form-select-sm" id="rentalListingVariantSelect"></select>
+          <small class="text-muted">每一列是「營區 × 規格」的上架；存檔會整組取代這個 SKU 的 listings</small>
+        </div>
+
+        <div class="table-responsive mb-4">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>營區</th>
+                <th style="width: 7rem;">平日／日</th>
+                <th style="width: 7rem;">假日／日</th>
+                <th style="width: 5.5rem;">折扣</th>
+                <th style="width: 4.5rem;">上架</th>
+              </tr>
+            </thead>
+            <tbody id="rentalListingRows">
+              <!-- 由 openRentalListingsModal() 依 C001–C009 產生 -->
+            </tbody>
+          </table>
+        </div>
+
+        <hr>
+        <h6 class="fw-semibold mb-2">裝備規格（itemId 共用）</h6>
+        <p class="small text-muted mb-2">每行一個 <code>key=value</code>；存檔會整組取代。</p>
+        <textarea class="form-control form-control-sm font-monospace mb-3" id="rentalEquipmentSpecsInput"
+                  rows="4" placeholder="weight=4.2 kg&#10;capacity=2 persons"></textarea>
+
+        <h6 class="fw-semibold mb-2">裝備標籤</h6>
+        <p class="small text-muted mb-2">以逗號分隔；存檔會整組取代。</p>
+        <input type="text" class="form-control form-control-sm mb-1" id="rentalEquipmentTagsInput"
+               placeholder="輕量, 防水, 親子">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>取消
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="submitRentalListings">
+          <i class="fas fa-save me-1"></i>儲存上架／規格／標籤
+        </button>
       </div>
     </div>
   </div>

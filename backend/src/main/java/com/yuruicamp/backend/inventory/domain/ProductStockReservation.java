@@ -91,7 +91,24 @@ public class ProductStockReservation {
         }
     }
 
-    // 保留帳只能由 active 進入一個終止狀態。
+    /**
+     * 線上付款成功：active → fulfilled（扣留轉成已履約保留）。
+     * Schema 要求 fulfilled 必須有 fulfilled_at，且 released_at 必須為 null。
+     */
+    public boolean fulfill(Instant now) {
+        if (!"active".equals(status)) {
+            return false;
+        }
+
+        status = "fulfilled";
+        fulfilledAt = now;
+        releasedAt = null;
+        expiresAt = null;
+
+        return true;
+    }
+
+    // 保留帳只能由 active 進入 released／expired。
     private boolean finish(String nextStatus, Instant now) {
         if (!"active".equals(status)) {
             return false;

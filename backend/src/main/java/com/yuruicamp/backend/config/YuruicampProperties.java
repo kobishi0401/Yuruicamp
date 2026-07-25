@@ -14,6 +14,7 @@ public class YuruicampProperties {
 
 	private final Cors cors = new Cors();
 	private final Firebase firebase = new Firebase();
+	private final Ecpay ecpay = new Ecpay();
 
 	public Cors getCors() {
 		return cors;
@@ -21,6 +22,10 @@ public class YuruicampProperties {
 
 	public Firebase getFirebase() {
 		return firebase;
+	}
+
+	public Ecpay getEcpay() {
+		return ecpay;
 	}
 
 	public static class Cors {
@@ -69,6 +74,119 @@ public class YuruicampProperties {
 
 		public void setProjectId(String projectId) {
 			this.projectId = projectId;
+		}
+	}
+
+	/**
+	 * ECPay（綠界）設定。本機預設 stub=true，不連真實綠界。
+	 * 沙箱預設值對齊 .ecpay-skill test-vectors（MerchantID 3002607）。
+	 */
+	public static class Ecpay {
+		/** true：本機 stub Gateway；false：表單 POST 到綠界沙箱／正式。 */
+		private boolean stub = true;
+		private String merchantId = "3002607";
+		private String hashKey = "pwFHCqoQZGmho4w6";
+		private String hashIv = "EkRm7iFT261dpevs";
+		/** AIO 付款表單 POST 位址（stub=false 時使用）。 */
+		private String paymentUrl = "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5";
+		/**
+		 * 對外可達的 API 根路徑（含 /api），用來組 NotifyURL／OrderResultURL。
+		 * 本機預設 localhost；接真實綠界時請改成 ngrok／正式網域。
+		 */
+		private String publicApiBaseUrl = "http://localhost:8080/api";
+		/** 前端根網址；Return 導頁用。 */
+		private String frontendBaseUrl = "http://127.0.0.1:5173";
+		private String orderSuccessPath = "/storefront/pages/checkout-success.html";
+		private String orderFailurePath = "/storefront/pages/checkout.html";
+		private String bookingSuccessPath = "/booking/pages/booking-success.html";
+		private String bookingFailurePath = "/booking/pages/booking-checkout.html";
+
+		public boolean isStub() {
+			return stub;
+		}
+
+		public void setStub(boolean stub) {
+			this.stub = stub;
+		}
+
+		public String getMerchantId() {
+			return merchantId;
+		}
+
+		public void setMerchantId(String merchantId) {
+			this.merchantId = merchantId;
+		}
+
+		public String getHashKey() {
+			return hashKey;
+		}
+
+		public void setHashKey(String hashKey) {
+			this.hashKey = hashKey;
+		}
+
+		public String getHashIv() {
+			return hashIv;
+		}
+
+		public void setHashIv(String hashIv) {
+			this.hashIv = hashIv;
+		}
+
+		public String getPaymentUrl() {
+			return paymentUrl;
+		}
+
+		public void setPaymentUrl(String paymentUrl) {
+			this.paymentUrl = paymentUrl;
+		}
+
+		public String getPublicApiBaseUrl() {
+			return publicApiBaseUrl;
+		}
+
+		public void setPublicApiBaseUrl(String publicApiBaseUrl) {
+			this.publicApiBaseUrl = publicApiBaseUrl;
+		}
+
+		public String getFrontendBaseUrl() {
+			return frontendBaseUrl;
+		}
+
+		public void setFrontendBaseUrl(String frontendBaseUrl) {
+			this.frontendBaseUrl = frontendBaseUrl;
+		}
+
+		public String getOrderSuccessPath() {
+			return orderSuccessPath;
+		}
+
+		public void setOrderSuccessPath(String orderSuccessPath) {
+			this.orderSuccessPath = orderSuccessPath;
+		}
+
+		public String getOrderFailurePath() {
+			return orderFailurePath;
+		}
+
+		public void setOrderFailurePath(String orderFailurePath) {
+			this.orderFailurePath = orderFailurePath;
+		}
+
+		public String getBookingSuccessPath() {
+			return bookingSuccessPath;
+		}
+
+		public void setBookingSuccessPath(String bookingSuccessPath) {
+			this.bookingSuccessPath = bookingSuccessPath;
+		}
+
+		public String getBookingFailurePath() {
+			return bookingFailurePath;
+		}
+
+		public void setBookingFailurePath(String bookingFailurePath) {
+			this.bookingFailurePath = bookingFailurePath;
 		}
 	}
 }

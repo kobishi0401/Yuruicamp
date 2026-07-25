@@ -111,12 +111,14 @@
 
 ## 線 D — Payment（P0）
 
-- [ ] D-1 ECPay Gateway + 本機 stub
-- [ ] D-2 `POST .../ecpay`
-- [ ] D-3 `POST /api/payments/ecpay/notify`（冪等）
-- [ ] D-4 Return URL 導頁
-- [ ] D-5 COD（僅商城）
-- [ ] D-6 預約禁止 COD
+- [x] D-1 ECPay Gateway + 本機 stub（`StubEcpayGateway`、`/api/payments/ecpay/stub/simulate-paid`；CMV 對齊 skill test-vectors）
+- [x] D-2 `POST .../ecpay`（商城／預約；`EcpayLaunch`；stub `aio-checkout`）
+- [x] D-3 `POST /api/payments/ecpay/notify`（驗簽、`payment_notifications` 冪等、order／booking → `paid`；訂單 reservation `fulfilled`、券 `consumed`）
+- [x] D-4 Return URL 導頁（`GET|POST /api/payments/ecpay/return`；302；不當 paid）
+- [x] D-5 COD（僅商城：`confirm-cod` 仍 unpaid；Admin complete → paid）
+- [x] D-6 預約禁止 COD（Service + DB CHECK；IT 既有）
+
+> D-1～D-6（2026-07-23）：本機預設 `yuruicamp.ecpay.stub=true`。取消／退款／券回滾規則已寫入 [`payment-api-contract.md`](../docs/api/payment-api-contract.md) v0.2；綠界退款 HTTP 本體屬 W3。
 
 ---
 

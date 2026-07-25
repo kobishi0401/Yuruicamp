@@ -449,12 +449,11 @@ function findAdminBrandId(brandName) {
 }
 
 /**
- * 正式模式只開放商品主檔、規格、圖片 URL、上下架與最低庫存閾值。
- * on-hand 編輯、租借寫入與調撥仍等待各自後端線程。
+ * 正式模式：依 readiness 決定是否顯示租借 tab／調撥／分類品牌主檔。
+ * Backend mode: gate rental tab, conversion transfer, and catalog master by feature flags.
  *
- * 【刻意延後 UI｜見 plans/admin-post-g6/w2/W2-ui-followups.md】
- * - 租借整頁（定價／上架）舊資料模型尚未改接 W2-04 listings API
- * - 「調撥到租借」Modal 仍改前端記憶體，尚未打 W2-05 inventory-conversions
+ * - products.rentalWrite → 租借列表＋上架定價（W2-04）
+ * - movement.conversion → 「調撥」打 inventory-conversions（W2-05）
  */
 function syncBackendProductUi() {
   var useBackend = isAdminProductBackendEnabled();
@@ -473,9 +472,19 @@ function syncBackendProductUi() {
     && typeof AdminRuntime !== 'undefined'
     && AdminRuntime.isFeatureReady
     && AdminRuntime.isFeatureReady('products.brandMaster');
+  // W2-04：租借寫入／listing 就緒才顯示租借 tab
+  var rentalWriteReady = !useBackend
+    || (typeof AdminRuntime !== 'undefined'
+      && AdminRuntime.isFeatureReady
+      && AdminRuntime.isFeatureReady('products.rentalWrite'));
+  // W2-05：跨領域轉換就緒才開放調撥按鈕
+  var conversionReady = !useBackend
+    || (typeof AdminRuntime !== 'undefined'
+      && AdminRuntime.isFeatureReady
+      && AdminRuntime.isFeatureReady('movement.conversion'));
 
-  $('.admin-product-tab[data-products-view="rental"]').toggleClass('d-none', useBackend);
-  if (useBackend) {
+  $('.admin-product-tab[data-products-view="rental"]').toggleClass('d-none', useBackend && !rentalWriteReady);
+  if (useBackend && !rentalWriteReady) {
     $('[data-products-panel="rental"]').addClass('d-none');
   }
   // 只控制切換鈕；提示列仍由 updateMinStockModeUI 負責顯示
@@ -490,12 +499,13 @@ function syncBackendProductUi() {
     ? '正式模式只儲存 /assets/... 或 http(s) 圖片 URL；第一張為主圖。'
     : '可一次選多張；第一張為主圖，拖曳握把調整順序');
   if (useBackend) {
-    switchProductView('store');
-    // 正式模式：隱藏「調撥到租借」；最低庫存編輯鈕在 min-stock 模式才會渲染，勿整批隱藏
-    // Hide transfer only; min-stock edit buttons appear only in min-stock mode
-    $('.transfer-to-rental-btn')
-      .prop('disabled', true)
-      .addClass('d-none');
+    // 正式模式：轉換未就緒才隱藏調撥；最低庫存編輯鈕在 min-stock 模式才會渲染
+    $('.transfer-to-rental-btn, .transfer-from-rental-btn')
+      .prop('disabled', !conversionReady)
+      .toggleClass('d-none', !conversionReady);
+    $('#transferConversionReasonWrap').toggleClass('d-none', !conversionReady);
+  } else {
+    $('#transferConversionReasonWrap').addClass('d-none');
   }
 }
 // 租借表目前營區欄位 ID 順序（僅固定 C001–C009）；表頭與 tbody 共用
@@ -1722,23 +1732,54 @@ window.initProducts = function () {
     window.showAdminToast('已產生庫存異動紀錄 ' + window.formatMovementId(record.id));
   });
 
-  // 調撥按鈕（租借 tab）：在商店快取中找對應的商店商品，再開啟同一個調撥 Modal
-  // Transfer button (rental tab): find the linked store product, then open the same transfer modal
+  // 調撥按鈕（租借 tab）：找對應商店商品（mock: rentalId；backend: itemId），再開啟調撥 Modal
+  // Transfer button (rental tab): resolve linked store product, then open transfer modal
   $(document).on('click.products', '.transfer-from-rental-btn', function () {
     var rentalId = $(this).data('rental-id');
-    // 在商店快取中找 rentalId 吻合的商店商品
-    var storeProduct = null;
-    for (var i = 0; i < adminProductsCache.length; i++) {
-      if (adminProductsCache[i].rentalId === rentalId) {
-        storeProduct = adminProductsCache[i];
-        break;
-      }
+    var rental = findAdminRentalById(rentalId);
+    var storeProduct = findStoreProductByRentalId(rentalId);
+    if (!storeProduct && rental && rental.itemId) {
+      storeProduct = findStoreProductByItemId(rental.itemId);
     }
     if (storeProduct) {
-      openTransferToRentalModal(storeProduct.id);
+      // 確保租借快取已載入（Backend 可能尚未切過租借 tab）
+      var openModal = function () {
+        openTransferToRentalModal(storeProduct.id);
+      };
+      if (isAdminProductBackendEnabled() && !adminRentalsLoaded) {
+        loadRentalProducts();
+        // 簡單延遲：load 是 async；改用短輪詢／再點一次會比較穩，這裡直接等 list then
+        AdminAPI.rentals.list({ page: 0, size: 100, sort: 'id,asc' })
+          .then(function (response) {
+            adminRentalsCache = ((response && response.data) || []).map(mapAdminRentalResponse);
+            adminRentalsLoaded = true;
+            openModal();
+          })
+          .catch(function (error) {
+            AdminAPI.handleError(error, '載入租借商品失敗');
+          });
+        return;
+      }
+      openModal();
     } else {
-      window.showAdminToast('此租借商品無對應的商店商品，無法從分店調撥；請改用「營地互轉」', 'warning');
+      window.showAdminToast('此租借商品無對應的商店商品，無法從分店調撥', 'warning');
     }
+  });
+
+  // 上架定價（租借 tab，正式模式）
+  $(document).on('click.products', '.rental-listings-btn', function () {
+    var rentalId = $(this).data('rental-id');
+    openRentalListingsModal(rentalId);
+  });
+
+  $(document).on('change.products', '#rentalListingVariantSelect', function () {
+    // 切換規格前先把目前列寫回暫存，避免未存檔內容遺失
+    persistCurrentRentalListingRowsToState();
+    renderRentalListingRowsForSelectedVariant();
+  });
+
+  $(document).on('click.products', '#submitRentalListings', function () {
+    submitRentalListingsModal();
   });
 
   // 規格切換：更新來源分店庫存顯示與各營地「目前庫存」列
@@ -1780,6 +1821,12 @@ window.initProducts = function () {
 
       if (!rental) {
         window.showAdminToast('找不到租借商品 ' + productId + ' 的資料', 'danger');
+        return;
+      }
+
+      // 正式模式：名稱點擊改開「上架定價」Modal（舊 addProductModal 欄位模型不符）
+      if (isAdminProductBackendEnabled()) {
+        openRentalListingsModal(productId);
         return;
       }
 
@@ -2253,7 +2300,9 @@ function switchProductView(view) {
 }
 
 function loadRentalProducts() {
-  if (adminRentalsLoaded) {
+  // Mock：已載入就只重繪；Backend：每次進入都重抓（避免殘留假 cache）
+  // Mock: skip refetch if loaded; Backend: always refetch from API
+  if (adminRentalsLoaded && !isAdminProductBackendEnabled()) {
     loadProductFormComboboxOptions();
     applyProductCategoryFilterAndRender();
     return;
@@ -2265,6 +2314,27 @@ function loadRentalProducts() {
     '<span class="text-muted">載入租借商品中...</span>' +
     '</td></tr>'
   );
+
+  if (isAdminProductBackendEnabled()) {
+    AdminAPI.rentals.list({ page: 0, size: 100, sort: 'id,asc' })
+      .then(function (response) {
+        var rows = (response && response.data) || [];
+        adminRentalsCache = rows.map(mapAdminRentalResponse);
+        adminRentalsLoaded = true;
+        loadProductFormComboboxOptions();
+        applyProductCategoryFilterAndRender();
+        // 表格重繪後再套用轉換按鈕顯示（依 readiness）
+        syncBackendProductUi();
+      })
+      .catch(function (error) {
+        AdminAPI.handleError(error, '載入租借商品失敗');
+        $('#rentalProductsTableBody').html(
+          '<tr><td colspan="' + getRentalTableColspan() + '" class="text-center text-danger py-4">' +
+          '<i class="fas fa-exclamation-triangle me-2"></i>載入租借商品失敗</td></tr>'
+        );
+      });
+    return;
+  }
 
   $.getJSON(MockDataPaths.rentalSkus, function (rentals) {
     var pendingItems = adminRentalsCache.slice();
@@ -2290,6 +2360,41 @@ function loadRentalProducts() {
       '<i class="fas fa-exclamation-triangle me-2"></i>載入租借商品數據失敗' +
       '</td></tr>'
     );
+  });
+}
+
+/**
+ * 把後端 AdminRentalResponse 轉成租借表格用的 UI cache。
+ * Map backend rental SKU response into adminRentalsCache shape.
+ * 注意：租借 on-hand 不在此 API；正式模式表格庫存欄先顯示 0（庫存走異動／轉換）。
+ */
+function mapAdminRentalResponse(rental) {
+  var variants = (rental && rental.variants ? rental.variants : []).map(function (variant) {
+    return {
+      id: variant.id,
+      sku: variant.sku,
+      color: variant.color || '',
+      size: variant.size || '',
+      specification: variant.specification,
+      label: variant.specification || buildVariantLabel(variant.color, variant.size),
+      status: variant.status,
+      camp: createEmptyCampStock(),
+      total: 0
+    };
+  });
+
+  return normalizeRentalItem({
+    id: rental && rental.id,
+    itemId: rental && rental.itemId,
+    status: rental && rental.status,
+    name: rental && rental.name,
+    categoryId: rental && rental.categoryId,
+    category: (rental && rental.category) || '其他',
+    brandId: rental && rental.brandId,
+    brand: (rental && rental.brand) || '',
+    description: (rental && rental.description) || '',
+    image: PRODUCT_IMAGE_PLACEHOLDER,
+    variants: variants
   });
 }
 
@@ -2347,14 +2452,11 @@ function findAdminRentalById(rentalId) {
 }
 
 // 新增或更新租借商品快取（權威來源：rental-skus）。
-// Mock 模式只更新 memory cache；後端就緒後 AdminAPI.products.updateRental 會寫入 DB，
-// 並應觸發 listing 同步（等同 npm run sync:listings：rental-skus → camp-equipment.stock）。
-// Source of truth: rental-skus. After backend write, sync derived camp-equipment.stock.
+// Mock 模式更新 memory cache；正式模式勿走舊 updateRental（請用 rentals／listings／conversions）。
+// Source of truth (mock): rental-skus. Backend writes go through dedicated AdminAPI namespaces.
 function upsertAdminRentalCache(rentalItem) {
   if (isAdminProductBackendEnabled()) {
-    AdminAPI.products.updateRental(rentalItem && rentalItem.id, rentalItem).catch(function (err) {
-      AdminAPI.handleError(err, '正式後端尚未提供租借商品寫入');
-    });
+    // 正式模式：不在此假寫庫存；呼叫端應改打 AdminAPI.rentals / listings / conversions
     return null;
   }
   var normalizedItem = normalizeRentalItem(rentalItem);
@@ -4420,14 +4522,19 @@ function syncLinkedStoreProductBrand(rentalId, brand) {
 
 /**
  * 判斷商店商品是否已「啟用租借」。
- * rentalEnabled 為 false 時即使已有 rentalId 也視為未啟用；
- * 舊資料沒有 rentalEnabled 欄位時，有 rentalId 視為已啟用（向後相容）。
+ * Mock：看 rentalId／rentalEnabled。
+ * Backend：同一 equipment itemId 已有對應租借 SKU 即可調撥。
  *
- * Returns true when rental is enabled on the store product.
- * Missing rentalEnabled + existing rentalId is treated as enabled for backward compatibility.
+ * Returns true when rental is enabled / linkable for transfer.
  */
 function isProductRentalEnabled(product) {
-  if (!product || !product.rentalId) {
+  if (!product) {
+    return false;
+  }
+  if (isAdminProductBackendEnabled()) {
+    return !!(product.itemId && findAdminRentalByItemId(product.itemId));
+  }
+  if (!product.rentalId) {
     return false;
   }
   if (product.rentalEnabled === undefined) {
@@ -4436,11 +4543,34 @@ function isProductRentalEnabled(product) {
   return !!product.rentalEnabled;
 }
 
+/** 依 equipment itemId 找租借 SKU（商店／租借共用 item）。 */
+function findAdminRentalByItemId(itemId) {
+  if (!itemId) {
+    return null;
+  }
+  return (adminRentalsCache || []).find(function (item) {
+    return item.itemId === itemId;
+  }) || null;
+}
+
+/** 依 itemId 找商店商品（供租借 tab 調撥入口）。 */
+function findStoreProductByItemId(itemId) {
+  if (!itemId) {
+    return null;
+  }
+  return (adminProductsCache || []).find(function (item) {
+    return item.itemId === itemId;
+  }) || null;
+}
+
 /**
  * 只保留已啟用租借的租借商品（供租借 tab 表格顯示）。
- * Filter rentals to those whose linked store product has rental enabled.
+ * Backend：直接顯示 API 回傳的租借 SKU（不再依 mock rentalEnabled 過濾）。
  */
 function filterEnabledRentals(rentals) {
+  if (isAdminProductBackendEnabled()) {
+    return rentals || [];
+  }
   return (rentals || []).filter(function (rental) {
     var storeProduct = findStoreProductByRentalId(rental.id);
     return storeProduct && isProductRentalEnabled(storeProduct);
@@ -5317,13 +5447,19 @@ function buildRentalRow(item) {
     '</span>' +
     '</td>' +
 
-    // ── 固定欄 5：操作（調撥）──
+    // ── 固定欄 5：操作（調撥／上架定價）──
     '<td class="sticky-col sticky-col-action">' +
     '<div class="d-flex flex-column gap-1">' +
     (!isMinStockMode
-      ? '<button type="button" class="btn btn-sm btn-outline-primary transfer-from-rental-btn" title="調撥" ' +
+      ? '<button type="button" class="btn btn-sm btn-outline-primary transfer-from-rental-btn" title="從商店調撥" ' +
         'data-rental-id="' + escapeHtml(rental.id) + '">' +
         '調撥' +
+        '</button>'
+      : '') +
+    (isAdminProductBackendEnabled() && !isMinStockMode
+      ? '<button type="button" class="btn btn-sm btn-outline-secondary rental-listings-btn" title="營區上架與定價" ' +
+        'data-rental-id="' + escapeHtml(rental.id) + '">' +
+        '上架定價' +
         '</button>'
       : '') +
     '</div>' +
@@ -5403,29 +5539,54 @@ function getVariantBranchStock(product, variantId, branchId) {
 }
 
 /**
- * 列出「商店與租借都能對上的」規格（用 id 對齊）。
- * List variants that exist on both store product and rental SKU.
- * @returns {Array<{id:string,label:string}>}
+ * 規格對齊用指紋：顏色＋尺寸＋規格說明（忽略大小寫）。
+ * Fingerprint for matching store ↔ rental variants when IDs differ (e.g. V001 vs RSV-R001-01).
+ */
+function getVariantMatchKey(variant) {
+  if (!variant) {
+    return '';
+  }
+  return [
+    String(variant.color || '').trim(),
+    String(variant.size || '').trim(),
+    String(variant.specification || variant.label || '').trim()
+  ].join('|').toLowerCase();
+}
+
+/**
+ * 列出「商店與租借都能對上的」規格。
+ * 優先相同 id；否則用顏色／尺寸／規格說明對齊（seed：V001 ↔ RSV-R001-01）。
+ * @returns {Array<{id:string,rentalVariantId:string,label:string}>}
  */
 function getTransferableVariants(product, rental) {
   ensureProductVariantStock(product);
   ensureRentalVariantStock(rental);
 
-  var rentalVariantMap = {};
+  var rentalById = {};
+  var rentalByKey = {};
   normalizeRentalVariants(rental).forEach(function (variant) {
     if (variant.id) {
-      rentalVariantMap[variant.id] = variant;
+      rentalById[variant.id] = variant;
+    }
+    var key = getVariantMatchKey(variant);
+    if (key && !rentalByKey[key]) {
+      rentalByKey[key] = variant;
     }
   });
 
   var result = [];
   normalizeProductVariants(product).forEach(function (variant) {
-    if (!variant.id || !rentalVariantMap[variant.id]) {
+    if (!variant.id) {
+      return;
+    }
+    var matched = rentalById[variant.id] || rentalByKey[getVariantMatchKey(variant)];
+    if (!matched || !matched.id) {
       return;
     }
     result.push({
       id: variant.id,
-      label: variant.label || variant.id
+      rentalVariantId: matched.id,
+      label: variant.label || matched.label || variant.id
     });
   });
   return result;
@@ -5438,8 +5599,8 @@ function getTransferableVariants(product, rental) {
 function refreshTransferSourceBranchOptions(product, variantId) {
   var previousBranch = $('#transferSourceBranch').val();
   var $sourceBranch = $('#transferSourceBranch').empty();
-  // 來源分店：僅固定分店（含商店主倉）
-  // Source branches: preset store locations only (includes main warehouse)
+  // 來源分店：僅固定分店（含商店主倉）；正式模式不提供「營地互轉」（那是同領域異動，非 conversions）
+  // Source branches: preset store locations; Backend mode hides camp-transfer (use inventory-movements)
   var branchKeys = ADMIN_PRODUCT_BRANCH_IDS.slice();
 
   branchKeys.forEach(function (branchId) {
@@ -5450,8 +5611,10 @@ function refreshTransferSourceBranchOptions(product, variantId) {
       .appendTo($sourceBranch);
   });
 
-  // 最後加入「營地互轉」選項（Mode 2 入口）
-  $('<option>', { value: 'camp-transfer' }).text('── 營地互轉 ──').appendTo($sourceBranch);
+  if (!isAdminProductBackendEnabled()) {
+    // 最後加入「營地互轉」選項（Mode 2 入口，僅 Mock）
+    $('<option>', { value: 'camp-transfer' }).text('── 營地互轉 ──').appendTo($sourceBranch);
+  }
 
   // 盡量保留先前選取；若已不存在則回到第一個分店
   if (previousBranch && $sourceBranch.find('option[value="' + previousBranch + '"]').length) {
@@ -5467,7 +5630,9 @@ function refreshTransferSourceBranchOptions(product, variantId) {
  */
 function onTransferVariantChange() {
   var variantId = $('#transferVariantSelect').val() || '';
+  var rentalVariantId = getSelectedTransferRentalVariantId();
   $('#transferToRentalModal').data('selected-variant-id', variantId);
+  $('#transferToRentalModal').data('dest-rental-variant-id', rentalVariantId);
 
   var productId = $('#transferToRentalModal').data('source-product-id');
   var rentalId = $('#transferToRentalModal').data('target-rental-id');
@@ -5489,15 +5654,26 @@ function onTransferVariantChange() {
     switchTransferMode('branch');
   }
 
-  resetTransferCampRows(rental, variantId);
+  resetTransferCampRows(rental, rentalVariantId);
   syncTransferDeltaCounter();
+}
+
+/**
+ * 取得目前調撥 Modal 選中的「租借規格」ID（可能與商店規格 ID 不同）。
+ * Get destination rental variant id from selected option data attribute.
+ */
+function getSelectedTransferRentalVariantId() {
+  var $opt = $('#transferVariantSelect option:selected');
+  var fromData = $opt.attr('data-rental-variant-id') || $opt.data('rental-variant-id');
+  return fromData
+    || $('#transferToRentalModal').data('dest-rental-variant-id')
+    || getSelectedTransferVariantId();
 }
 
 /**
  * 開啟調至租借 Modal，並將商品資料帶入各欄位。
  * Opens the transfer-to-rental modal and populates it with product data.
- * 依 product.rentalId 自動對應目標租借商品；無對應則封鎖並顯示 Toast。
- * Uses product.rentalId to auto-match target rental; blocks if not set.
+ * Mock：依 product.rentalId；Backend：依同一 itemId 找租借 SKU。
  * @param {string} productId - 商店商品 ID
  */
 function openTransferToRentalModal(productId) {
@@ -5508,21 +5684,29 @@ function openTransferToRentalModal(productId) {
     return;
   }
 
-  // 驗證：租借必須已啟用才可調撥
-  // Validate: rental must be enabled on the store product
+  // 驗證：租借必須已啟用／可對應才可調撥
   if (!isProductRentalEnabled(product)) {
-    window.showAdminToast('此商品尚未啟用租借，請先於編輯中開啟「是否為租借商品」', 'danger');
+    window.showAdminToast(
+      isAdminProductBackendEnabled()
+        ? '找不到同一裝備（itemId）的租借 SKU，無法調撥'
+        : '此商品尚未啟用租借，請先於編輯中開啟「是否為租借商品」',
+      'danger'
+    );
     return;
   }
 
-  var rental = findAdminRentalById(product.rentalId);
+  var rental = product.rentalId
+    ? findAdminRentalById(product.rentalId)
+    : null;
+  if (!rental && product.itemId) {
+    rental = findAdminRentalByItemId(product.itemId);
+  }
   if (!rental) {
     window.showAdminToast('租借商品資料不存在，請聯繫管理員', 'danger');
     return;
   }
 
   // 確保規格庫存結構就緒（舊資料會遷移到 variants）
-  // Ensure variant stock structure is ready (legacy data migrates into variants)
   ensureProductVariantStock(product);
   ensureRentalVariantStock(rental);
 
@@ -5532,22 +5716,31 @@ function openTransferToRentalModal(productId) {
     return;
   }
 
-  // 填入規格下拉（商店／租借 id 對得上的規格）
+  // 填入規格下拉（商店 id + data-rental-variant-id）
   var $variantSelect = $('#transferVariantSelect').empty();
   transferable.forEach(function (item) {
-    $('<option>', { value: item.id }).text(item.label).appendTo($variantSelect);
+    $('<option>', {
+      value: item.id,
+      'data-rental-variant-id': item.rentalVariantId,
+      text: item.label + (item.rentalVariantId !== item.id ? ' → ' + item.rentalVariantId : '')
+    }).appendTo($variantSelect);
   });
   var variantId = $variantSelect.val();
+  var rentalVariantId = $variantSelect.find('option:selected').attr('data-rental-variant-id') || variantId;
 
   // 儲存商品 ID、租借 ID、規格 ID，供確認調撥時使用
-  // Store product / rental / variant IDs for confirm
   $('#transferToRentalModal')
     .data('source-product-id', productId)
-    .data('target-rental-id', product.rentalId)
-    .data('selected-variant-id', variantId);
+    .data('target-rental-id', rental.id)
+    .data('selected-variant-id', variantId)
+    .data('dest-rental-variant-id', rentalVariantId);
 
   // 填入商品名稱（唯讀）
-  $('#transferProductName').text(product.name);
+  $('#transferProductName').text(product.name + ' → ' + rental.name);
+
+  if (isAdminProductBackendEnabled()) {
+    $('#transferConversionReason').val('商店調撥至租借');
+  }
 
   // 依選中規格填入來源分店下拉（含庫存件數）
   refreshTransferSourceBranchOptions(product, variantId);
@@ -5557,8 +5750,7 @@ function openTransferToRentalModal(productId) {
   syncTransferSourceStock();
 
   // 重置多行營地分配清單（顯示「該規格」在各營地的庫存）
-  // Reset camp rows using selected variant's camp stock
-  resetTransferCampRows(rental, variantId);
+  resetTransferCampRows(rental, rentalVariantId);
   syncTransferDeltaCounter();
 
   // 開啟 Modal
@@ -5772,24 +5964,138 @@ function syncTransferDeltaCounter() {
  * 調撥入口：依目前選取的來源分店判斷模式，分派到對應提交函式。
  * Dispatch function: routes to Mode 1 or Mode 2 based on source branch selection.
  *
- * 【刻意延後｜W2-ui-followups.md 延後項 B】
- * 此路徑目前仍只改前端 memory cache，不會呼叫 /api/admin/inventory-conversions。
- * Backend 正式轉換請用 AdminAPI.inventoryConversions（createDraft → post）。
+ * Backend：Mode 1 打 inventory-conversions（createDraft → post）；Mode 2 不支援。
+ * Mock：維持舊的 memory cache 路徑。
  */
 function submitTransferToRental() {
   var mode = $('#transferSourceBranch').val();
   if (mode === 'camp-transfer') {
+    if (isAdminProductBackendEnabled()) {
+      window.showAdminToast('正式模式請用庫存異動頁處理營地互轉；此處只支援商店→租借轉換', 'warning');
+      return;
+    }
     submitCampTransfer();
+  } else if (isAdminProductBackendEnabled()) {
+    submitBranchToCampTransferBackend();
   } else {
     submitBranchToCampTransfer();
   }
 }
 
 /**
- * Mode 1：分店→營地 調撥（作用在「選中規格」）。
- * 收集各 delta > 0 的列 → 扣商店規格分店庫存 → 加租借規格營地庫存 → 產生「調撥」異動記錄。
- *
- * Mode 1: Branch → Camp transfer at selected variant level.
+ * Mode 1（正式）：分店→營地，對每個 delta>0 的營區各建一筆 conversion 並過帳。
+ * Backend Mode 1: one inventory-conversion draft+post per target camp with qty > 0.
+ */
+function submitBranchToCampTransferBackend() {
+  var productId = $('#transferToRentalModal').data('source-product-id');
+  var rentalId = $('#transferToRentalModal').data('target-rental-id');
+  var branchId = $('#transferSourceBranch').val();
+  var storeVariantId = getSelectedTransferVariantId();
+  var rentalVariantId = getSelectedTransferRentalVariantId();
+  var reason = String($('#transferConversionReason').val() || '').trim() || '商店調撥至租借';
+
+  var product = findAdminProductById(productId);
+  var rental = findAdminRentalById(rentalId);
+
+  if (!product) { window.showAdminToast('找不到來源商品資料', 'danger'); return; }
+  if (!rental) { window.showAdminToast('找不到對應租借商品資料', 'danger'); return; }
+  if (!storeVariantId || !rentalVariantId) {
+    window.showAdminToast('請先選擇規格', 'danger');
+    return;
+  }
+  if (!branchId || branchId === 'camp-transfer') {
+    window.showAdminToast('請選擇來源分店', 'danger');
+    return;
+  }
+
+  var distributions = [];
+  $('#transferCampRows .transfer-camp-row').each(function () {
+    var $row = $(this);
+    var campKey = $row.data('camp-key');
+    var delta = parseInt($row.find('.transfer-camp-delta').val(), 10) || 0;
+    if (campKey && isFixedCampId(campKey) && delta > 0) {
+      distributions.push({ campKey: campKey, delta: delta });
+    }
+  });
+
+  if (distributions.length === 0) {
+    window.showAdminToast('請至少填寫一個營地的轉入數量（大於 0）', 'danger');
+    return;
+  }
+
+  var totalDelta = distributions.reduce(function (sum, d) { return sum + d.delta; }, 0);
+  var sourceQty = getVariantBranchStock(product, storeVariantId, branchId);
+  if (totalDelta > sourceQty) {
+    window.showAdminToast('調撥數量超過來源分店庫存（目前 ' + sourceQty + ' 件）', 'danger');
+    return;
+  }
+
+  var $btn = $('#submitTransferToRental').prop('disabled', true);
+  var stamp = Date.now();
+
+  // 依序建立草稿並過帳（避免並行搶同一來源庫存造成難讀錯誤）
+  // Sequentially createDraft → post for each camp destination
+  var chain = Promise.resolve();
+  distributions.forEach(function (d, index) {
+    chain = chain.then(function () {
+      var payload = {
+        sourceLocationId: branchId,
+        destinationLocationId: toApiMinStockLocationId('rental', d.campKey),
+        sourceVariantId: storeVariantId,
+        destinationRentalVariantId: rentalVariantId,
+        quantity: d.delta,
+        reason: reason,
+        occurredAt: null,
+        idempotencyKey: 'ui-conv-' + productId + '-' + storeVariantId + '-' + d.campKey + '-' + stamp + '-' + index
+      };
+      return AdminAPI.inventoryConversions.createDraft(payload).then(function (res) {
+        var draft = res && res.data;
+        if (!draft || draft.id == null) {
+          throw new Error('轉換草稿回應缺少 id');
+        }
+        return AdminAPI.inventoryConversions.post(draft.id);
+      });
+    });
+  });
+
+  chain
+    .then(function () {
+      // 成功後重抓商店 on-hand，並重載租借列表
+      return AdminAPI.products.getById(productId).then(function (res) {
+        var mapped = mapAdminProductResponse(res && res.data ? res.data : res);
+        var idx = adminProductsCache.findIndex(function (item) {
+          return item.id === productId;
+        });
+        if (idx >= 0) {
+          adminProductsCache[idx] = mapped;
+        }
+        applyProductCategoryFilterAndRender();
+        adminRentalsLoaded = false;
+        if ($('[data-products-panel="rental"]').is(':visible')) {
+          loadRentalProducts();
+        }
+      });
+    })
+    .then(function () {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('transferToRentalModal')).hide();
+      var campSummary = distributions.map(function (d) {
+        return (ADMIN_RENTAL_CAMP_LABELS[d.campKey] || d.campKey) + ' +' + d.delta + ' 件';
+      }).join('、');
+      window.showAdminToast(
+        '已過帳商店→租借轉換共 ' + totalDelta + ' 件（' + campSummary + '）'
+      );
+    })
+    .catch(function (error) {
+      AdminAPI.handleError(error, '調撥過帳失敗');
+    })
+    .finally(function () {
+      $btn.prop('disabled', false);
+    });
+}
+
+/**
+ * Mode 1：分店→營地 調撥（Mock：作用在「選中規格」的 memory cache）。
+ * Collect delta > 0 rows → mutate store/rental caches → fake movement items.
  */
 function submitBranchToCampTransfer() {
   var productId = $('#transferToRentalModal').data('source-product-id');
@@ -6223,7 +6529,242 @@ function renderRentalProductsTable(rentals) {
 
   $('#rentalProductsTableBody').html(html);
 
+  syncBackendProductUi();
+
   if (typeof window.applyEditPermission === 'function') {
     window.applyEditPermission('products', $('#contentArea'));
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// W2-04：租借上架／定價＋裝備規格／標籤 Modal（正式模式）
+// Rental listings + equipment specs/tags modal (backend mode)
+// ════════════════════════════════════════════════════════════
+
+/** Modal 暫存：目前編輯的 rentalId、listings 快取（依 variant 分組） */
+var rentalListingsModalState = {
+  rentalId: null,
+  itemId: null,
+  listingsByVariant: {}
+};
+
+/**
+ * 開啟上架定價 Modal：載入 listings + specs + tags。
+ * Open listings modal and load current listings / equipment specs / tags.
+ */
+function openRentalListingsModal(rentalId) {
+  var rental = findAdminRentalById(rentalId);
+  if (!rental) {
+    window.showAdminToast('找不到租借商品 ' + rentalId, 'danger');
+    return;
+  }
+  if (!isAdminProductBackendEnabled()) {
+    window.showAdminToast('上架定價僅在正式模式使用', 'info');
+    return;
+  }
+
+  rentalListingsModalState = {
+    rentalId: rentalId,
+    itemId: rental.itemId || null,
+    listingsByVariant: {}
+  };
+
+  $('#rentalListingsProductName').text(rental.name + '（' + rentalId + '）');
+  var $variantSelect = $('#rentalListingVariantSelect').empty();
+  normalizeRentalVariants(rental).forEach(function (variant) {
+    if (!variant.id) {
+      return;
+    }
+    $('<option>', {
+      value: variant.id,
+      text: (variant.label || variant.id) + (variant.sku ? '／' + variant.sku : '')
+    }).appendTo($variantSelect);
+  });
+
+  if (!$variantSelect.find('option').length) {
+    window.showAdminToast('此租借 SKU 尚無規格，無法設定上架', 'danger');
+    return;
+  }
+
+  $('#rentalListingRows').html(
+    '<tr><td colspan="5" class="text-muted small py-3">載入中…</td></tr>'
+  );
+  $('#rentalEquipmentSpecsInput').val('');
+  $('#rentalEquipmentTagsInput').val('');
+
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('rentalListingsModal')).show();
+
+  var itemId = rental.itemId;
+  Promise.all([
+    AdminAPI.rentals.listListings(rentalId),
+    itemId ? AdminAPI.equipmentItems.getSpecs(itemId) : Promise.resolve({ data: { specs: [] } }),
+    itemId ? AdminAPI.equipmentItems.getTags(itemId) : Promise.resolve({ data: { tags: [] } })
+  ]).then(function (results) {
+    var listings = (results[0] && results[0].data) || [];
+    var specsPayload = (results[1] && results[1].data) || {};
+    var tagsPayload = (results[2] && results[2].data) || {};
+
+    // 依規格分組，方便切換下拉時填表
+    var byVariant = {};
+    (listings || []).forEach(function (row) {
+      if (!row || !row.rentalSkuVariantId) {
+        return;
+      }
+      if (!byVariant[row.rentalSkuVariantId]) {
+        byVariant[row.rentalSkuVariantId] = {};
+      }
+      byVariant[row.rentalSkuVariantId][row.campgroundId] = row;
+    });
+    rentalListingsModalState.listingsByVariant = byVariant;
+
+    var specs = specsPayload.specs || [];
+    $('#rentalEquipmentSpecsInput').val(specs.map(function (s) {
+      return String(s.key || '') + '=' + String(s.value || '');
+    }).join('\n'));
+    $('#rentalEquipmentTagsInput').val((tagsPayload.tags || []).join(', '));
+
+    renderRentalListingRowsForSelectedVariant();
+  }).catch(function (error) {
+    AdminAPI.handleError(error, '載入上架／規格失敗');
+  });
+}
+
+/**
+ * 把 #rentalListingRows 目前輸入寫回 rentalListingsModalState（依目前選中規格）。
+ * Persist visible listing rows into modal state for the selected variant.
+ */
+function persistCurrentRentalListingRowsToState() {
+  var variantId = $('#rentalListingVariantSelect').val();
+  if (!variantId) {
+    return;
+  }
+  var currentMap = rentalListingsModalState.listingsByVariant[variantId] || {};
+  $('#rentalListingRows .rental-listing-row').each(function () {
+    var $row = $(this);
+    var campId = $row.data('campground-id');
+    var weekday = $row.find('.listing-weekday').val();
+    var holiday = $row.find('.listing-holiday').val();
+    var discount = $row.find('.listing-discount').val();
+    var active = $row.find('.listing-active').is(':checked');
+    if (!active && (weekday === '' || weekday == null) && (holiday === '' || holiday == null)) {
+      delete currentMap[campId];
+      return;
+    }
+    currentMap[campId] = {
+      campgroundId: campId,
+      rentalSkuVariantId: variantId,
+      pricePerDayWeekday: weekday === '' ? '0' : String(weekday),
+      pricePerDayHoliday: holiday === '' ? '0' : String(holiday),
+      discount: discount === '' ? '0' : String(discount),
+      terrain: (currentMap[campId] && currentMap[campId].terrain) || null,
+      description: (currentMap[campId] && currentMap[campId].description) || null,
+      active: !!active
+    };
+  });
+  rentalListingsModalState.listingsByVariant[variantId] = currentMap;
+}
+
+/**
+ * 依目前選中的租借規格，重繪各營區定價列。
+ * Rebuild campground price rows for the selected rental variant.
+ */
+function renderRentalListingRowsForSelectedVariant() {
+  var variantId = $('#rentalListingVariantSelect').val();
+  var existing = (rentalListingsModalState.listingsByVariant || {})[variantId] || {};
+  var html = ADMIN_RENTAL_CAMP_IDS.map(function (campId) {
+    var row = existing[campId] || {};
+    var label = ADMIN_RENTAL_CAMP_LABELS[campId] || campId;
+    var weekday = row.pricePerDayWeekday != null ? row.pricePerDayWeekday : '';
+    var holiday = row.pricePerDayHoliday != null ? row.pricePerDayHoliday : '';
+    var discount = row.discount != null ? row.discount : '0';
+    var active = row.active === true;
+    return '<tr class="rental-listing-row" data-campground-id="' + escapeHtml(campId) + '">' +
+      '<td class="small">' + escapeHtml(label) + '</td>' +
+      '<td><input type="number" min="0" step="0.01" class="form-control form-control-sm listing-weekday" value="' + escapeHtml(String(weekday)) + '"></td>' +
+      '<td><input type="number" min="0" step="0.01" class="form-control form-control-sm listing-holiday" value="' + escapeHtml(String(holiday)) + '"></td>' +
+      '<td><input type="number" min="0" max="0.3" step="0.01" class="form-control form-control-sm listing-discount" value="' + escapeHtml(String(discount)) + '"></td>' +
+      '<td class="text-center"><input type="checkbox" class="form-check-input listing-active"' + (active ? ' checked' : '') + '></td>' +
+      '</tr>';
+  }).join('');
+  $('#rentalListingRows').html(html);
+}
+
+/**
+ * 收集畫面輸入並呼叫 replaceListings + specs/tags。
+ * Collect form values and PUT listings + equipment specs/tags.
+ */
+function submitRentalListingsModal() {
+  var rentalId = rentalListingsModalState.rentalId;
+  var itemId = rentalListingsModalState.itemId;
+  var variantId = $('#rentalListingVariantSelect').val();
+  if (!rentalId || !variantId) {
+    window.showAdminToast('缺少租借 SKU 或規格', 'danger');
+    return;
+  }
+
+  persistCurrentRentalListingRowsToState();
+
+  var listings = [];
+  Object.keys(rentalListingsModalState.listingsByVariant).forEach(function (vid) {
+    var campMap = rentalListingsModalState.listingsByVariant[vid] || {};
+    Object.keys(campMap).forEach(function (campId) {
+      var row = campMap[campId];
+      if (!row) {
+        return;
+      }
+      listings.push({
+        campgroundId: row.campgroundId,
+        rentalSkuVariantId: row.rentalSkuVariantId || vid,
+        pricePerDayWeekday: row.pricePerDayWeekday,
+        pricePerDayHoliday: row.pricePerDayHoliday,
+        discount: row.discount == null ? '0' : row.discount,
+        terrain: row.terrain || null,
+        description: row.description || null,
+        active: row.active === true
+      });
+    });
+  });
+
+  var specs = [];
+  String($('#rentalEquipmentSpecsInput').val() || '').split(/\r?\n/).forEach(function (line) {
+    var trimmed = String(line || '').trim();
+    if (!trimmed) {
+      return;
+    }
+    var sep = trimmed.indexOf('=');
+    if (sep < 1) {
+      return;
+    }
+    var key = trimmed.slice(0, sep).trim();
+    var value = trimmed.slice(sep + 1).trim();
+    if (key && value) {
+      specs.push({ key: key, value: value });
+    }
+  });
+
+  var tags = String($('#rentalEquipmentTagsInput').val() || '')
+    .split(',')
+    .map(function (t) { return String(t || '').trim(); })
+    .filter(Boolean);
+
+  var $btn = $('#submitRentalListings').prop('disabled', true);
+  var tasks = [
+    AdminAPI.rentals.replaceListings(rentalId, { listings: listings })
+  ];
+  if (itemId) {
+    tasks.push(AdminAPI.equipmentItems.replaceSpecs(itemId, { specs: specs }));
+    tasks.push(AdminAPI.equipmentItems.replaceTags(itemId, { tags: tags }));
+  }
+
+  Promise.all(tasks)
+    .then(function () {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('rentalListingsModal')).hide();
+      window.showAdminToast('已儲存上架定價' + (itemId ? '與裝備規格／標籤' : ''));
+    })
+    .catch(function (error) {
+      AdminAPI.handleError(error, '儲存上架定價失敗');
+    })
+    .finally(function () {
+      $btn.prop('disabled', false);
+    });
 }

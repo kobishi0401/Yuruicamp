@@ -17,27 +17,25 @@
 
 ## 契約一覽
 
-| 優先 | 文件                                                                                   | 階段 | 狀態                                                                                            |
-| ---- | -------------------------------------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------- |
-| 共用 | [`common-api-conventions.md`](./common-api-conventions.md)                             | 全部 | Locked v0.1                                                                                     |
-| P0   | [`auth-api-contract.md`](./auth-api-contract.md)                                       | A    | Locked v0.1（已實作）                                                                           |
-| P0   | [`member-shipping-address-api-contract.md`](./member-shipping-address-api-contract.md) | A/I  | Implemented v0.1（會員本人預設配送地址 GET／PUT）                                               |
-| P0   | [`product-api-contract.md`](./product-api-contract.md)                                 | B    | Locked v0.3（B-1～B-5b 已完成）                                                                 |
-| P0   | [`branch-api-contract.md`](./branch-api-contract.md)                                   | B    | Locked v0.1（B-7 已完成）                                                                       |
-| P0   | [`checkout-api-contract.md`](./checkout-api-contract.md)                               | C/F  | Locked v0.9（確認背包先建 Draft 鎖庫；正式 Checkout 只 PATCH；付款後消耗待線 D）                |
-| P0   | [`order-api-contract.md`](./order-api-contract.md)                                     | C    | Locked v0.1（待實作）                                                                           |
-| P0   | [`payment-api-contract.md`](./payment-api-contract.md)                                 | D    | Locked v0.1（待實作）                                                                           |
-| P1   | [`booking-api-contract.md`](./booking-api-contract.md)                                 | E    | Locked v1.0（公開營區含環境／設施標籤；E-1～E-7 已實作，ECPay、優惠券分別延後至 D、F）           |
-| P1   | [`coupon-api-contract.md`](./coupon-api-contract.md)                                   | F    | Partially Implemented v0.2（商城完成；Booking 關聯 Schema 待決定）                              |
-| P1   | [`admin-api-contract.md`](./admin-api-contract.md)                                     | G    | Locked v0.8（G-1～G-6 正式接線完成；未就緒子功能依 readiness 停用）                             |
-| P2   | [`member-review-api-contract.md`](./member-review-api-contract.md)、[`product-review-api-contract.md`](./product-review-api-contract.md) | H | Implemented（會員本人 GET／POST、商品公開分頁讀取與評分統計） |
+| 優先 | 文件                                                       | 階段 | 狀態                                                                                            |
+| ---- | ---------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------- |
+| 共用 | [`common-api-conventions.md`](./common-api-conventions.md) | 全部 | Locked v0.1                                                                                     |
+| P0   | [`auth-api-contract.md`](./auth-api-contract.md)           | A    | Locked v0.1（已實作）                                                                           |
+| P0   | [`product-api-contract.md`](./product-api-contract.md)     | B    | Locked v0.3（B-1～B-5b 已完成）                                                                 |
+| P0   | [`branch-api-contract.md`](./branch-api-contract.md)       | B    | Locked v0.1（B-7 已完成）                                                                       |
+| P0   | [`checkout-api-contract.md`](./checkout-api-contract.md)   | C/F  | Locked v0.5（Checkout 與優惠券套用已實作；付款後消耗待線 D）                                     |
+| P0   | [`order-api-contract.md`](./order-api-contract.md)         | C    | Locked v0.1（待實作）                                                                           |
+| P0   | [`payment-api-contract.md`](./payment-api-contract.md)     | D    | Locked v0.3（D-1～D-6＋W3 全額退款 port）                                                         |
+| P1   | [`booking-api-contract.md`](./booking-api-contract.md)     | E    | Locked v0.9（E-1～E-7 已實作；Booking Prepare／Reservation 完成，ECPay、優惠券分別延後至 D、F） |
+| P1   | [`coupon-api-contract.md`](./coupon-api-contract.md)       | F    | Partially Implemented v0.2（商城完成；Booking 關聯 Schema 待決定）                                |
+| P1   | [`admin-api-contract.md`](./admin-api-contract.md)         | G    | Locked v0.23（G＋W1～W3＋W4-01～03＋W4-06） |
 
 ### 刻意延後（P2，本輪不寫死）
 
-| 領域                | 原因       |
-| ------------------- | ---------- |
-| Articles／公開 Reviews | 會員讀寫已完成；商品公開讀取仍待辦 |
-| calendar_dates 維護 | P2         |
+| 領域                | 原因                                               |
+| ------------------- | -------------------------------------------------- |
+| Articles／Reviews   | MVP 可延後                                         |
+| calendar_dates 維護 | P2                                                 |
 
 ---
 

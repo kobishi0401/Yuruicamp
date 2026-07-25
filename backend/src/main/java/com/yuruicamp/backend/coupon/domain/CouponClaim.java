@@ -52,6 +52,18 @@ public class CouponClaim {
 		return claim;
 	}
 
+	/** 付款成功後把已套用到訂單的券改成 consumed（重複呼叫安全）。 */
+	public boolean consume(Instant now) {
+		if (status != CouponClaimStatus.claimed) {
+			return false;
+		}
+
+		status = CouponClaimStatus.consumed;
+		consumedAt = now;
+
+		return true;
+	}
+
 	public Long getId() {
 		return id;
 	}
