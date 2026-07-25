@@ -416,11 +416,11 @@
         headers.set('Authorization', 'Bearer ' + refreshedToken);
         response = await fetch(buildRestUrl(path, settings.baseUrl), requestOptions);
       } catch (refreshError) {
-        notifyAuthExpired();
+        notifySessionExpired();
         throw refreshError;
       }
       if (response.status === 401) {
-        notifyAuthExpired();
+        notifySessionExpired();
       }
     }
 

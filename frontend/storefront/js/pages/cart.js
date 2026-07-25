@@ -125,7 +125,7 @@ function _bindStorefrontCartActions() {
       _setStorefrontCartSessionStatus({
         state: 'error',
         title: '請先登入',
-        message: '登入後系統會自動確認並保留商品庫存。',
+        message: '',
       });
     }
   });
@@ -208,6 +208,8 @@ function _prepareStorefrontCartSession(replaceExisting) {
       // 前一次失敗不阻斷使用者調整數量後的下一次重試。
     })
     .then(async () => {
+      await _waitForStorefrontCartAuthReady();
+
       const previousSession = _readStorefrontCartSession();
       if (replaceExisting && previousSession?.orderId) {
         await window.API.checkout.cancelSession(previousSession.orderId);
@@ -250,6 +252,23 @@ function _prepareStorefrontCartSession(replaceExisting) {
     });
 
   return storefrontCartSessionQueue;
+}
+
+/** 等 Firebase／AppAuth 就緒後再建 Checkout Session，避免 Bearer 尚未注入就收到 401。 */
+async function _waitForStorefrontCartAuthReady() {
+  if (window.AppAuth?.whenReady) {
+    await window.AppAuth.whenReady();
+  }
+  if (window.YuruiFirebase?.waitForAuthState) {
+    await window.YuruiFirebase.waitForAuthState();
+  }
+  if (window.YuruiFirebase?.isReady?.() && window.AppAuth?.configure) {
+    try {
+      window.AppAuth.configure({ auth: window.YuruiFirebase.getAuth() });
+    } catch (error) {
+      console.warn('[storefront-cart] AppAuth.configure 略過:', error);
+    }
+  }
 }
 
 function _buildStorefrontCartCheckoutRequest(cart) {
@@ -369,7 +388,7 @@ function _renderStorefrontCartSessionError(error) {
     _setStorefrontCartSessionStatus({
       state: 'error',
       title: '請先登入',
-      message: '登入後系統會自動確認並保留商品庫存。',
+      message: '',
     });
     window.openModal?.('loginModal');
     return;
@@ -398,6 +417,8 @@ function _setStorefrontCartSessionStatus({ state, title, message, details = [] }
   }
   _setStorefrontCartText('storefrontCartSessionTitle', title);
   _setStorefrontCartText('storefrontCartSessionMessage', message);
+  const messageElement = document.getElementById('storefrontCartSessionMessage');
+  if (messageElement) messageElement.hidden = !String(message || '').trim();
 
   if (list) {
     const messages = details.map((detail) => detail?.reason || detail?.message).filter(Boolean);
