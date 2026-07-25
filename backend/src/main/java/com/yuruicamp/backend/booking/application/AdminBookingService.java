@@ -17,6 +17,7 @@ import com.yuruicamp.backend.booking.infrastructure.AdminBookingReadRepository;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +33,17 @@ public class AdminBookingService {
 
 	private final AdminBookingReadRepository readRepository;
 	private final AdminBookingCommandRepository commandRepository;
+	private final PaymentRefundService paymentRefundService;
 	private final Clock clock;
 
 	public AdminBookingService(
 			AdminBookingReadRepository readRepository,
 			AdminBookingCommandRepository commandRepository,
+			PaymentRefundService paymentRefundService,
 			Clock clock) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
+		this.paymentRefundService = paymentRefundService;
 		this.clock = clock;
 	}
 
@@ -107,6 +111,35 @@ public class AdminBookingService {
 		commandRepository.updateStatus(id, "completed", now);
 		commandRepository.fulfillRentalReservations(id, now);
 		commandRepository.addHistory(id, "completed", now, actorId, cleanNote(note, "Booking completed by admin"));
+
+		return get(id);
+	}
+
+	/**
+	 * W3-03：已付款預約取消（pending／confirmed）；先退款再釋放資源。
+	 * Paid booking cancel — refund first, then release rentals / cancel status.
+	 */
+	@Transactional
+	public AdminBookingDetailResponse cancel(String id, String actorId, String note) {
+		var booking = lock(id);
+		if ("cancelled".equals(booking.status())) {
+			return get(id);
+		}
+		if ("completed".equals(booking.status())) {
+			throw conflict("Completed booking cannot be cancelled");
+		}
+		if (!"paid".equals(booking.paymentStatus())) {
+			throw conflict("Only paid booking can be cancelled here; unpaid uses member checkout cancel");
+		}
+		if (!"pending".equals(booking.status()) && !"confirmed".equals(booking.status())) {
+			throw conflict("Booking status does not allow cancel");
+		}
+
+		Instant now = clock.instant();
+		paymentRefundService.refundBookingFully(id, booking.finalAmount());
+		commandRepository.cancelPaidAndRefunded(id, now);
+		commandRepository.releaseActiveRentalReservations(id, now);
+		commandRepository.addHistory(id, "cancelled", now, actorId, cleanNote(note, "Booking cancelled by admin"));
 
 		return get(id);
 	}

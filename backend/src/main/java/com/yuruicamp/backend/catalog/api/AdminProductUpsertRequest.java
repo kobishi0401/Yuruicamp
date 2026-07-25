@@ -10,7 +10,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * 後台商品建立與更新輸入，只接受商品主檔、規格與圖片，不接受庫存或租借欄位。
+ * 後台商品建立與更新輸入：主檔、規格、圖片；規格可選帶 {@code stockLocations} 寫商城庫存（ADM-W2-08）。
+ * 仍不接受前端胖物件（branch map／totalStock／rentalEnabled／camp 等）。
  */
 public record AdminProductUpsertRequest(
 		@NotBlank @Size(max = 200) String name,

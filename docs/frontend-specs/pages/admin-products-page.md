@@ -1,10 +1,10 @@
-﻿# AdminProductsPage Spec
+# AdminProductsPage Spec
 
 **Status:** Implemented for G-2c Backend integration; legacy page spec retained
 **Category:** Page
 **Design Ref:** N/A - derived from existing source file `admin/partials/products.html`
 
-> G-2c 已在現有 Bootstrap Admin shell 內完成 Mock／Backend 雙模式。Backend 模式以分類／品牌 ID、圖片 URL 與規格 DTO 寫入，庫存只讀，租借操作隱藏；API 成功前不更新 cache。互動驗收見 [`../test/admin-validation.md`](../test/admin-validation.md)，API 契約見 [`../../api/admin-api-contract.md`](../../api/admin-api-contract.md)。
+> G-2c 已在現有 Bootstrap Admin shell 內完成 Mock／Backend 雙模式。**ADM-W2-08（✅）**：Backend 商品 Modal 可編各分店 on-hand（`stockLocations`）；規格說明隱藏並由顏色／尺寸組字；存檔後 pending →「產生異動紀錄」一鍵稽核（明細帶 `lineNature` 推導預設）。**分類／品牌主檔（W2-01／02）**：工具列單一「分類／品牌」按鈕 → Modal 內 tab 切換維護；無說明文。**租借上架 Modal（W2-04 UI）**：一次列出全部規格卡；每卡一組平日／假日價＋勾選上架營區（C002–C009，不含主倉）；`discount` 固定 0；不編輯裝備規格／標籤。調撥另見 W2-05／G-3。互動驗收見 [`../test/admin-validation.md`](../test/admin-validation.md)，API 契約見 [`../../api/admin-api-contract.md`](../../api/admin-api-contract.md) **v0.18**。
 
 ---
 

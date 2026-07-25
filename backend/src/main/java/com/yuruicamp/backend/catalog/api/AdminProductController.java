@@ -31,7 +31,7 @@ public class AdminProductController {
 		this.adminProductService = adminProductService;
 	}
 
-	// 查詢後台商品分頁列表，包含停用商品、規格、圖片與唯讀庫存。
+	// 查詢後台商品分頁列表，包含停用商品、規格、圖片與庫存摘要。
 	@GetMapping
 	@PreAuthorize("hasAuthority('products.view')")
 	@Operation(summary = "商品列表", description = "RBAC: products.view")
@@ -64,19 +64,19 @@ public class AdminProductController {
 		return ApiResponse.ok(adminProductService.getLookups());
 	}
 
-	// 建立商品、裝備主檔、規格與圖片，不建立初始庫存。
+	// 建立商品、裝備主檔、規格與圖片；可選 stockLocations 寫入商城庫存（ADM-W2-08）。
 	@PostMapping
 	@PreAuthorize("hasAuthority('products.edit')")
-	@Operation(summary = "建立商品", description = "RBAC: products.edit；庫存由 G-3 管理")
+	@Operation(summary = "建立商品", description = "RBAC: products.edit；可選寫入 stockLocations")
 	public ApiResponse<AdminProductResponse> create(
 			@Valid @RequestBody AdminProductUpsertRequest request) {
 		return ApiResponse.ok(adminProductService.create(request));
 	}
 
-	// 原子更新商品主檔、規格與圖片，未送出的既有規格會改為停用。
+	// 原子更新商品主檔、規格與圖片；可選 stockLocations 寫入／更新商城庫存。
 	@PutMapping("/{id}")
 	@PreAuthorize("hasAuthority('products.edit')")
-	@Operation(summary = "更新商品", description = "RBAC: products.edit；不接受庫存欄位")
+	@Operation(summary = "更新商品", description = "RBAC: products.edit；可選 stockLocations（Z2）")
 	public ApiResponse<AdminProductResponse> update(
 			@PathVariable String id,
 			@Valid @RequestBody AdminProductUpsertRequest request) {

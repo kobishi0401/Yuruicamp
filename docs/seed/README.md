@@ -45,7 +45,7 @@ docs/seed/
     ├── 030-catalog.sql    # 商品與租借 SKU／variant
     ├── 040-inventory.sql  # 商城／租借庫位、listing 與庫存
     ├── 050-coupons.sql    # 優惠券主檔（claim 尚未建立）
-    ├── 060-orders.sql     # 225 筆展示訂單、442 筆明細與歷程
+    ├── 060-orders.sql     # 222 筆展示訂單、435 筆明細與歷程
     ├── 070-bookings.sql   # 90 筆展示預訂、zone／租借快照與歷程
     ├── 080-reviews.sql    # 已購評價（綁 order_items；含照片）
     └── 090-w1-manual-fixtures.sql  # W1 手動驗收固定單（W1-ORD-*／W1-BK-*／W1-REV-DEL／min-stock）
@@ -69,7 +69,7 @@ docs/seed/
 
 `coupon_claims` 不是為了補齊關聯而建立的展示資料。只有來源同時能確認會員、券、領券時間、claim 狀態，以及 consumed claim 對應的訂單與折扣快照時，才可另行加入；否則 `coupon_claims`、`order_coupons` 與 Seed 訂單折扣都維持空／`0`。`claimed_quantity` 必須由 claim Trigger 配額流程產生，不可只修改主檔計數。
 
-`060-orders.sql` 已包含訂單 1～225、442 筆商品快照、439 筆狀態歷程、614 筆付款／建立／退款事件與 442 筆商城庫存保留；其中 1～222 對應前端 JSON，223～225 是 Firebase 測試會員「粉紅雞」的固定隨機訂單，分別呈現已完成、已出貨、已退貨。商品 FK／SKU 已轉為 canonical variant。`070-bookings.sql` 已包含預訂 1～90、90 筆 zone、40 筆租借快照、190 筆狀態歷程與 40 筆租借庫存保留。訂單保留以固定主倉 `main` 履約；商城庫存的 on-hand 已加回 active 保留量，扣除後 active 商品可用量維持 JSON 的 399。
+`060-orders.sql` 已包含訂單 1～222、435 筆商品快照、431 筆狀態歷程、607 筆舊付款／建立事件與 435 筆商城庫存保留；商品 FK／SKU 已轉為 canonical variant。`070-bookings.sql` 已包含預訂 1～90、90 筆 zone、40 筆租借快照、190 筆狀態歷程與 40 筆租借庫存保留。訂單保留以固定主倉 `main` 履約；商城庫存的 on-hand 已加回 active 保留量，扣除後 active 商品可用量維持 JSON 的 399。
 
 `frontend/data/admin/reviews.json` 的評價已盡量對到真實 `order_items`，由 `080-reviews.sql` 載入；另有 `090-w1-manual-fixtures.sql` 提供 W1 手動驗收固定 ID（`W1-ORD-NOTE`／`W1-BK-NOTE`／`W1-REV-DEL` 等）。步驟見 [`../../plans/admin-post-g6/w1/W1-manual-qa.md`](../../plans/admin-post-g6/w1/W1-manual-qa.md)。`movement.json` 仍不搬移：141 筆明細全部缺 variantId，其中 24 筆對到多規格商品，26 張表頭混合異動語意，員工 01～03 也沒有可追溯的 `admin_users` 主檔。
 
@@ -81,9 +81,9 @@ docs/seed/
 
 - Reference／Identity：13 品牌、8 個 active 營區、13 個 active zone、3 門市、50 會員、18 偏好選項、200 會員偏好、50 預設地址、3 會員標籤、56 標籤指派。
 - Catalog／Inventory：30 商品、39 商城規格、4 商城庫位、156 商城庫存、29 租借 SKU、38 租借規格、17 listing、334 筆租借庫存。商城總 on-hand／active 保留／可用量為 `499／98／401`，其中 active catalog 可用量為 399；租借庫存總量為 555。
-- Coupon／Order／Booking／Review：7 優惠券、0 claim、0 訂單券快照、225 筆零折扣訂單、442 訂單明細、442 商城保留、90 預訂、90 zone 快照、40 租借快照、40 租借保留、1 筆 verified-purchase 評論、0 庫存異動。
+- Coupon／Order／Booking／Review：7 優惠券、0 claim、0 訂單券快照、222 筆零折扣訂單、435 訂單明細、435 商城保留、90 預訂、90 zone 快照、40 租借快照、40 租借保留、1 筆 verified-purchase 評論、0 庫存異動。
 - 會員偏好、地址、會員標籤、訂單會員、訂單規格、預訂會員、營區、zone、租借 listing／variant 的孤兒檢查皆為 `0`；每位展示會員只有一筆預設地址，沒有連線停留在 `idle in transaction`。
-- 2026-07-22 在 PostgreSQL 16 全新獨立資料庫 `yuruicamp_inventory_verify_final_0722` 先執行 `latest_schema.sql`，再完整執行 `010`～`070`，一次成功 `COMMIT`；另在前一個隔離庫連續重跑驗證冪等性。2026-07-23 新增粉紅雞訂單後，已在目前 `yuruicamp` 以同一交易完整重跑 `020` 與 `060` 再回滾，確認可重複執行；目前商城／租借保留為 `442／40`，新增 7 筆商城保留皆為 fulfilled，不改變 active catalog 可用量 399。
+- 2026-07-22 在 PostgreSQL 16 全新獨立資料庫 `yuruicamp_inventory_verify_final_0722` 先執行 `latest_schema.sql`，再完整執行 `010`～`070`，一次成功 `COMMIT`；另在前一個隔離庫連續重跑驗證冪等性。同一版本已套用到目前 `yuruicamp`；商城／租借保留為 `435／40`，active catalog 可用量 399，負庫存、複合 FK 孤兒與租借區間超賣皆為 `0`。
 
 可重做的隔離驗證流程見 [`../backend-specs/test/database-seed-validation.md`](../backend-specs/test/database-seed-validation.md)。驗證使用專用容器與 port，不會停止、重建或清除既有 `yuruicamp-db`。
 
@@ -104,7 +104,7 @@ psql -U postgres -d yuruicamp -f docs/seed/002-dev-seed.sql
 
 入口已設定 `ON_ERROR_STOP`。若自訂了 `POSTGRES_USER` 或 `POSTGRES_DB`，請同步替換指令參數。
 
-> 注意：重跑 seed 會以 reference 主檔覆寫同 ID 的品牌、營區、zone、標籤與門市欄位，並重建 C002～C009 的標籤關聯及 3 門市 features；舊 `C002-Z-A`、`C002-Z-HIDDEN` 只會改為 inactive，不會刪除。它也會覆寫 U001～U050、Firebase 測試會員「粉紅雞」、訂單 1～225、預訂 1～90 及其固定明細／歷程。Seed 會覆寫 156 筆商城庫存、333 筆前端對照租借庫存、442／40 筆交易保留與 `REV031`；不會刪除多出的人工交易明細。優惠券主檔會更新，但既有 `claimed_quantity` 不會被重設。不要在需要保留同 ID 手動測試資料時重跑。`docker compose down -v` 會刪除整個本機資料卷，只能在確定資料可捨棄時使用。
+> 注意：重跑 seed 會以 reference 主檔覆寫同 ID 的品牌、營區、zone、標籤與門市欄位，並重建 C002～C009 的標籤關聯及 3 門市 features；舊 `C002-Z-A`、`C002-Z-HIDDEN` 只會改為 inactive，不會刪除。它也會覆寫 U001～U050、訂單 1～222、預訂 1～90 及其固定明細／歷程。Seed 會覆寫 156 筆商城庫存、333 筆前端對照租借庫存、435／40 筆交易保留與 `REV031`；不會刪除多出的人工交易明細。優惠券主檔會更新，但既有 `claimed_quantity` 不會被重設。不要在需要保留同 ID 手動測試資料時重跑。`docker compose down -v` 會刪除整個本機資料卷，只能在確定資料可捨棄時使用。
 
 ### 維護規則
 

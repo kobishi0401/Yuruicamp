@@ -1889,8 +1889,14 @@ CREATE TABLE public.store_inventory_movement_items (
     sku_snapshot character varying(64) NOT NULL,
     item_name_snapshot character varying(200) NOT NULL,
     quantity integer NOT NULL,
+    source_location_id character varying(32),
+    destination_location_id character varying(32),
+    line_reason text,
+    line_nature character varying(32),
     CONSTRAINT ck_store_inventory_movement_items_domain CHECK (((inventory_domain)::text = 'store'::text)),
     CONSTRAINT ck_store_inventory_movement_items_quantity CHECK ((quantity > 0)),
+    CONSTRAINT ck_store_inventory_movement_items_locations CHECK ((((source_location_id IS NOT NULL) OR (destination_location_id IS NOT NULL)) AND ((source_location_id IS NULL) OR (destination_location_id IS NULL) OR ((source_location_id)::text <> (destination_location_id)::text)))),
+    CONSTRAINT ck_store_inventory_movement_items_line_nature CHECK (((line_nature IS NULL) OR ((line_nature)::text = ANY ((ARRAY['receipt'::character varying, 'transfer'::character varying, 'stocktake'::character varying, 'damage'::character varying, 'write_off'::character varying])::text[])))),
 
     CONSTRAINT pk_store_inventory_movement_items PRIMARY KEY (id)
 );
@@ -1907,7 +1913,11 @@ CREATE VIEW public.inventory_movement_items_view AS
     item.variant_id,
     item.sku_snapshot,
     item.item_name_snapshot,
-    item.quantity
+    item.quantity,
+    item.source_location_id,
+    item.destination_location_id,
+    item.line_reason,
+    item.line_nature
    FROM public.store_inventory_movement_items item
 UNION ALL
  SELECT item.id,
@@ -1916,7 +1926,11 @@ UNION ALL
     item.rental_sku_variant_id AS variant_id,
     item.sku_snapshot,
     item.item_name_snapshot,
-    item.quantity
+    item.quantity,
+    NULL::character varying(32) AS source_location_id,
+    NULL::character varying(32) AS destination_location_id,
+    NULL::text AS line_reason,
+    NULL::character varying(32) AS line_nature
    FROM public.rental_inventory_movement_items item;
 
 
@@ -1946,12 +1960,12 @@ CREATE TABLE public.inventory_movements (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT ck_inventory_movements_domain CHECK (((inventory_domain)::text = ANY ((ARRAY['store'::character varying, 'rental'::character varying])::text[]))),
-    CONSTRAINT ck_inventory_movements_locations CHECK (((source_location_id IS NOT NULL) OR (destination_location_id IS NOT NULL))),
+    CONSTRAINT ck_inventory_movements_locations CHECK ((((movement_type)::text = 'product_stock_update'::text) OR (source_location_id IS NOT NULL) OR (destination_location_id IS NOT NULL))),
     CONSTRAINT ck_inventory_movements_posting CHECK (((((status)::text = 'posted'::text) AND (posted_at IS NOT NULL)) OR (((status)::text = ANY ((ARRAY['draft'::character varying, 'cancelled'::character varying])::text[])) AND (posted_at IS NULL)))),
     CONSTRAINT ck_inventory_movements_reason CHECK ((btrim(reason) <> ''::text)),
     CONSTRAINT ck_inventory_movements_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'posted'::character varying, 'cancelled'::character varying])::text[]))),
-    CONSTRAINT ck_inventory_movements_type CHECK (((movement_type)::text = ANY ((ARRAY['receipt'::character varying, 'write_off'::character varying, 'transfer'::character varying, 'conversion_out'::character varying, 'conversion_in'::character varying])::text[]))),
-    CONSTRAINT ck_inventory_movements_type_payload CHECK (((((movement_type)::text = 'receipt'::text) AND (source_location_id IS NULL) AND (destination_location_id IS NOT NULL)) OR (((movement_type)::text = 'write_off'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NULL)) OR (((movement_type)::text = 'transfer'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NOT NULL) AND ((source_location_id)::text <> (destination_location_id)::text)) OR (((movement_type)::text = 'conversion_out'::text) AND ((inventory_domain)::text = 'store'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NULL)) OR (((movement_type)::text = 'conversion_in'::text) AND ((inventory_domain)::text = 'rental'::text) AND (source_location_id IS NULL) AND (destination_location_id IS NOT NULL)))),
+    CONSTRAINT ck_inventory_movements_type CHECK (((movement_type)::text = ANY ((ARRAY['receipt'::character varying, 'write_off'::character varying, 'transfer'::character varying, 'conversion_out'::character varying, 'conversion_in'::character varying, 'product_stock_update'::character varying])::text[]))),
+    CONSTRAINT ck_inventory_movements_type_payload CHECK (((((movement_type)::text = 'receipt'::text) AND (source_location_id IS NULL) AND (destination_location_id IS NOT NULL)) OR (((movement_type)::text = 'write_off'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NULL)) OR (((movement_type)::text = 'transfer'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NOT NULL) AND ((source_location_id)::text <> (destination_location_id)::text)) OR (((movement_type)::text = 'conversion_out'::text) AND ((inventory_domain)::text = 'store'::text) AND (source_location_id IS NOT NULL) AND (destination_location_id IS NULL)) OR (((movement_type)::text = 'conversion_in'::text) AND ((inventory_domain)::text = 'rental'::text) AND (source_location_id IS NULL) AND (destination_location_id IS NOT NULL)) OR (((movement_type)::text = 'product_stock_update'::text) AND (source_location_id IS NULL) AND (destination_location_id IS NULL)))),
 
     CONSTRAINT pk_inventory_movements PRIMARY KEY (id),
     CONSTRAINT uq_inventory_movements_id_inventory_domain UNIQUE (id, inventory_domain),
@@ -4283,6 +4297,22 @@ ALTER TABLE ONLY public.store_inventory_movement_items
 
 ALTER TABLE ONLY public.store_inventory_movement_items
     ADD CONSTRAINT fk_store_inventory_movement_items_variant_id FOREIGN KEY (variant_id) REFERENCES public.product_variants(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: store_inventory_movement_items fk_store_inventory_movement_items_source_location_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store_inventory_movement_items
+    ADD CONSTRAINT fk_store_inventory_movement_items_source_location_domain FOREIGN KEY (source_location_id, inventory_domain) REFERENCES public.inventory_locations(id, inventory_domain) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: store_inventory_movement_items fk_store_inventory_movement_items_destination_location_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store_inventory_movement_items
+    ADD CONSTRAINT fk_store_inventory_movement_items_destination_location_domain FOREIGN KEY (destination_location_id, inventory_domain) REFERENCES public.inventory_locations(id, inventory_domain) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 

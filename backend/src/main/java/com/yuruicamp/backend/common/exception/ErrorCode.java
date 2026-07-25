@@ -32,6 +32,10 @@ public enum ErrorCode {
 	REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT),
 	REVIEW_ORDER_NOT_COMPLETED(HttpStatus.CONFLICT),
 	REVIEW_ORDER_FORBIDDEN(HttpStatus.FORBIDDEN),
+	/** 綠界／stub 退款失敗；不得只改本地 status。 / ECPay refund failed — do not mutate local status only. */
+	PAYMENT_REFUND_FAILED(HttpStatus.CONFLICT),
+	/** 找不到可退款 Notify 或交易衝突。 / Missing refundable notify row or provider conflict. */
+	PAYMENT_PROVIDER_CONFLICT(HttpStatus.CONFLICT),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
 	private final HttpStatus status;

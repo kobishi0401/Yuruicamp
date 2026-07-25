@@ -2,10 +2,10 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Active（W1／W2／W3 ✅；下一步 W4） |
+| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後） |
 | **日期** | 2026-07-25 |
 | **前提** | 線 G-1～G-6 已完成；見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) |
-| **契約現況** | [`docs/api/admin-api-contract.md`](../docs/api/admin-api-contract.md) v0.18 |
+| **契約現況** | [`docs/api/admin-api-contract.md`](../docs/api/admin-api-contract.md) v0.23 |
 | **Schema** | [`docs/latest_schema.sql`](../docs/latest_schema.sql) |
 | **缺漏分析** | 本對話「Admin 模組缺漏分析報告」＋ HITL 問答定案 |
 | **實作 Checklist 資料夾** | [`admin-post-g6/`](./admin-post-g6/README.md)（每個 ADM-W* 一份可勾選步驟） |
@@ -63,7 +63,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **W1** | P0 | 後台「看得見、寫得了」的日常客服缺口 | ✅ |
 | **W2** | P1 | 可持續上架租借／調撥商店↔租借、維護商品維度主檔 | ✅ |
 | **W3** | P1 | 付款成功後的取消與退款閉環 | ✅ |
-| **W4** | P2～P3 | 少改 SQL、內容與報表可營運化 | ⬜ |
+| **W4** | P2～P3 | 少改 SQL、內容與報表可營運化 | ✅（04／05 延後） |
 
 ### 跨波次硬依賴（請先記住）
 
@@ -504,8 +504,8 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 ### W4 完成門檻
 
 - [x] K5～K7（W4-01～03）  
-- [ ] K8～K10：W4-04／05 **延後**（不阻塞）  
-- [x] K11：W4-06 Analytics API  
+- [x] K8～K10：W4-04／05 **延後**（不阻塞；文章仍靜態 JSON、圖檔等 GCP）  
+- [x] K11：W4-06 Analytics API（含手動驗收）  
 - [ ] 營運文件：哪些主檔改後台、哪些仍需工程師  
 
 ---
@@ -575,3 +575,4 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 2026-07-25 | **W2 波次完成（文件收斂）**：W2-01～08 DoD／checklist 全勾；UI follow-up 手動驗收通過；契約現況改記 v0.18；波次表 W1／W2 ✅；下一步 W3 Gate |
 | 2026-07-25 | **W3 Gate ✅**：對齊 Payment 契約 v0.2 §6／§7；線 D D-1～D-6 勾完；解鎖 W3-01～03（綠界退款 HTTP 仍屬 W3-02） |
 | 2026-07-25 | **W3 波次完成**：O1／O3／B1；Admin v0.19、Payment v0.3 stub 全額退款 port；下一步 W4 |
+| 2026-07-25 | **W4-06 完成＋手動驗收**：Analytics summary API；Admin v0.23；**W4 波次收斂**（04／05 延後） |

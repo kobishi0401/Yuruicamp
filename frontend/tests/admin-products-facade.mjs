@@ -70,7 +70,12 @@ const mapped = productContext.mapAdminProductResponse({
     status: 'active',
     onHandQuantity: 10,
     availableQuantity: 8,
-    stockLocations: [{ locationType: 'main', branchId: null, onHandQuantity: 10 }],
+    stockLocations: [{
+      locationId: 'main',
+      locationType: 'main',
+      branchId: null,
+      onHandQuantity: 10,
+    }],
   }],
 });
 
@@ -85,10 +90,14 @@ const requestFunction = productSource.slice(
   productSource.indexOf('/** 正式後端商品送出流程'),
 );
 assert.equal(requestFunction.includes('totalStock:'), false);
-assert.equal(requestFunction.includes('branch:'), false);
 assert.equal(requestFunction.includes('rentalEnabled:'), false);
 assert.equal(requestFunction.includes('camp:'), false);
+// ADM-W2-08：允許 stockLocations；仍禁止把前端 branch map 整包送出
+assert.match(requestFunction, /stockLocations/);
+assert.equal(requestFunction.includes('branch: newBranch'), false);
+assert.equal(requestFunction.includes('branch: variant.branch'), false);
 assert.match(productSource, /operation\.then\(function \(response\)/);
 assert.equal(/AdminAPI\.products\.update\(product\.id,\s*product\)/.test(productSource), false);
+assert.match(productSource, /product_stock_update/);
 
 console.log('Admin Products facade and mapping tests passed.');

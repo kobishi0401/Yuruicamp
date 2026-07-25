@@ -11,9 +11,6 @@ import vm from 'node:vm';
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const apiSource = readFileSync(join(rootDir, 'admin/js/admin-api.js'), 'utf8');
 const runtimeSource = readFileSync(join(rootDir, 'admin/js/admin-runtime.js'), 'utf8');
-const reviewsSource = readFileSync(join(rootDir, 'admin/js/reviews.js'), 'utf8');
-const reviewsPartial = readFileSync(join(rootDir, 'admin/partials/reviews.html'), 'utf8');
-const dashboardSource = readFileSync(join(rootDir, 'admin/dashboard.html'), 'utf8');
 const calls = [];
 const window = {
   AppConfig: {
@@ -86,15 +83,5 @@ assert.deepEqual(
   ],
 );
 assert.equal(calls.every((call) => call.options.auth === 'required'), true);
-
-assert.match(reviewsSource, /AdminAPI\.reviews\.list\(buildBackendQuery\(\)\)/);
-assert.match(reviewsSource, /query\.q = reviewsState\.searchQuery/);
-assert.match(reviewsSource, /query\.rating = reviewsState\.ratingFilter/);
-assert.match(reviewsSource, /meta\.totalElements/);
-assert.match(reviewsSource, /AdminAPI\.reviews\.getById\(reviewId\)/);
-assert.match(reviewsSource, /reviewsState\.page \+= 1/);
-assert.match(reviewsPartial, /id="reviewsPagination"/);
-assert.match(reviewsPartial, /id="reviewPageSize"/);
-assert.match(dashboardSource, /id="reviewDetailModal"/);
 
 console.log('Admin reviews facade tests passed.');

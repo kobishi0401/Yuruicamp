@@ -1,5 +1,11 @@
 # G-3 Admin Inventory Movements
 
+> **⚠️ 語意覆寫（2026-07-24）**  
+> Admin 契約 **v0.17／ADM-W2-08**：通用 `inventory-movements` 新建以 `product_stock_update` 為主，**post 不定商城 on-hand**；異動頁改唯讀；列級 `lineNature` 可 PATCH。  
+> **例外 1**：`inventory-conversions`（store→rental）過帳仍改兩邊庫存。  
+> **例外 2**：`inventoryDomain=rental` + `movementType=transfer`（營地↔營地）過帳仍改 `rental_sku_variant_stocks`（G-3 鎖／409／保留量規則）。  
+> 下文描述的是 **G-3 當日實作**（含 store receipt／write_off／transfer）；現況新建白名單以契約 v0.17 與 [`ADM-W2-08`](../../../plans/admin-post-g6/w2/ADM-W2-08-product-stock-update.md) 為準。
+
 ## 用途
 
 集中所有正式庫存寫入，禁止商品編輯、前端記憶體或直接 API 欄位繞過庫存異動歷程。商城寫入 `inventory_stocks`，租借寫入 `rental_sku_variant_stocks`。

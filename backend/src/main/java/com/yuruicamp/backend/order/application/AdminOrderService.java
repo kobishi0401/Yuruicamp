@@ -15,10 +15,14 @@ import com.yuruicamp.backend.order.api.AdminOrderDetailResponse;
 import com.yuruicamp.backend.order.api.AdminOrderListResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
+import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 後台訂單管理用例，只處理查詢與出貨、完成等履約命令。
+/**
+ * 後台訂單：查詢、出貨／完成、未出貨取消（W3-01）與同交易退款（W3-02）。
+ * Admin orders: query, ship/complete, unshipped cancel + refund-in-same-tx.
+ */
 @Service
 public class AdminOrderService {
 
@@ -30,12 +34,15 @@ public class AdminOrderService {
 
 	private final AdminOrderReadRepository readRepository;
 	private final AdminOrderCommandRepository commandRepository;
+	private final PaymentRefundService paymentRefundService;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
-			AdminOrderCommandRepository commandRepository) {
+			AdminOrderCommandRepository commandRepository,
+			PaymentRefundService paymentRefundService) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
+		this.paymentRefundService = paymentRefundService;
 	}
 
 	@Transactional(readOnly = true)
@@ -117,8 +124,52 @@ public class AdminOrderService {
 	}
 
 	/**
+	 * W3-01／W3-02：未出貨取消。已付款線上單必須先退款成功才改本地狀態。
+	 * Unshipped cancel; paid online requires provider refund before local mutation.
+	 */
+	@Transactional
+	public AdminOrderDetailResponse cancel(String id, String actorId, String note) {
+		var order = lock(id);
+		if ("cancelled".equals(order.status())) {
+			// 冪等回放 / Idempotent replay
+			return get(id);
+		}
+		if (!"unshipped".equals(order.status())) {
+			throw conflict("Only unshipped order can be cancelled (O2 return is out of scope)");
+		}
+		if ("refunded".equals(order.paymentStatus()) || !"none".equals(order.refundStatus())) {
+			throw conflict("Order refund state does not allow cancel");
+		}
+
+		boolean onlinePaid = !"cod".equals(order.paymentMethod()) && "paid".equals(order.paymentStatus());
+		boolean unpaid = "unpaid".equals(order.paymentStatus());
+		if (!onlinePaid && !unpaid) {
+			throw conflict("Order payment state does not allow cancel");
+		}
+
+		Instant now = Instant.now();
+		String historyNote = cleanNote(note, "Order cancelled by admin");
+
+		if (onlinePaid) {
+			// 契約：先綠界退款，失敗則整筆 rollback、訂單維持 unshipped
+			paymentRefundService.refundOrderFully(id, order.total());
+			commandRepository.cancelPaidAndRefunded(id, now);
+			commandRepository.releaseActiveReservations(id, now);
+			commandRepository.rollbackConsumedCouponClaim(id);
+			long historyId = commandRepository.addHistory(id, "cancelled", now, actorId, historyNote);
+			commandRepository.addRefundEvent(id, historyId, now, actorId, "Full refund after admin cancel");
+		} else {
+			commandRepository.cancelUnpaid(id, now);
+			commandRepository.releaseActiveReservations(id, now);
+			commandRepository.clearOrderCouponsForUnpaidCancel(id, now);
+			commandRepository.addHistory(id, "cancelled", now, actorId, historyNote);
+		}
+
+		return get(id);
+	}
+
+	/**
 	 * 覆寫訂單內部備註；不變更履約或付款狀態。
-	 * Overwrite order internal note without changing fulfillment/payment state.
 	 */
 	@Transactional
 	public AdminOrderDetailResponse updateInternalNote(String id, String internalNote) {
@@ -194,7 +245,6 @@ public class AdminOrderService {
 		return note == null || note.isBlank() ? fallback : note.trim();
 	}
 
-	/** 空白字串清成 null，與契約一致。 / Blank strings become null per contract. */
 	private static String normalizeInternalNote(String note) {
 		if (note == null || note.isBlank()) {
 			return null;

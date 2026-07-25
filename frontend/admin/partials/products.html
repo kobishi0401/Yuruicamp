@@ -31,7 +31,7 @@
 
     <!-- 右側按鈕群組：清除篩選 | 產生異動紀錄 | 設定最低庫存 | 新增商品 -->
     <div class="d-flex flex-row flex-wrap align-items-center gap-2">
-      <!-- 有分類 / 品牌篩選時才顯示，由 products.js 控制 -->
+      <!-- 有分類 / 品牌 / 狀態篩選時才顯示，由 products.js 控制 -->
       <button type="button"
               class="btn btn-sm btn-outline-secondary d-none"
               id="btnClearProductFilters">
@@ -51,18 +51,11 @@
               id="toggleMinStockMode">
         <i class="fas fa-sliders-h me-1"></i>設定最低庫存
       </button>
-      <!-- W2-01／02：分類／品牌主檔（Backend 就緒時顯示） -->
+      <!-- W2-01／02：分類／品牌主檔（一個按鈕開 Modal；內用 tab） -->
       <button type="button"
               class="btn btn-sm btn-outline-secondary d-none"
-              id="btnManageCategories"
-              title="維護商品分類主檔">
-        <i class="fas fa-folder-tree me-1"></i>分類
-      </button>
-      <button type="button"
-              class="btn btn-sm btn-outline-secondary d-none"
-              id="btnManageBrands"
-              title="維護品牌主檔">
-        <i class="fas fa-tags me-1"></i>品牌
+              id="btnManageCatalogMaster">
+        <i class="fas fa-folder-tree me-1"></i>分類／品牌
       </button>
       <button class="btn btn-sm text-white"
               style="background-color: var(--admin-brand-accent);"
@@ -76,7 +69,7 @@
   <!-- 最低庫存設定模式提示：由 products.js 的 updateMinStockModeUI() 控制顯示 -->
   <div id="minStockModeHint" class="d-none px-3 py-2 bg-warning bg-opacity-10 border-bottom small text-muted">
     <i class="fas fa-info-circle me-1"></i>
-    最低庫存設定模式：點各列右側 <i class="fas fa-pencil-alt"></i> 可編輯各分店／營地的庫存閾值；多規格商品請先展開規格。
+    最低庫存設定模式
   </div>
 
   <!-- 商店表格容器 -->
@@ -103,6 +96,16 @@
               <span class="filter-dot d-none"></span>
               <div class="filter-dropdown d-none" data-product-brand-filter-options></div>
             </th>
+            <!-- 狀態：上架／下架多選篩選（商店／租借共用；值為 active／inactive） -->
+            <th class="sticky-col sticky-col-status filter-th" data-filter-key="status">
+              狀態
+              <i class="fas fa-filter filter-icon ms-1"></i>
+              <span class="filter-dot d-none"></span>
+              <div class="filter-dropdown d-none">
+                <label><input type="checkbox" value="active"> 上架</label>
+                <label><input type="checkbox" value="inactive"> 下架</label>
+              </div>
+            </th>
             <th class="sticky-col sticky-col-total-stock">總庫存量</th>
             <!-- 可水平捲動欄位：商店主倉 + 各分店庫存（明確指定欄寬）-->
             <th class="scrollable-stock-col">商店主倉</th>
@@ -114,10 +117,10 @@
           </tr>
         </thead>
         <!-- tbody 由 products.js 的 renderProductsTable() 動態填入；不足格庫存數字顯示紅色 -->
-        <!-- colspan：一般 9 欄；最低庫存模式 10 欄（多「修改」）-->
+        <!-- colspan：一般 10 欄；最低庫存模式 11 欄（多「修改」）-->
         <tbody id="productsTableBody">
           <tr>
-            <td colspan="9" class="text-center py-4">
+            <td colspan="10" class="text-center py-4">
               <div class="spinner-border spinner-border-sm me-2"
                    style="color: var(--admin-brand-accent);"></div>
               <span class="text-muted">載入商品中...</span>
@@ -151,6 +154,16 @@
               <i class="fas fa-filter filter-icon ms-1"></i>
               <span class="filter-dot d-none"></span>
               <div class="filter-dropdown d-none" data-product-brand-filter-options></div>
+            </th>
+            <!-- 狀態：SKU status；篩選與商店表共用（方案 A：品牌 → 狀態 → 操作） -->
+            <th class="sticky-col sticky-col-status filter-th" data-filter-key="status">
+              狀態
+              <i class="fas fa-filter filter-icon ms-1"></i>
+              <span class="filter-dot d-none"></span>
+              <div class="filter-dropdown d-none">
+                <label><input type="checkbox" value="active"> 上架</label>
+                <label><input type="checkbox" value="inactive"> 下架</label>
+              </div>
             </th>
             <th class="sticky-col sticky-col-action">操作</th>
             <th class="sticky-col sticky-col-total-stock">總租借庫存</th>
@@ -209,12 +222,12 @@
           <small class="text-muted">調撥會作用在所選規格的庫存上；正式模式會對應到租借規格 ID</small>
         </div>
 
-        <!-- 來源分店 + 目前庫存（數字依「規格 × 分店」更新）-->
+        <!-- 來源分店 + 目前庫存（Mode 1）；Mode 2 改選來源營區 -->
         <div class="row g-3 mb-3">
-          <div class="col-8">
-            <label for="transferSourceBranch" class="form-label">來源分店</label>
+          <div class="col-8" id="transferSourceBranchCol">
+            <label for="transferSourceBranch" class="form-label" id="transferSourceBranchLabel">來源分店</label>
             <select class="form-select form-select-sm" id="transferSourceBranch">
-              <!-- 由 JS 動態填入：主倉 / 分店A / B / C -->
+              <!-- 由 JS 動態填入：主倉 / 分店A / B / C + 營地互轉 -->
             </select>
           </div>
           <div class="col-4" id="transferSourceStockCol">
@@ -224,12 +237,23 @@
           </div>
         </div>
 
-        <!-- 正式模式過帳理由（寫入 inventory_conversions.reason） -->
-        <div class="mb-3 d-none" id="transferConversionReasonWrap">
-          <label for="transferConversionReason" class="form-label">調撥原因</label>
-          <input type="text" class="form-control form-control-sm" id="transferConversionReason"
-                 maxlength="1000" placeholder="例如：補營區租借庫存">
+        <!-- Mode 2（正式）：來源營區（G-3 rental transfer）＋目前件數 -->
+        <div class="mb-3 d-none" id="transferCampSourceWrap">
+          <div class="row g-2 align-items-end">
+            <div class="col">
+              <label for="transferCampSourceSelect" class="form-label">來源營區</label>
+              <select class="form-select form-select-sm" id="transferCampSourceSelect"></select>
+            </div>
+            <div class="col-auto text-end" style="min-width: 5.5rem;">
+              <label class="form-label">來源庫存</label>
+              <!-- 隨「來源營區／規格」變更由 JS 更新（syncTransferCampSourceStock） -->
+              <p class="form-control-plaintext fw-semibold mb-0 text-end" id="transferCampSourceStock">0 件</p>
+            </div>
+          </div>
+          <small class="text-muted">正式模式營地互轉：從來源營區轉到下方數量 &gt; 0 的目標營區</small>
         </div>
+
+        <!-- 調撥原因已移除：表頭 reason 用系統預設；列備註改在「產生異動紀錄」區塊 B 填寫（A1/B2/C2） -->
 
         <!-- 目標營地分配（多行動態清單，由 JS 管理） -->
         <div class="mb-1">
@@ -261,31 +285,44 @@
   </div><!-- end modal-dialog -->
 </div><!-- end #transferToRentalModal -->
 
-<!-- W2-01／02：分類／品牌主檔維護 Modal（極簡列表＋建立） -->
+<!-- W2-01／02：分類／品牌主檔 Modal（tab 切換；極簡新增＋列表） -->
 <div class="modal fade" id="catalogMasterModal" tabindex="-1" aria-labelledby="catalogMasterModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="catalogMasterModalLabel">主檔維護</h5>
+        <h5 class="modal-title" id="catalogMasterModalLabel">分類／品牌</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
       </div>
       <div class="modal-body">
-        <p class="small text-muted mb-3" id="catalogMasterHint">
-          已被商品引用的項目無法刪除（後端回 409）。新建後會自動出現在商品表單選單。
-        </p>
+        <ul class="nav nav-tabs mb-3" id="catalogMasterTabs" role="tablist">
+          <li class="nav-item" role="presentation" id="catalogMasterTabCategoriesWrap">
+            <button type="button"
+                    class="nav-link active"
+                    id="catalogMasterTabCategories"
+                    data-catalog-master-kind="categories"
+                    role="tab"
+                    aria-selected="true">分類</button>
+          </li>
+          <li class="nav-item" role="presentation" id="catalogMasterTabBrandsWrap">
+            <button type="button"
+                    class="nav-link"
+                    id="catalogMasterTabBrands"
+                    data-catalog-master-kind="brands"
+                    role="tab"
+                    aria-selected="false">品牌</button>
+          </li>
+        </ul>
         <form id="catalogMasterCreateForm" class="row g-2 mb-3">
-          <div class="col-12" id="catalogMasterIdFieldWrap">
-            <label class="form-label small mb-0" for="catalogMasterId">ID（slug）</label>
-            <input type="text" class="form-control form-control-sm" id="catalogMasterId"
-                   placeholder="例如 naturehike" autocomplete="off">
+          <div class="col-12 d-none" id="catalogMasterIdFieldWrap">
+            <label class="form-label small mb-0" for="catalogMasterId">ID</label>
+            <input type="text" class="form-control form-control-sm" id="catalogMasterId" autocomplete="off">
           </div>
           <div class="col-12" id="catalogMasterCodeFieldWrap">
-            <label class="form-label small mb-0" for="catalogMasterCode">代碼 code</label>
-            <input type="text" class="form-control form-control-sm" id="catalogMasterCode"
-                   placeholder="例如 camp-chair" autocomplete="off">
+            <label class="form-label small mb-0" for="catalogMasterCode">代碼</label>
+            <input type="text" class="form-control form-control-sm" id="catalogMasterCode" autocomplete="off">
           </div>
           <div class="col-8">
-            <label class="form-label small mb-0" for="catalogMasterName">顯示名稱</label>
+            <label class="form-label small mb-0" for="catalogMasterName">名稱</label>
             <input type="text" class="form-control form-control-sm" id="catalogMasterName" required autocomplete="off">
           </div>
           <div class="col-4">
@@ -304,8 +341,9 @@
   </div>
 </div>
 
-<!-- W2-04：租借上架／定價＋裝備規格／標籤（正式模式） -->
-<!-- Rental listings + equipment specs/tags modal (backend mode) -->
+<!-- W2-04：租借上架／定價（正式模式）
+     每規格一卡：一組一般價／特殊節日價＋勾選上架營區（C002–C009，不含主倉）
+     不編輯裝備規格／標籤；折扣固定送 0 -->
 <div class="modal fade" id="rentalListingsModal" tabindex="-1"
      aria-labelledby="rentalListingsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -318,50 +356,91 @@
       </div>
       <div class="modal-body">
         <p class="small text-muted mb-3" id="rentalListingsProductName">—</p>
-
-        <div class="mb-3">
-          <label for="rentalListingVariantSelect" class="form-label fw-semibold">租借規格</label>
-          <select class="form-select form-select-sm" id="rentalListingVariantSelect"></select>
-          <small class="text-muted">每一列是「營區 × 規格」的上架；存檔會整組取代這個 SKU 的 listings</small>
-        </div>
-
-        <div class="table-responsive mb-4">
-          <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>營區</th>
-                <th style="width: 7rem;">平日／日</th>
-                <th style="width: 7rem;">假日／日</th>
-                <th style="width: 5.5rem;">折扣</th>
-                <th style="width: 4.5rem;">上架</th>
-              </tr>
-            </thead>
-            <tbody id="rentalListingRows">
-              <!-- 由 openRentalListingsModal() 依 C001–C009 產生 -->
-            </tbody>
-          </table>
-        </div>
-
-        <hr>
-        <h6 class="fw-semibold mb-2">裝備規格（itemId 共用）</h6>
-        <p class="small text-muted mb-2">每行一個 <code>key=value</code>；存檔會整組取代。</p>
-        <textarea class="form-control form-control-sm font-monospace mb-3" id="rentalEquipmentSpecsInput"
-                  rows="4" placeholder="weight=4.2 kg&#10;capacity=2 persons"></textarea>
-
-        <h6 class="fw-semibold mb-2">裝備標籤</h6>
-        <p class="small text-muted mb-2">以逗號分隔；存檔會整組取代。</p>
-        <input type="text" class="form-control form-control-sm mb-1" id="rentalEquipmentTagsInput"
-               placeholder="輕量, 防水, 親子">
+        <!-- 規格卡由 products.js 的 renderRentalListingVariantCards() 填入 -->
+        <div id="rentalListingVariantCards"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
           <i class="fas fa-times me-1"></i>取消
         </button>
         <button type="button" class="btn btn-primary btn-sm" id="submitRentalListings">
-          <i class="fas fa-save me-1"></i>儲存上架／規格／標籤
+          <i class="fas fa-save me-1"></i>儲存
         </button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- 產生異動紀錄確認 Modal -->
+<!-- 區塊 A：商品庫存調整（可改異動性質／列備註；表頭 reason 用系統預設 A1） -->
+<!-- 區塊 B：調撥摘要（乙／B2：已過帳；列備註可改 → PATCH lineReason／C2） -->
+<div class="modal fade" id="confirmProductStockMovementModal" tabindex="-1"
+     aria-labelledby="confirmProductStockMovementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold" id="confirmProductStockMovementModalLabel">
+          <i class="fas fa-file-alt me-2"></i>產生異動紀錄
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        <!-- 區塊 A／B 欄位對齊：商品／規格／數量／來源地／接收地／性質或類型／備註 -->
+        <div id="confirmStockAuditSection" class="mb-4">
+          <h6 class="fw-semibold mb-2">
+            <i class="fas fa-boxes-stacked me-1"></i>商品庫存調整
+          </h6>
+          <div class="table-responsive mb-2">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>商品</th>
+                  <th>規格</th>
+                  <th class="text-center">數量</th>
+                  <th>來源地</th>
+                  <th>接收地</th>
+                  <th>性質</th>
+                  <th>備註</th>
+                </tr>
+              </thead>
+              <tbody id="confirmProductStockMovementItems"></tbody>
+            </table>
+          </div>
+          <div id="confirmStockAuditEmpty" class="small text-muted d-none">本次沒有商品庫存調整明細。</div>
+        </div>
+
+        <div id="confirmTransferSection" class="mb-1 d-none">
+          <h6 class="fw-semibold mb-2">
+            <i class="fas fa-right-left me-1"></i>調撥
+          </h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>商品</th>
+                  <th>規格</th>
+                  <th class="text-center">數量</th>
+                  <th>來源地</th>
+                  <th>接收地</th>
+                  <th>類型</th>
+                  <th>備註</th>
+                </tr>
+              </thead>
+              <tbody id="confirmTransferMovementItems"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>取消
+        </button>
+        <button type="button" class="btn btn-success btn-sm" id="confirmProductStockMovementReason">
+          <i class="fas fa-check me-1"></i>確認
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 

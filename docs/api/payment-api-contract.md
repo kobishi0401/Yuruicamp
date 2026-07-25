@@ -1,10 +1,10 @@
-# Payment API Contract（v0.2）
+# Payment API Contract（v0.3）
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Implemented（D-1～D-6）；退款 API 本體留 W3 |
-| **日期** | 2026-07-23 |
-| **版本** | 0.2 |
+| **狀態** | Implemented（D-1～D-6）；W3 Admin 全額退款 port（stub） |
+| **日期** | 2026-07-25 |
+| **版本** | 0.3 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **DB** | `payment_method`／`payment_status` ENUM、`payment_notifications`、`orders`、`bookings` |
 | **ENUM** | [`schema-enums.md`](../schema-enums.md) |
@@ -125,12 +125,33 @@
 
 ---
 
-## 8. v0.2 不做
+## 8. Admin 全額退款 Port（W3）
+
+> 對外 HTTP 仍走 Admin 契約的 `POST .../cancel`；本節定義 **Payment port** 行為。
+
+| 步驟 | 說明 |
+|------|------|
+| 1 | 依 `payment_notifications` 成功列取得 `merchant_trade_no`／`provider_trade_no`（找不到 → `PAYMENT_PROVIDER_CONFLICT`） |
+| 2 | 呼叫 `EcpayGateway.refundFull(...)`（真實環境對綠界退款 API；**stub=true 時固定成功**） |
+| 3 | 失敗 → 拋業務錯誤 `PAYMENT_REFUND_FAILED`；**呼叫端不得**只改本地 `cancelled`／`refunded` |
+| 4 | 成功 → 呼叫端更新 `payment_status=refunded`、`refund_status=refunded`（本波全額；不做部分退） |
+
+錯誤碼：
+
+| code | HTTP | 何時 |
+|------|------|------|
+| `PAYMENT_REFUND_FAILED` | 409 | 綠界／stub 退款失敗 |
+| `PAYMENT_PROVIDER_CONFLICT` | 409 | 找不到可退款的 Notify 紀錄、或交易狀態衝突 |
+
+---
+
+## 9. v0.3 不做
 
 | 項目 | 原因 |
 |------|------|
 | LINE Pay／舊 `credit-card` 字串 | ENUM 已移除 |
-| 綠界退款 HTTP 實作 | W3 |
+| 部分退款 | 本波只做全額（取消） |
+| 獨立會員自助退款 API | 走 Admin 客服命令 |
 | 信用卡號經自家 API | 全部在綠界 |
 
 ---
@@ -139,5 +160,6 @@
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| 0.3 | 2026-07-25 | W3：Admin 全額退款 port／錯誤碼；stub 退款；§7 規則仍有效 |
 | 0.2 | 2026-07-23 | D-2／D-4 端點；COD／取消退款／券回滾定案；stub aio-checkout |
 | 0.1 | 2026-07-20 | ECPay 真相在 Notify；COD 僅商城 |

@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "RUN_BACKEND_IT", matches = "true")
-// 使用真正 PostgreSQL 驗證商品四表交易、RBAC、唯讀庫存與公開上下架結果。
+// 使用真正 PostgreSQL 驗證商品四表交易、RBAC、可選 stockLocations 寫庫存與公開上下架結果。
 class AdminProductPostgreSqlIntegrationTest {
 
 	private static final String TOKEN =
@@ -190,6 +190,52 @@ class AdminProductPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void createWithStockLocationsWritesInventoryStocks() throws Exception {
+		jdbc.update("""
+				INSERT INTO inventory_locations (id, code, inventory_domain, type, name, active)
+				VALUES ('main', 'main', 'store', 'main', '主倉', true)
+				ON CONFLICT (id) DO UPDATE SET active = true, inventory_domain = 'store'
+				""");
+		String createBody = """
+				{
+				  "name": "G2C 有庫存商品",
+				  "categoryId": 99002,
+				  "brandId": "g2c-brand",
+				  "status": "active",
+				  "images": [],
+				  "variants": [{
+				    "sku":"G2C-SKU-STOCK",
+				    "specification":"標準",
+				    "price":"100.00",
+				    "status":"active",
+				    "stockLocations":[{"locationId":"main","onHandQuantity":7}]
+				  }]
+				}
+				""";
+		String responseBody = mockMvc.perform(post("/api/admin/products")
+					.header("Authorization", TOKEN)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(createBody))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.variants[0].onHandQuantity").value(7))
+				.andReturn()
+				.getResponse()
+				.getContentAsString();
+		String variantId = objectMapper.readTree(responseBody)
+				.path("data")
+				.path("variants")
+				.get(0)
+				.path("id")
+				.asText();
+		org.junit.jupiter.api.Assertions.assertEquals(
+				7,
+				jdbc.queryForObject(
+						"SELECT on_hand_quantity FROM inventory_stocks WHERE variant_id = ? AND location_id = 'main'",
+						Integer.class,
+						variantId));
+	}
+
+	@Test
 	void viewerWithoutEditPermissionCannotCreate() throws Exception {
 		jdbc.update("UPDATE admin_users SET role = 'operator' WHERE id = 'G2C-ADMIN'");
 		jdbc.update("""
@@ -220,6 +266,7 @@ class AdminProductPostgreSqlIntegrationTest {
 	}
 
 	private void cleanup() {
+		jdbc.update("DELETE FROM inventory_stocks WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE item_id IN (SELECT id FROM equipment_items WHERE category_id = 99002)))");
 		jdbc.update("DELETE FROM equipment_images WHERE item_id IN (SELECT item_id FROM products WHERE id LIKE 'P%') AND item_id IN (SELECT id FROM equipment_items WHERE category_id = 99002)");
 		jdbc.update("DELETE FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE item_id IN (SELECT id FROM equipment_items WHERE category_id = 99002))");
 		jdbc.update("DELETE FROM products WHERE item_id IN (SELECT id FROM equipment_items WHERE category_id = 99002)");

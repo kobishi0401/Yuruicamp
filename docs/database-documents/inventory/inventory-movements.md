@@ -32,9 +32,10 @@ inventory_movements
 1. 在 `inventory_movements` 建立 `draft` 表頭，指定庫存領域、異動類型、來源或目的地點、員工與原因。
 2. 商城異動明細寫入 `store_inventory_movement_items`；租借異動明細寫入 `rental_inventory_movement_items`。
 3. 明細的 `inventory_domain` 必須與表頭相同，資料庫以複合外鍵強制驗證。
-4. 異動類型決定地點組合：進貨只允許目的地、損耗只允許來源地、移轉必須同時有不同的來源與目的地。
+4. 異動類型決定表頭地點組合：進貨只允許目的地、損耗只允許來源地、移轉必須同時有不同的來源與目的地；**`product_stock_update` 表頭兩端皆 NULL**，庫位寫在明細列。
 5. 表頭改為 `posted` 時必須填入 `posted_at`；`draft` 與 `cancelled` 不得填入 `posted_at`。
-6. 讀取清單或明細時，使用 `inventory_movement_items_view` 或 `inventory_movement_dto_view` 將兩個領域的資料統一呈現。
+6. **ADM-W2-08**：`product_stock_update` 的 post **只定稿、不改** `inventory_stocks`（商城 on-hand 由 Admin Products 寫入）。`conversion_*` 成對過帳仍改兩邊庫存。
+7. 讀取清單或明細時，使用 `inventory_movement_items_view` 或 `inventory_movement_dto_view` 將兩個領域的資料統一呈現。
 
 
 ## 欄位說明
@@ -51,14 +52,17 @@ inventory_movements
                                 `transfer`
                                 `conversion_out`
                                 `conversion_in`
+                                `product_stock_update`  （ADM-W2-08：商品 Modal 稽核單；表頭 source／destination 必須皆 NULL；細節在明細列）
 
 * status                        異動狀態，只允許 `draft`、`posted`、`cancelled`。
 
 * source_location_id            來源庫存地點，NULL；
-                                與 `inventory_domain` 組合後外鍵指向 `inventory_locations`。 (location 指向地點，domain 驗證store / rental)
+                                與 `inventory_domain` 組合後外鍵指向 `inventory_locations`。
+                                `product_stock_update` 表頭必須為 NULL（列級庫位在明細）。
 
 * destination_location_id       目的庫存地點，NULL；
                                 與 `inventory_domain` 組合後外鍵指向 `inventory_locations`。
+                                `product_stock_update` 表頭必須為 NULL。
 
 * employee_id                   負責員工，外鍵指向 `admin_users.id`。
                                 *idx_inventory_movements_employee ON (employee_id)*
@@ -87,7 +91,16 @@ inventory_movements
 
 * sku_snapshot          異動當下 SKU 快照
 * item_name_snapshot    異動當下品名快照
-* quantity              異動數量，必須大於 `0`。
+* quantity              異動數量，必須大於 `0`（正整數；方向靠 from／to）。
+* source_location_id    列級來源庫位，NULL 表示 UI「---」；與 `inventory_domain` 外鍵指向 `inventory_locations`。
+* destination_location_id 列級目的庫位，NULL 表示 UI「---」。
+* line_reason           列級備註，可空（選填）。API／契約欄位名 `lineReason`；Admin UI 標籤為「備註」。
+* line_nature           列級異動性質，可空。API `lineNature`；白名單：
+                        `receipt`（進貨）／`transfer`（移轉）／`stocktake`（盤點）／
+                        `damage`（折損）／`write_off`（損耗）。
+                        與 from／to **獨立**：改性質不改庫位；產單時前端依 from／to 推導預設後可再改。
+* CHECK：至少一端庫位非 NULL；兩端都有時必須不同。
+* CHECK：`line_nature` 為 NULL 或上列白名單之一。
 *idx_store_inventory_movement_items_movement ON (movement_id、inventory_domain)*
 
 ### rental_inventory_movement_items
@@ -158,18 +171,11 @@ inventory_movements
 
 
 
-## G-3 實作狀態
+## G-3／W2-08 實作狀態
 
-* 正式 Backend 模式已改由 `/api/admin/inventory-movements` 建立 draft、加入明細、過帳與作廢；只有過帳交易能寫入實體庫存表。
-* API 只接受 canonical `receipt`、`write_off`、`transfer`；中文只留在前端顯示層。
-* posted／cancelled 的不可變性、明細僅能在 draft 編輯、重複過帳冪等及負庫存防護已由 Service 執行。
-* 前端 legacy JSON 與記憶體流程只留在 Mock 模式；Backend 模式的 `addMovementRecord()` 不會送出胖 Mock 紀錄。
-* 跨領域 `conversion_out`／`conversion_in` 尚未開放，商店轉租借需另立成對轉換契約。
-* 現有表頭只有一個 `employee_id`，用來保存最後過帳或作廢操作者；若需逐事件 audit history，仍需新增獨立 Schema。
-        目前 `latest_schema.sql` 中沒有這些 Trigger，需由後端執行。
-
-* 中風險：前端異動資料格式使用顯示用欄位（例如 `fromStore`、`toStore`、`productName`）
-        正式表的 location ID、領域、規格 ID、快照欄位不同，串接前需建立 DTO 轉換與驗證。
-
+* **ADM-W2-08（契約 v0.16／v0.17；✅ 已驗收）**：新單以 `product_stock_update` 為主；明細可帶列級 from／to／`line_reason`／`line_nature`；**post 不定庫存**。異動頁改唯讀；商城 on-hand 由 Products 寫入。
+* **方案 B（v0.17）**：列表仍不顯示異動性質欄；詳情列性質可下拉改並寫入 `line_nature`；產單帶 from／to 推導預設（進貨／移轉／損耗）；盤點／折損僅手動。`line_reason` UI 稱「備註」。
+* 歷史 `receipt`／`write_off`／`transfer` 仍可讀；開發環境不符格式之舊異動資料可清（Seed 本來就不建 movements）。
+* 跨領域 `conversion_out`／`conversion_in` 由 `/api/admin/inventory-conversions` 成對處理；**過帳仍改**兩邊 on-hand；只允許 store→rental。
+* 現有表頭只有一個 `employee_id`，用來保存最後過帳或作廢操作者；改 reason 的 PATCH **不**更新 `employee_id`。
 * 中風險：三張表的 `updated_at` 只有預設值，更新時不會自動刷新。
-* 低風險：正式異動表不再保留舊 JSON ID，不應在正式交易流程使用。

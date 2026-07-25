@@ -3,9 +3,9 @@
 -- Easy-to-find fixtures for Admin Post-G6 W1 manual QA.
 --
 -- 固定 ID（後台搜尋用）：
---   商城訂單 W1-ORD-NOTE  … paid + unshipped（測備註後再出貨）
+--   商城訂單 W1-ORD-NOTE  … paid + unshipped（測備註／出貨／W3 取消退款；含 success Notify）
 --   商城訂單 W1-ORD-REV   … completed（綁可刪評論 W1-REV-DEL）
---   租借預約 W1-BK-NOTE   … confirmed + 含租借裝備（測預約備註）
+--   租借預約 W1-BK-NOTE   … confirmed + 含租借裝備（測預約備註／W3 取消；含 success Notify）
 --   評論     W1-REV-DEL   … 專供刪除驗收（刪了可重跑 seed 還原）
 --   最低庫存 V001 @ main  … minimum_quantity = 3（測 min-stock）
 -- =============================================================================
@@ -23,7 +23,7 @@ INSERT INTO public.orders (
 VALUES (
     'W1-ORD-NOTE', 'U001',
     'Amy Chen', 'amy@example.com',
-    'Amy Chen', '台南市東區長榮路二段200號（W1 備註驗收）', '0912345678',
+    'Amy Chen', '台南市東區長榮路二段200號', '0912345678',
     980.00, 0.00, 0.00, 980.00,
     'ecpay-credit', 'paid', 'none', 'unshipped',
     NULL,
@@ -68,7 +68,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 INSERT INTO public.order_status_history (id, order_id, status, occurred_at, actor_id, note)
 OVERRIDING SYSTEM VALUE
-VALUES (9107111, 'W1-ORD-NOTE', 'unshipped', TIMESTAMPTZ '2026-07-20T10:05:00+08:00', NULL, 'W1 待出貨（可測備註）')
+VALUES (9107111, 'W1-ORD-NOTE', 'unshipped', TIMESTAMPTZ '2026-07-20T10:05:00+08:00', NULL, 'W1 待出貨')
 ON CONFLICT (id) DO UPDATE SET
     order_id = EXCLUDED.order_id,
     status = EXCLUDED.status,
@@ -100,6 +100,27 @@ SET on_hand_quantity = GREATEST(on_hand_quantity, 6),
 WHERE location_id = 'main'
   AND variant_id = 'V014-01'
   AND inventory_domain = 'store';
+
+-- W3：已付款取消／退款需要 success Notify（對單 merchant_trade_no）
+-- Paid cancel/refund needs a success notify row for MerchantTradeNo lookup.
+DELETE FROM public.payment_notifications
+WHERE order_id = 'W1-ORD-NOTE'
+   OR merchant_trade_no = 'W1ORDNOTE0001';
+
+INSERT INTO public.payment_notifications (
+    provider, merchant_trade_no, provider_trade_no,
+    order_id, booking_id, raw_payload, result, processed_at
+)
+VALUES (
+    'ecpay',
+    'W1ORDNOTE0001',
+    'TN-W1-ORD-NOTE',
+    'W1-ORD-NOTE',
+    NULL,
+    '{"seed":"w1-ord-note","RtnCode":"1"}'::jsonb,
+    'success',
+    TIMESTAMPTZ '2026-07-20T10:05:00+08:00'
+);
 
 -- ── 2) 商城訂單：專供刪評論 ───────────────────────────────────────────────
 INSERT INTO public.orders (
@@ -252,11 +273,31 @@ INSERT INTO public.booking_status_history (id, booking_id, status, occurred_at, 
 OVERRIDING SYSTEM VALUE
 VALUES
     (9107511, 'W1-BK-NOTE', 'pending', TIMESTAMPTZ '2026-07-21T11:00:00+08:00', NULL, 'W1 預約已送出'),
-    (9107512, 'W1-BK-NOTE', 'confirmed', TIMESTAMPTZ '2026-07-21T11:30:00+08:00', NULL, 'W1 已確認（可測備註）')
+    (9107512, 'W1-BK-NOTE', 'confirmed', TIMESTAMPTZ '2026-07-21T11:30:00+08:00', NULL, 'W1 已確認')
 ON CONFLICT (id) DO UPDATE SET
     booking_id = EXCLUDED.booking_id,
     status = EXCLUDED.status,
     note = EXCLUDED.note;
+
+-- W3：已付款預約取消同樣需要 success Notify
+DELETE FROM public.payment_notifications
+WHERE booking_id = 'W1-BK-NOTE'
+   OR merchant_trade_no = 'W1BKNOTE00001';
+
+INSERT INTO public.payment_notifications (
+    provider, merchant_trade_no, provider_trade_no,
+    order_id, booking_id, raw_payload, result, processed_at
+)
+VALUES (
+    'ecpay',
+    'W1BKNOTE00001',
+    'TN-W1-BK-NOTE',
+    NULL,
+    'W1-BK-NOTE',
+    '{"seed":"w1-bk-note","RtnCode":"1"}'::jsonb,
+    'success',
+    TIMESTAMPTZ '2026-07-21T11:00:00+08:00'
+);
 
 -- ── 4) 最低庫存閾值（W1-07）──────────────────────────────────────────────
 INSERT INTO public.product_variant_min_stocks (

@@ -30,65 +30,39 @@
       <button id="btnClearMovementSort" class="btn btn-sm btn-outline-secondary d-none">
         <i class="fas fa-rotate-left me-1"></i>清除條件
       </button>
-      <button id="openMovementDraftModal" class="btn btn-sm btn-primary backend-movement-action d-none">
+      <button id="openMovementDraftModal" class="btn btn-sm btn-primary backend-movement-write-action d-none">
         <i class="fas fa-plus me-1"></i>建立異動草稿
       </button>
     </div>
   </div>
 
-  <!-- 表格容器 -->
+  <!-- 表格容器：編號短號 MOV-/CVT-；列表不顯示狀態／異動性質 -->
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0 admin-data-table" id="movementTable">
         <thead class="table-light">
           <tr>
             <th>異動編號</th>
-
-            <!-- 異動日期：可排序（ISO 字串 YYYY-MM-DD 可直接比大小） -->
             <th class="sortable-th" data-sort-key="createdAt">
               異動日期 <i class="fas fa-sort sort-icon ms-1"></i>
             </th>
-
-            <!-- 負責員工 ID：多選篩選（checkbox 由 movement.js 依資料動態填入） -->
             <th class="filter-th" data-filter-key="employeeId">
-              負責員工 ID
+              員工
               <i class="fas fa-filter filter-icon ms-1"></i>
               <span class="filter-dot d-none"></span>
-              <div class="filter-dropdown d-none">
-                <!-- populateEmployeeFilterOptions() 動態填入 -->
-              </div>
+              <div class="filter-dropdown d-none"></div>
             </th>
-
             <th>明細筆數</th>
-
-            <th>狀態</th>
-
-            <!-- 異動性質：多選篩選（比對 items[].type） -->
-            <th class="filter-th" data-filter-key="movementType">
-              異動性質
-              <i class="fas fa-filter filter-icon ms-1"></i>
-              <span class="filter-dot d-none"></span>
-              <div class="filter-dropdown d-none">
-                <label><input type="checkbox" value="進貨"> 進貨</label>
-                <label><input type="checkbox" value="移轉"> 移轉</label>
-                <label><input type="checkbox" value="調撥"> 調撥</label>
-                <label><input type="checkbox" value="營地互轉"> 營地互轉</label>
-                <label><input type="checkbox" value="損耗"> 損耗</label>
-                <label><input type="checkbox" value="—"> 未分類</label>
-              </div>
-            </th>
           </tr>
         </thead>
-        <!-- tbody 由 movement.js 的 renderMovementTable() 動態填入 -->
         <tbody id="movementTableBody">
           <tr>
-            <td colspan="6" class="text-center py-4">
+            <td colspan="4" class="text-center py-4">
               <div class="spinner-border spinner-border-sm me-2"
                    style="color: var(--admin-brand-accent);"></div>
               <span class="text-muted">載入庫存異動紀錄中...</span>
             </td>
           </tr>
-          <!-- colspan 需對應 thead 6 欄 -->
         </tbody>
       </table>
     </div>
@@ -109,26 +83,15 @@
       </div>
       <div class="modal-body">
         <div class="row g-3 mb-3">
-          <div class="col-sm-4">
-            <small class="text-muted d-block">異動日期</small>
+          <div class="col-sm-6">
+            <small class="text-muted d-block">異動時間</small>
             <span id="modalMovementDate" class="fw-semibold"></span>
           </div>
-          <div class="col-sm-4">
-            <small class="text-muted d-block">員工 ID</small>
+          <div class="col-sm-6">
+            <small class="text-muted d-block">員工</small>
             <span id="modalMovementEmployeeId" class="fw-semibold"></span>
           </div>
-          <div class="col-sm-4">
-            <small class="text-muted d-block">狀態</small>
-            <span id="modalMovementStatus"></span>
-          </div>
-          <div class="col-sm-6">
-            <small class="text-muted d-block">庫存領域</small>
-            <span id="modalMovementDomain" class="fw-semibold"></span>
-          </div>
-          <div class="col-sm-6">
-            <small class="text-muted d-block">原因</small>
-            <span id="modalMovementReason" class="fw-semibold"></span>
-          </div>
+          <!-- 狀態／庫存領域／異動類型／表頭原因已移除；說明改看列備註 -->
         </div>
         <div class="table-responsive">
           <table class="table table-sm table-bordered mb-0">
@@ -139,6 +102,7 @@
                 <th>配送地</th>
                 <th>接收地</th>
                 <th>異動性質</th>
+                <th>備註</th>
               </tr>
             </thead>
             <tbody id="modalMovementItems">
@@ -146,7 +110,7 @@
             </tbody>
           </table>
         </div>
-        <div id="draftMovementItemEditor" class="border rounded p-3 mt-3 d-none">
+        <div id="draftMovementItemEditor" class="border rounded p-3 mt-3 d-none backend-movement-write-action">
           <div class="small fw-semibold mb-2">新增草稿明細</div>
           <div class="row g-2 align-items-end">
             <div class="col-md-8">
@@ -166,10 +130,12 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer backend-movement-action d-none">
-        <button id="cancelMovementDraft" type="button" class="btn btn-outline-danger d-none">作廢草稿</button>
-        <button id="postMovementDraft" type="button" class="btn btn-primary d-none">確認過帳</button>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">關閉</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">關閉</button>
+        <button id="cancelMovementDraft" type="button"
+                class="btn btn-outline-danger btn-sm d-none backend-movement-write-action">作廢草稿</button>
+        <button id="postMovementDraft" type="button"
+                class="btn btn-primary btn-sm d-none backend-movement-write-action">確認過帳</button>
       </div>
     </div>
   </div>

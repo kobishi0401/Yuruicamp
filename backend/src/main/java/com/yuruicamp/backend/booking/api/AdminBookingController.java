@@ -89,6 +89,17 @@ public class AdminBookingController {
 		return ApiResponse.ok(service.complete(id, principal.adminUserId(), request == null ? null : request.note()));
 	}
 
+	// W3-03：已付款預約取消＋同交易全額退款。
+	@PostMapping("/{id}/cancel")
+	@PreAuthorize("hasAuthority('bookings.edit')")
+	@Operation(summary = "取消已付款預約", description = "RBAC: bookings.edit；先退款再釋放")
+	public ApiResponse<AdminBookingDetailResponse> cancel(
+			@PathVariable String id,
+			@AuthenticationPrincipal AdminPrincipal principal,
+			@Valid @RequestBody(required = false) AdminBookingTransitionRequest request) {
+		return ApiResponse.ok(service.cancel(id, principal.adminUserId(), request == null ? null : request.note()));
+	}
+
 	// 覆寫預約內部備註；不改履約或付款狀態。
 	@PatchMapping("/{id}/internal-note")
 	@PreAuthorize("hasAuthority('bookings.edit')")

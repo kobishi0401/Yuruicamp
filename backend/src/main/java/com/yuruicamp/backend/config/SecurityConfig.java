@@ -55,7 +55,6 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/admin/auth/firebase/session").permitAll()
 						// 線 B：商品公開讀（Product API Contract v0.1）— 不必登入
 						.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/assets/uploads/reviews/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
 						// 線 F：只公開有效優惠券主檔，會員 claim 仍需登入。
 						.requestMatchers(HttpMethod.GET, "/api/coupons").permitAll()

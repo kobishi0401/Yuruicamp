@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Active（W1～W3 ✅；W4-01～03 ✅；W4-06 ✅；W4-04／05 ⏭️ 延後） |
+| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後） |
 | **日期** | 2026-07-25 |
 | **總覽（需求／波次／依賴）** | [`../admin-post-g6-task-list.md`](../admin-post-g6-task-list.md) |
 | **契約** | [`../../docs/api/admin-api-contract.md`](../../docs/api/admin-api-contract.md) |
@@ -81,7 +81,7 @@
 | ADM-W3-02 | [`w3/ADM-W3-02-order-refund.md`](./w3/ADM-W3-02-order-refund.md) | ✅ 全額退款（cancel 同交易；stub port） |
 | ADM-W3-03 | [`w3/ADM-W3-03-booking-cancel.md`](./w3/ADM-W3-03-booking-cancel.md) | ✅ 預約已付款取消 B1 |
 
-### W4 — P2～P3 主檔與內容
+### W4 — P2～P3 主檔與內容 ✅（04／05 延後）
 
 | ID | 檔案 | 摘要 |
 |----|------|------|
@@ -96,7 +96,7 @@
 
 ## 建議開工順序（精簡）
 
-見總覽 §6。W1／W2／W3／W4-06 已完成；W4-04／05 延後至內容／GCP 就緒。
+見總覽 §6。**Admin post-G6 主線（W1～W4）已完成**；延後項：W4-04 文章、W4-05 圖檔（GCP）。下一步見 [`admin-post-g6-task-list.md`](../admin-post-g6-task-list.md) § W4 完成門檻與 [`post-firebase-roadmap-checklist.md`](../post-firebase-roadmap-checklist.md)。
 
 ---
 
@@ -112,3 +112,4 @@
 | 2026-07-25 | **W4-02 完成**：營位 CRUD＋容量峰值 409；Admin v0.21；計價 UI 用語改為一般價／特殊節日價（方案 A）；下一步 W4-03 假日曆 |
 | 2026-07-25 | **W4-03 完成**：`calendar_dates` Admin CRUD；Admin v0.22；預約排程「特殊節日曆」Modal；下一步 W4-04 文章 |
 | 2026-07-25 | **W4-06 完成**：`shop-summary`／`booking-summary`；Admin v0.23；前端改打 summary API |
+| 2026-07-25 | **W4 波次收斂**：手動驗收通過；04／05 延後；post-G6 主線 W1～W4 ✅ |

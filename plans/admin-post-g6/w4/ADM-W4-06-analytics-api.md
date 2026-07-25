@@ -52,6 +52,7 @@
 
 - [x] `AdminAnalyticsPostgreSqlIntegrationTest`（主接縫；需 `RUN_BACKEND_IT=true` + PostgreSQL）
 - [x] `npm run test:admin-analytics` facade
+- [x] 手動驗收：Network 打 `shop-summary`／`booking-summary`；不拉 orders／bookings 全列表；期間切換、KPI、錯誤提示
 
 ---
 
@@ -68,3 +69,4 @@
 |------|--------|------|------|
 | 2026-07-25 | Agent | 📋 | Spec 已寫入；待實作 |
 | 2026-07-25 | Agent | ✅ | 後端 summary API + 前端改打 + facade；IT 需本機 Postgres |
+| 2026-07-25 | Amy | ✅ | 手動驗收通過（summary API、期間篩選、KPI、無全列表拉取） |

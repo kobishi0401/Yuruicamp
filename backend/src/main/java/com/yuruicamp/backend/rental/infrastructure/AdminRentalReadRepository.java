@@ -9,17 +9,18 @@ import java.util.Locale;
 import java.util.Map;
 
 import com.yuruicamp.backend.rental.api.AdminRentalResponse;
+import com.yuruicamp.backend.rental.api.AdminRentalStockLocationResponse;
 import com.yuruicamp.backend.rental.api.AdminRentalVariantResponse;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * 後台租借 SKU 讀模型：先分頁出 {@code rental_skus.id}，再批次組回規格清單。
- * Admin rental SKU read model：paginate ids first, then batch-assemble variants.
+ * 後台租借 SKU 讀模型：先分頁出 {@code rental_skus.id}，再批次組回規格＋唯讀庫存。
+ * Admin rental SKU read model：paginate ids first, then batch-assemble variants and stocks.
  *
- * <p>寫法完全對齊 {@code AdminProductReadRepository}，方便新手比對兩者差異
- * （主要差異：沒有圖片、沒有唯讀庫存，因為租借的庫存／定價不在這個 API 範圍）。</p>
+ * <p>庫存讀法對齊 {@code AdminProductReadRepository#findStocks}：
+ * {@code rental_sku_variant_stocks} ＋ active {@code rental_stock_reservations}。</p>
  */
 @Repository
 public class AdminRentalReadRepository {
@@ -98,7 +99,8 @@ public class AdminRentalReadRepository {
 				row.getObject("created_at", OffsetDateTime.class),
 				row.getObject("updated_at", OffsetDateTime.class)));
 
-		Map<String, List<AdminRentalVariantResponse>> variantsById = findVariants(parameters);
+		Map<String, List<VariantRow>> variantsBySku = findVariantRows(parameters);
+		Map<String, List<AdminRentalStockLocationResponse>> stocksByVariant = findStocks(parameters);
 		Map<String, RentalHeader> headersById = new HashMap<>();
 		headers.forEach(header -> headersById.put(header.id(), header));
 
@@ -108,32 +110,122 @@ public class AdminRentalReadRepository {
 			if (header == null) {
 				continue;
 			}
-			result.add(toResponse(header, variantsById.getOrDefault(id, List.of())));
+			List<AdminRentalVariantResponse> variants = toVariants(
+					variantsBySku.getOrDefault(id, List.of()),
+					stocksByVariant);
+			result.add(toResponse(header, variants));
 		}
 
 		return result;
 	}
 
-	private Map<String, List<AdminRentalVariantResponse>> findVariants(MapSqlParameterSource parameters) {
-		Map<String, List<AdminRentalVariantResponse>> result = new LinkedHashMap<>();
+	private Map<String, List<VariantRow>> findVariantRows(MapSqlParameterSource parameters) {
+		Map<String, List<VariantRow>> result = new LinkedHashMap<>();
 		jdbc.query("""
 				SELECT rental_sku_id, id, sku, color, size, specification, status, created_at, updated_at
 				FROM rental_sku_variants
 				WHERE rental_sku_id IN (:ids)
 				ORDER BY rental_sku_id, id
 				""", parameters, row -> {
-			AdminRentalVariantResponse variant = new AdminRentalVariantResponse(
+			VariantRow variant = new VariantRow(
 					row.getString("id"),
 					row.getString("sku"),
 					row.getString("color"),
 					row.getString("size"),
 					row.getString("specification"),
 					row.getString("status"),
-					row.getObject("created_at", OffsetDateTime.class).toInstant(),
-					row.getObject("updated_at", OffsetDateTime.class).toInstant());
+					row.getObject("created_at", OffsetDateTime.class),
+					row.getObject("updated_at", OffsetDateTime.class));
 			result.computeIfAbsent(row.getString("rental_sku_id"), ignored -> new ArrayList<>())
 					.add(variant);
 		});
+
+		return result;
+	}
+
+	/**
+	 * 批次讀取租借規格在各庫位的 on_hand 與 active 保留量。
+	 * Batch-load rental on-hand + active reservations per location.
+	 */
+	private Map<String, List<AdminRentalStockLocationResponse>> findStocks(
+			MapSqlParameterSource parameters) {
+		Map<String, List<AdminRentalStockLocationResponse>> result = new HashMap<>();
+		jdbc.query("""
+				WITH stock_keys AS (
+				    SELECT stock.rental_sku_variant_id AS variant_id, stock.location_id
+				    FROM rental_sku_variant_stocks stock
+				    UNION
+				    SELECT reservation.rental_sku_variant_id, reservation.location_id
+				    FROM rental_stock_reservations reservation
+				    WHERE reservation.status = 'active'
+				), reservations AS (
+				    SELECT rental_sku_variant_id AS variant_id, location_id, sum(quantity) AS quantity
+				    FROM rental_stock_reservations
+				    WHERE status = 'active'
+				    GROUP BY rental_sku_variant_id, location_id
+				)
+				SELECT variant.id AS variant_id,
+				       location.id AS location_id, location.code AS location_code,
+				       location.type AS location_type, location.name,
+				       COALESCE(stock.on_hand_quantity, 0) AS on_hand_quantity,
+				       COALESCE(reservation.quantity, 0) AS reserved_quantity
+				FROM rental_sku_variants variant
+				JOIN stock_keys key ON key.variant_id = variant.id
+				JOIN inventory_locations location ON location.id = key.location_id
+				LEFT JOIN rental_sku_variant_stocks stock
+				       ON stock.rental_sku_variant_id = key.variant_id
+				      AND stock.location_id = key.location_id
+				LEFT JOIN reservations reservation
+				       ON reservation.variant_id = key.variant_id
+				      AND reservation.location_id = key.location_id
+				WHERE variant.rental_sku_id IN (:ids)
+				  AND location.inventory_domain = 'rental'
+				ORDER BY variant.id, location.type, location.id
+				""", parameters, row -> {
+			int onHand = row.getInt("on_hand_quantity");
+			int reserved = row.getInt("reserved_quantity");
+			AdminRentalStockLocationResponse stock = new AdminRentalStockLocationResponse(
+					row.getString("location_id"),
+					row.getString("location_code"),
+					row.getString("location_type"),
+					row.getString("name"),
+					onHand,
+					reserved,
+					Math.max(onHand - reserved, 0));
+			result.computeIfAbsent(row.getString("variant_id"), ignored -> new ArrayList<>())
+					.add(stock);
+		});
+
+		return result;
+	}
+
+	private List<AdminRentalVariantResponse> toVariants(
+			List<VariantRow> rows,
+			Map<String, List<AdminRentalStockLocationResponse>> stocksByVariant) {
+		List<AdminRentalVariantResponse> result = new ArrayList<>();
+		for (VariantRow row : rows) {
+			List<AdminRentalStockLocationResponse> locations = stocksByVariant
+					.getOrDefault(row.id(), List.of());
+			int onHand = locations.stream()
+					.mapToInt(AdminRentalStockLocationResponse::onHandQuantity)
+					.sum();
+			int reserved = locations.stream()
+					.mapToInt(AdminRentalStockLocationResponse::reservedQuantity)
+					.sum();
+			result.add(new AdminRentalVariantResponse(
+					row.id(),
+					row.sku(),
+					row.color(),
+					row.size(),
+					row.specification(),
+					row.status(),
+					onHand,
+					reserved,
+					Math.max(onHand - reserved, 0),
+					locations,
+					row.createdAt().toInstant(),
+					row.updatedAt().toInstant()));
+		}
 
 		return result;
 	}
@@ -187,6 +279,17 @@ public class AdminRentalReadRepository {
 			String category,
 			String brandId,
 			String brand,
+			OffsetDateTime createdAt,
+			OffsetDateTime updatedAt) {
+	}
+
+	private record VariantRow(
+			String id,
+			String sku,
+			String color,
+			String size,
+			String specification,
+			String status,
 			OffsetDateTime createdAt,
 			OffsetDateTime updatedAt) {
 	}

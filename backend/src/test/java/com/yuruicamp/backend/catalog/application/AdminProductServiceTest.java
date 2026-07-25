@@ -18,6 +18,7 @@ import com.yuruicamp.backend.catalog.infrastructure.ProductRepository;
 import com.yuruicamp.backend.catalog.infrastructure.ProductVariantRepository;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.inventory.infrastructure.AdminInventoryMovementRepository;
 import org.junit.jupiter.api.Test;
 
 class AdminProductServiceTest {
@@ -49,7 +50,8 @@ class AdminProductServiceTest {
 						null,
 						"標準規格",
 						BigDecimal.TEN,
-						"inactive")));
+						"inactive",
+						null)));
 
 		BusinessException error = assertThrows(BusinessException.class, () -> service.create(request));
 
@@ -64,6 +66,7 @@ class AdminProductServiceTest {
 				mock(EquipmentImageRepository.class),
 				mock(ProductCategoryRepository.class),
 				mock(BrandRepository.class),
-				mock(AdminProductReadRepository.class));
+				mock(AdminProductReadRepository.class),
+				mock(AdminInventoryMovementRepository.class));
 	}
 }
