@@ -1,5 +1,9 @@
 # G-2c Admin Products
 
+> **⚠️ 語意覆寫（2026-07-24）**  
+> 商城 `inventory_stocks` 寫入改由 **ADM-W2-08／Admin 契約 v0.17** 規範（Products 可帶 `stockLocations`）。  
+> 下文「庫存只讀／不建立初始庫存／隱藏庫存輸入」為 **G-2c 當日實作紀錄**；現況以契約 v0.17 與 [`ADM-W2-08`](../../../plans/admin-post-g6/w2/ADM-W2-08-product-stock-update.md)（✅ 已驗收）為準。
+
 ## 用途
 
 讓後台商品頁在 Backend 模式安全維護商城商品、規格、圖片與上下架狀態。資料庫正規化模型是唯一真相，前端舊 Mock 的庫存、租借、評價與銷售衍生欄位不會進入寫入契約。

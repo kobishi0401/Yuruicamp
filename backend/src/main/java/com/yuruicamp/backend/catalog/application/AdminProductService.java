@@ -13,6 +13,7 @@ import java.util.UUID;
 import com.yuruicamp.backend.catalog.api.AdminProductImageRequest;
 import com.yuruicamp.backend.catalog.api.AdminProductLookupResponse;
 import com.yuruicamp.backend.catalog.api.AdminProductResponse;
+import com.yuruicamp.backend.catalog.api.AdminProductStockLocationRequest;
 import com.yuruicamp.backend.catalog.api.AdminProductUpsertRequest;
 import com.yuruicamp.backend.catalog.api.AdminProductVariantRequest;
 import com.yuruicamp.backend.catalog.domain.Brand;
@@ -31,12 +32,14 @@ import com.yuruicamp.backend.catalog.infrastructure.ProductVariantRepository;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.inventory.infrastructure.AdminInventoryMovementRepository;
+import com.yuruicamp.backend.inventory.infrastructure.AdminInventoryMovementRepository.LocationRecord;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 後台商品管理用例，在單一交易內同步裝備主檔、商品、規格與圖片。
+ * 後台商品管理用例：同交易同步裝備主檔、商品、規格、圖片，並可選寫入商城 inventory_stocks（ADM-W2-08）。
  */
 @Service
 public class AdminProductService {
@@ -51,6 +54,7 @@ public class AdminProductService {
 	private final ProductCategoryRepository categoryRepository;
 	private final BrandRepository brandRepository;
 	private final AdminProductReadRepository readRepository;
+	private final AdminInventoryMovementRepository inventoryMovementRepository;
 
 	public AdminProductService(
 			ProductRepository productRepository,
@@ -59,7 +63,8 @@ public class AdminProductService {
 			EquipmentImageRepository imageRepository,
 			ProductCategoryRepository categoryRepository,
 			BrandRepository brandRepository,
-			AdminProductReadRepository readRepository) {
+			AdminProductReadRepository readRepository,
+			AdminInventoryMovementRepository inventoryMovementRepository) {
 		this.productRepository = productRepository;
 		this.equipmentItemRepository = equipmentItemRepository;
 		this.variantRepository = variantRepository;
@@ -67,6 +72,7 @@ public class AdminProductService {
 		this.categoryRepository = categoryRepository;
 		this.brandRepository = brandRepository;
 		this.readRepository = readRepository;
+		this.inventoryMovementRepository = inventoryMovementRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -213,6 +219,8 @@ public class AdminProductService {
 		existing.forEach(variant -> existingById.put(variant.getId(), variant));
 		Set<String> retainedIds = new HashSet<>();
 		List<ProductVariant> changed = new ArrayList<>();
+		// 收集「規格 ID → 要寫的庫位量」；null／省略 stockLocations＝本規格不動庫存
+		List<VariantStockWrite> stockWrites = new ArrayList<>();
 
 		for (AdminProductVariantRequest request : requests) {
 			String requestId = normalizeNullable(request.id());
@@ -240,6 +248,9 @@ public class AdminProductService {
 			variant.setUpdatedAt(now);
 			retainedIds.add(variant.getId());
 			changed.add(variant);
+			if (request.stockLocations() != null) {
+				stockWrites.add(new VariantStockWrite(variant.getId(), request.stockLocations()));
+			}
 		}
 
 		for (ProductVariant variant : existing) {
@@ -258,6 +269,65 @@ public class AdminProductService {
 					ErrorCode.CONFLICT,
 					"SKU or product variant combination already exists");
 		}
+		applyStoreStockWrites(stockWrites, now);
+	}
+
+	/**
+	 * 依契約 Z2 寫入商城 on-hand：只處理有送出的 location；鎖 variant×location 後 upsert。
+	 */
+	private void applyStoreStockWrites(List<VariantStockWrite> stockWrites, Instant now) {
+		if (stockWrites.isEmpty()) {
+			return;
+		}
+		record StockTarget(String variantId, String locationId, int onHand) {
+		}
+		List<StockTarget> targets = new ArrayList<>();
+		for (VariantStockWrite write : stockWrites) {
+			Set<String> seenLocations = new HashSet<>();
+			for (AdminProductStockLocationRequest location : write.locations()) {
+				String locationId = location.locationId().trim();
+				if (!seenLocations.add(locationId)) {
+					throw new BusinessException(
+							ErrorCode.VALIDATION_ERROR,
+							"Duplicate stock location in request: " + locationId);
+				}
+				if (location.onHandQuantity() == null || location.onHandQuantity() < 0) {
+					throw new BusinessException(
+							ErrorCode.VALIDATION_ERROR,
+							"onHandQuantity must be greater than or equal to 0");
+				}
+				LocationRecord record = inventoryMovementRepository.findActiveLocation(locationId);
+				if (record == null || !record.active()) {
+					throw new BusinessException(ErrorCode.NOT_FOUND, "Active inventory location not found");
+				}
+				if (!"store".equals(record.inventoryDomain())) {
+					throw new BusinessException(
+							ErrorCode.VALIDATION_ERROR,
+							"Product stockLocations must use store inventory locations");
+				}
+				targets.add(new StockTarget(write.variantId(), locationId, location.onHandQuantity()));
+			}
+		}
+		targets.sort((left, right) -> {
+			int byVariant = left.variantId().compareTo(right.variantId());
+			return byVariant != 0 ? byVariant : left.locationId().compareTo(right.locationId());
+		});
+		for (StockTarget target : targets) {
+			inventoryMovementRepository.ensureAndLockStock(
+					"store",
+					target.locationId(),
+					target.variantId(),
+					now);
+			inventoryMovementRepository.updateStock(
+					"store",
+					target.locationId(),
+					target.variantId(),
+					target.onHand(),
+					now);
+		}
+	}
+
+	private record VariantStockWrite(String variantId, List<AdminProductStockLocationRequest> locations) {
 	}
 
 	private void replaceImages(

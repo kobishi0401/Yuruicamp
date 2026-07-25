@@ -85,6 +85,17 @@ public class AdminOrderController {
 		return ApiResponse.ok(service.complete(id, principal.adminUserId(), request == null ? null : request.note()));
 	}
 
+	// W3-01／W3-02：未出貨取消；已付款線上單同交易全額退款。
+	@PostMapping("/{id}/cancel")
+	@PreAuthorize("hasAuthority('orders.edit')")
+	@Operation(summary = "取消未出貨訂單", description = "RBAC: orders.edit；paid 線上單先退款")
+	public ApiResponse<AdminOrderDetailResponse> cancel(
+			@PathVariable String id,
+			@AuthenticationPrincipal AdminPrincipal principal,
+			@Valid @RequestBody(required = false) AdminOrderTransitionRequest request) {
+		return ApiResponse.ok(service.cancel(id, principal.adminUserId(), request == null ? null : request.note()));
+	}
+
 	// 覆寫訂單內部備註；不改履約或付款狀態。
 	@PatchMapping("/{id}/internal-note")
 	@PreAuthorize("hasAuthority('orders.edit')")

@@ -697,13 +697,18 @@ button[data-permission-disabled="true"] {
   padding: 0.2rem 0.35rem;
 }
 
-/* 各欄位的左側偏移（圖片欄 28px 含 padding，對應 20px 縮圖） */
+/* 各欄位的左側偏移（圖片欄 28px 含 padding，對應 20px 縮圖）
+ * 共用到品牌：img → name → category → brand
+ * 商店表：… → status → total
+ * 租借表：… → status → action → total（見下方 #rentalProductsTable 覆寫）
+ */
 .sticky-col-img          { left: 0;     width: 28px;  min-width: 28px; }
 .sticky-col-name         { left: 28px;  width: 120px; min-width: 120px; }
 .sticky-col-category     { left: 148px; width: 80px;  min-width: 80px; }
 .sticky-col-brand        { left: 228px; width: 72px;  min-width: 72px; }
-.sticky-col-action       { left: 300px; width: 64px;  min-width: 64px; }
-.sticky-col-total-stock  { left: 364px; width: 80px; min-width: 80px; text-align: center; }
+.sticky-col-status       { left: 300px; width: 56px;  min-width: 56px; text-align: center; }
+.sticky-col-action       { left: 356px; width: 64px;  min-width: 64px; }
+.sticky-col-total-stock  { left: 420px; width: 80px;  min-width: 80px; text-align: center; }
 
 /* 品牌欄文字過長時省略 / Truncate long brand names in narrow column */
 .sticky-col-brand .product-brand-cell {
@@ -714,9 +719,11 @@ button[data-permission-disabled="true"] {
   max-width: 100%;
 }
 
-/* 商店表已移除「操作」欄，總庫存 sticky 對齊品牌欄後方（28 + 120 + 80 + 72 = 300） */
+/* 商店表無「操作」欄：狀態後直接接總庫存
+ * Store table has no action col: status (300+56) → total at 356
+ */
 #productsTable .sticky-col-total-stock {
-  left: 300px;
+  left: 356px;
 }
 
 /* 商品表分類篩選 dropdown 需高於 sticky 表頭 */
@@ -1437,6 +1444,7 @@ tr.variant-rows-expanded > td {
 .bc-legend-dot.bc-status-low { background: #fff3cd; border: 1px solid #ffc107; }
 .bc-legend-dot.bc-status-full { background: #f8d7da; border: 1px solid #f5c2c7; }
 .bc-legend-dot.bc-status-closed { background: #e2d9f3; border: 1px solid #c5b3e6; }
+.bc-legend-dot.bc-status-holiday { background: #ffe8cc; border: 1px solid #ffb366; }
 .bc-legend-dot.bc-status-out_of_window { background: #e9ecef; border: 1px solid #ced4da; }
 
 .bc-calendar-grid {
@@ -1526,6 +1534,23 @@ tr.variant-rows-expanded > td {
 .bc-day-status {
   font-size: 0.68rem;
   color: #6c757d;
+}
+
+.bc-day-cell.isHolidayMarked {
+  box-shadow: inset 0 -3px 0 #ffb366;
+}
+
+.bc-day-holiday-tag {
+  font-size: 0.62rem;
+  color: #c45c00;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-cal-holiday-name:disabled {
+  background: #f8f9fa;
 }
 
 /* 分析報表：趨勢圖總額與上期比較 */

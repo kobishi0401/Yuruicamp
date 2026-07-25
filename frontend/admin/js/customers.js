@@ -183,14 +183,43 @@ function loadBackendCustomerDetail(customerId) {
     });
 }
 
+/**
+ * 把詳情 API 資料套到展開 panel。
+ * 列表缺 birthday／preferences／地址，詳情載入後必須重設 originalSnapshot，
+ * 否則收合時會被誤判成「尚有未確認變更」。
+ * Apply detail DTO to panels; refresh baseline snapshot so list→detail gap is not dirty.
+ */
 function applyBackendCustomerDetail(customer) {
   getCustomerPanels(customer.id).each(function () {
     var $panel = $(this);
-    $panel.find('.birthday-display').text(formatDateDisplay(customer.birthday));
+
+    // 若使用者已開始編輯，不要覆蓋畫面與基準（競態：詳情較晚回來）
+    // Skip overwrite when user already started editing (race with slow detail fetch)
+    var userEditing = Boolean(
+      $panel.data('draftTags') ||
+      $panel.data('draftPreferences') ||
+      $panel.data('draftShippingAddress') ||
+      $panel.find('.phone-input, .email-input, .birthday-input, .points-input').length ||
+      $panel.find('.tags-editor:not(.d-none), .preferences-editor:not(.d-none)').length
+    );
+
     $panel.find('.auth-provider-display').text(getCustomerAuthProviderDisplay(customer));
+
+    if (userEditing) {
+      return;
+    }
+
+    $panel.find('.birthday-display').text(formatDateDisplay(customer.birthday));
     $panel.find('.preferences-display').html(preferencesToHtml(customer.preferences));
     $panel.find('.tags-display').html(tagsToHtml(customer.tags));
     $panel.find('.shipping-address-display').html(formatShippingAddressDisplay(customer.shippingAddress));
+
+    // 用最新 cache 重設基準快照，清掉草稿，隱藏「確認變更」列
+    $panel.data('originalSnapshot', captureCustomerSnapshot(customer.id));
+    $panel.removeData('draftTags');
+    $panel.removeData('draftPreferences');
+    $panel.removeData('draftShippingAddress');
+    $panel.find('.customer-edit-actions').addClass('d-none');
   });
 }
 

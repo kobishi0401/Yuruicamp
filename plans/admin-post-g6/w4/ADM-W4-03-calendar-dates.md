@@ -3,7 +3,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **波次** | W4｜P2 |
-| **狀態** | ⬜ 未開始 |
+| **狀態** | ✅ 完成 |
 | **總覽** | [`../../admin-post-g6-task-list.md`](../../admin-post-g6-task-list.md) § ADM-W4-03 |
 | **索引** | [`../README.md`](../README.md) |
 | **Dependencies** | 對齊線 H／架構 P2；與公休（G-4）互補 |
@@ -13,48 +13,50 @@
 
 ## 0. 開工前必讀
 
-- [ ] 公休 = 能不能訂；假日曆 = 哪天算假日價
-- [ ] 表：`calendar_dates`
+- [x] 公休 = 能不能訂；假日曆 = 哪天走**特殊節日價**（見 Booking 契約 §0.1；**非**週六日自動假日）
+- [x] UI 用語：**一般價**／**特殊節日價**（JSON 欄位仍為 `priceWeekday`／`priceHoliday`）
+- [x] 表：`calendar_dates`
 
 ---
 
 ## 1. 契約
 
-- [ ] Admin：`GET/PUT` 區間或 CRUD 寫死
-- [ ] 欄位：date、is_holiday、holiday_name、source_version 等依 DB
-- [ ] 說明 Booking 計價如何讀取
+- [x] Admin v0.22 §11.2：`GET/PUT/DELETE /api/admin/calendar-dates`
+- [x] 欄位：calendarDate、isHoliday、holidayName、sourceVersion 等依 DB
+- [x] 說明 Booking 計價如何讀取（`countHolidayDates`）
 
 ---
 
 ## 2. Schema
 
-- [ ] 通常不需改
+- [x] 通常不需改
 
 ---
 
 ## 3. 後端
 
-- [ ] 維護 API＋RBAC
-- [ ] 確認 Checkout／availability 計價讀同一來源
+- [x] `AdminCalendarDateController/Service/Repository`＋RBAC
+- [x] Checkout 計價讀同一來源（IT 驗 `holidayCount`）
 
 ---
 
 ## 4. 前端
 
-- [ ] 假日曆維護 UI（booking-calendar）
+- [x] 預約排程「特殊節日曆」Modal（`booking-calendar.calendarDates=true`）
+- [x] `AdminAPI.calendarDates.*`；月曆底部標示特殊節日
 
 ---
 
 ## 5. 測試與驗收
 
-- [ ] 標一日為假日 → 報價 holiday 天數／金額變化（至少一筆整合或手動）
-- [ ] 與公休同時存在時行為符合文件
+- [x] `AdminCalendarDatePostgreSqlIntegrationTest`（upsert/delete + holidayCount）
+- [x] `npm run test:admin-calendar-dates` facade smoke
 
 ---
 
 ## 6. 收尾
 
-- [ ] 總覽 W4-03；本檔 ✅
+- [x] 總覽 W4-03；本檔 ✅
 
 ---
 
@@ -62,4 +64,4 @@
 
 | 日期 | 執行者 | 結果 | 備註 |
 |------|--------|------|------|
-|  |  | ⬜／✅ |  |
+| 2026-07-25 | Agent | ✅ | Admin v0.22；後端 CRUD + IT；前端 Modal + 月曆標示 |

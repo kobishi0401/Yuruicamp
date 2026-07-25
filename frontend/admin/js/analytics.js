@@ -31,6 +31,53 @@ var ANALYTICS_COLORS = [
   '#4e91a0', '#7ab8c3', '#e07040', '#f0a080', '#6f42c1'
 ];
 
+/**
+ * W4-06：正式 Backend 且 analytics.summary 就緒時，KPI／折線／Top10 改打 summary API。
+ * Mock 模式仍用 orders.json／bookings.json 在瀏覽器聚合。
+ */
+function isAnalyticsSummaryMode() {
+  return typeof AdminAPI !== 'undefined'
+    && AdminAPI.isBackendEnabled
+    && AdminAPI.isBackendEnabled()
+    && typeof AdminRuntime !== 'undefined'
+    && AdminRuntime.isFeatureReady
+    && AdminRuntime.isFeatureReady('analytics.summary');
+}
+
+/** API 回傳的 BigDecimal 可能是 number 或字串 */
+function analyticsApiNum(value) {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  var parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function bucketIsoDate(bucket) {
+  if (!bucket) return '';
+  return String(bucket).slice(0, 10);
+}
+
+/** 折線 X 軸標籤（日或週） */
+function timeSeriesLabel(bucket, granularity) {
+  var iso = bucketIsoDate(bucket);
+  if (granularity === 'week') {
+    var end = new Date(iso + 'T00:00:00');
+    end.setDate(end.getDate() + 6);
+    return fmtLabel(iso) + '~' + fmtLabel(fmtAnalyticsDateISO(end));
+  }
+  return fmtLabel(iso);
+}
+
+function showSummaryError(elementId, message) {
+  $('#' + elementId)
+    .text(message || '無法載入報表資料，請稍後再試。')
+    .removeClass('d-none');
+}
+
+function hideSummaryError(elementId) {
+  $('#' + elementId).addClass('d-none').text('');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // 主入口：由 core.js 呼叫
 // ═══════════════════════════════════════════════════════════════
@@ -86,8 +133,9 @@ window.initAnalytics = function () {
  * Any individual failure silently falls back to an empty array/object.
  */
 function loadAllAnalyticsData(callback) {
+  var summaryMode = isAnalyticsSummaryMode();
   var loaded = 0;
-  var total  = 5;
+  var total  = summaryMode ? 3 : 5;
 
   function onDone() {
     loaded++;
@@ -113,10 +161,13 @@ function loadAllAnalyticsData(callback) {
       .always(onDone);
   }
 
-  fetchOne('analyticsOrdersCache', AdminAPI && AdminAPI.orders && AdminAPI.orders.list, MockDataPaths.orders, []);
+  // W4-06：報表 KPI 不再拉全列表；Mock 模式仍保留 orders／bookings JSON
+  if (!summaryMode) {
+    fetchOne('analyticsOrdersCache', AdminAPI && AdminAPI.orders && AdminAPI.orders.list, MockDataPaths.orders, []);
+    fetchOne('analyticsBookingsCache', AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list, MockDataPaths.campBookings, []);
+  }
   fetchOne('analyticsProductsCache', AdminAPI && AdminAPI.products && AdminAPI.products.list, MockDataPaths.products, []);
   fetchOne('analyticsMinStockCache', null, MockDataPaths.minStock, {});
-  fetchOne('analyticsBookingsCache', AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list, MockDataPaths.campBookings, []);
   fetchOne('analyticsRentalCache', null, MockDataPaths.rentalSkus, []);
 }
 
@@ -610,15 +661,457 @@ function hideChartEmpty(emptyId, targetId) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// W4-06：Summary API 載入與渲染（正式 Backend）
+// ═══════════════════════════════════════════════════════════════
+
+/** 向後端取本期＋上期 shop-summary，更新 KPI／折線／Top10 */
+function loadShopSummaryAndRender() {
+  var from = fmtAnalyticsDateISO(shopState.startDate);
+  var to = fmtAnalyticsDateISO(shopState.endDate);
+  if (!from || !to || !AdminAPI.analytics || !AdminAPI.analytics.shopSummary) {
+    showSummaryError('shopSummaryError', '分析報表 API 尚未就緒。');
+    return;
+  }
+  var prev = getPreviousPeriodRange(shopState.startDate, shopState.endDate);
+  var prevFrom = fmtAnalyticsDateISO(prev.startDate);
+  var prevTo = fmtAnalyticsDateISO(prev.endDate);
+
+  Promise.all([
+    AdminAPI.analytics.shopSummary(from, to),
+    AdminAPI.analytics.shopSummary(prevFrom, prevTo),
+  ])
+    .then(function (results) {
+      hideSummaryError('shopSummaryError');
+      var current = (results[0] && results[0].data) || {};
+      var previous = (results[1] && results[1].data) || {};
+      renderShopKpisFromSummary(current.kpis || {});
+      renderShopLineChartFromSummary(current, previous);
+      renderShopTopProductsFromSummary(current, previous);
+    })
+    .catch(function (err) {
+      var msg = (err && err.message) ? err.message : '無法載入商城報表。';
+      showSummaryError('shopSummaryError', msg);
+    });
+}
+
+/** 向後端取本期＋上期 booking-summary */
+function loadBookingSummaryAndRender() {
+  var from = fmtAnalyticsDateISO(bookingState.startDate);
+  var to = fmtAnalyticsDateISO(bookingState.endDate);
+  if (!from || !to || !AdminAPI.analytics || !AdminAPI.analytics.bookingSummary) {
+    showSummaryError('bookingSummaryError', '分析報表 API 尚未就緒。');
+    return;
+  }
+  var prev = getPreviousPeriodRange(bookingState.startDate, bookingState.endDate);
+  var prevFrom = fmtAnalyticsDateISO(prev.startDate);
+  var prevTo = fmtAnalyticsDateISO(prev.endDate);
+
+  Promise.all([
+    AdminAPI.analytics.bookingSummary(from, to),
+    AdminAPI.analytics.bookingSummary(prevFrom, prevTo),
+  ])
+    .then(function (results) {
+      hideSummaryError('bookingSummaryError');
+      var current = (results[0] && results[0].data) || {};
+      var previous = (results[1] && results[1].data) || {};
+      renderBookingKpisFromSummary(current.kpis || {});
+      renderBookingLineChartFromSummary(current, previous);
+      renderCampgroundBarFromSummary(current.byCampground || []);
+      renderRegionBarFromSummary(current.byRegion || []);
+    })
+    .catch(function (err) {
+      var msg = (err && err.message) ? err.message : '無法載入預約報表。';
+      showSummaryError('bookingSummaryError', msg);
+    });
+}
+
+function renderShopKpisFromSummary(kpis) {
+  $('#shopKpiOrders').text(kpis.orderCount != null ? kpis.orderCount : '—');
+  $('#shopKpiOrdersNote').text('含各狀態訂單');
+  $('#shopKpiPending').text(kpis.pendingShipmentCount != null ? kpis.pendingShipmentCount : '—');
+  $('#shopKpiRefund').text(kpis.refundCount != null ? kpis.refundCount : '—');
+  $('#shopKpiRefundNote').text(
+    '退款率 ' + (kpis.refundRatePercent != null ? kpis.refundRatePercent : 0) + '%'
+  );
+  $('#shopKpiSoldQty').text(kpis.soldQuantity != null ? kpis.soldQuantity : '—');
+  renderShopLowStockKpi();
+}
+
+function renderBookingKpisFromSummary(kpis) {
+  $('#bookKpiPending').text(kpis.pendingCount != null ? kpis.pendingCount : '—');
+  $('#bookKpiCancelRate').text(
+    (kpis.cancelRatePercent != null ? kpis.cancelRatePercent : 0) + '%'
+  );
+  var cancelled = kpis.cancelledCount != null ? kpis.cancelledCount : 0;
+  var total = kpis.periodBookingCount != null ? kpis.periodBookingCount : 0;
+  $('#bookKpiCancelNote').text(cancelled + ' 筆取消 / ' + total + ' 筆總計');
+  $('#bookKpiCompleted').text(kpis.completedCount != null ? kpis.completedCount : '—');
+  var rentalAmt = analyticsApiNum(kpis.rentalAmount);
+  $('#bookKpiRentalAmt').text('NT$ ' + rentalAmt.toLocaleString());
+  $('#bookKpiRentalRatio').text(
+    (kpis.rentalRatioPercent != null ? kpis.rentalRatioPercent : 0) + '%'
+  );
+}
+
+/** 低庫存 KPI：v1 仍由 products 列表計算 */
+function renderShopLowStockKpi() {
+  var products = window.analyticsProductsCache || [];
+  var lowStock = products.filter(function (p) {
+    return isAnalyticsProductLowStock(p);
+  }).length;
+  $('#shopKpiLowStock').text(lowStock);
+}
+
+function buildDualLineChartOptions(config) {
+  return {
+    type: 'line',
+    data: {
+      labels: config.labels,
+      datasets: [
+        {
+          label: config.currentLabel || '本期',
+          data: config.currentData,
+          borderColor: config.currentColor || '#244d4d',
+          backgroundColor: config.currentFill || 'rgba(36,77,77,0.08)',
+          borderWidth: 2.5,
+          pointBackgroundColor: config.currentColor || '#244d4d',
+          pointRadius: 1.25,
+          pointHoverRadius: 4,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: config.previousLabel || '上期',
+          data: config.previousData,
+          borderColor: config.previousColor || '#aabbaa',
+          borderDash: [6, 6],
+          borderWidth: 2,
+          pointBackgroundColor: config.previousColor || '#aabbaa',
+          pointRadius: 1,
+          pointHoverRadius: 3,
+          tension: 0.4,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var prefix = ctx.datasetIndex === 0 ? '本期' : '上期';
+              return prefix + ' NT$ ' + ctx.parsed.y.toLocaleString();
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function (val) {
+              return val >= 1000
+                ? 'NT$ ' + (val / 1000).toFixed(0) + 'K'
+                : 'NT$ ' + val;
+            },
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { maxTicksLimit: 12 },
+        },
+      },
+    },
+  };
+}
+
+function renderShopLineChartFromSummary(current, previous) {
+  var curSeries = current.timeSeries || [];
+  var prevSeries = previous.timeSeries || [];
+  var granularity = current.granularity || 'day';
+  var labels = curSeries.map(function (p) { return timeSeriesLabel(p.bucket, granularity); });
+  var curData = curSeries.map(function (p) { return analyticsApiNum(p.revenue); });
+  var prevData = prevSeries.map(function (p) { return analyticsApiNum(p.revenue); });
+
+  while (prevData.length < curData.length) prevData.push(0);
+  while (prevData.length > curData.length) prevData.pop();
+
+  var currentTotal = analyticsApiNum(current.kpis && current.kpis.revenueTotal);
+  var previousTotal = analyticsApiNum(previous.kpis && previous.kpis.revenueTotal);
+  renderLineTotalBadge('shopLineTotalBadge', 'shopLineTotalDelta', currentTotal, previousTotal);
+
+  var hasData = curData.some(function (v) { return v > 0; })
+    || prevData.some(function (v) { return v > 0; });
+  if (!hasData) {
+    showChartEmpty('shopLineChartEmpty', 'shopSalesLineChart');
+    if (_shopLineChart) { _shopLineChart.destroy(); _shopLineChart = null; }
+    return;
+  }
+
+  hideChartEmpty('shopLineChartEmpty', 'shopSalesLineChart');
+  if (_shopLineChart) _shopLineChart.destroy();
+
+  _shopLineChart = new Chart(
+    document.getElementById('shopSalesLineChart'),
+    buildDualLineChartOptions({
+      labels: labels,
+      currentData: curData,
+      previousData: prevData,
+      currentLabel: '本期銷售額',
+      previousLabel: '上期銷售額',
+      currentColor: '#244d4d',
+      currentFill: 'rgba(36,77,77,0.08)',
+      previousColor: '#aabbaa',
+    })
+  );
+}
+
+function renderBookingLineChartFromSummary(current, previous) {
+  var curSeries = current.timeSeries || [];
+  var prevSeries = previous.timeSeries || [];
+  var granularity = current.granularity || 'day';
+  var labels = curSeries.map(function (p) { return timeSeriesLabel(p.bucket, granularity); });
+  var curData = curSeries.map(function (p) { return analyticsApiNum(p.revenue); });
+  var prevData = prevSeries.map(function (p) { return analyticsApiNum(p.revenue); });
+
+  while (prevData.length < curData.length) prevData.push(0);
+  while (prevData.length > curData.length) prevData.pop();
+
+  var currentTotal = analyticsApiNum(current.kpis && current.kpis.revenueTotal);
+  var previousTotal = analyticsApiNum(previous.kpis && previous.kpis.revenueTotal);
+  renderLineTotalBadge('bookingLineTotalBadge', 'bookingLineTotalDelta', currentTotal, previousTotal);
+
+  var hasData = curData.some(function (v) { return v > 0; })
+    || prevData.some(function (v) { return v > 0; });
+  if (!hasData) {
+    showChartEmpty('bookLineChartEmpty', 'bookingRevenueLineChart');
+    if (_bookLineChart) { _bookLineChart.destroy(); _bookLineChart = null; }
+    return;
+  }
+
+  hideChartEmpty('bookLineChartEmpty', 'bookingRevenueLineChart');
+  if (_bookLineChart) _bookLineChart.destroy();
+
+  _bookLineChart = new Chart(
+    document.getElementById('bookingRevenueLineChart'),
+    buildDualLineChartOptions({
+      labels: labels,
+      currentData: curData,
+      previousData: prevData,
+      currentLabel: '本期預約收入',
+      previousLabel: '上期預約收入',
+      currentColor: '#3d7d7d',
+      currentFill: 'rgba(61,125,125,0.08)',
+      previousColor: '#aabbaa',
+    })
+  );
+}
+
+function renderShopTopProductsFromSummary(current, previous) {
+  var currentRows = (current.topProducts || []).slice(0, 10);
+  var prevMap = {};
+  (previous.topProducts || []).forEach(function (row) {
+    var key = row.productId || row.name;
+    if (key) {
+      prevMap[key] = row;
+    }
+  });
+
+  var ranked = currentRows.map(function (row) {
+    var key = row.productId || row.name;
+    var prevRow = prevMap[key] || {};
+    var revenue = analyticsApiNum(row.revenue);
+    var qty = row.quantity != null ? row.quantity : 0;
+    var prevRevenue = analyticsApiNum(prevRow.revenue);
+    var prevQty = prevRow.quantity != null ? prevRow.quantity : 0;
+    return {
+      name: row.name || String(key || ''),
+      revenue: revenue,
+      qty: qty,
+      revenueComp: calcPeriodComparison(revenue, prevRevenue),
+      qtyComp: calcPeriodComparison(qty, prevQty),
+    };
+  });
+
+  var $body = $('#shopTopProductsBody');
+  var $table = $('#shopTopProductsTable');
+  var $empty = $('#shopTopProductsEmpty');
+  $body.empty();
+
+  if (ranked.length === 0) {
+    $empty.removeClass('d-none');
+    $table.addClass('d-none');
+    return;
+  }
+  $empty.addClass('d-none');
+  $table.removeClass('d-none');
+
+  ranked.forEach(function (row, i) {
+    var qtyFmt = formatComparisonDelta(row.qtyComp);
+    var revFmt = formatComparisonDelta(row.revenueComp);
+    $body.append(
+      '<tr>' +
+        '<td class="text-muted">' + (i + 1) + '</td>' +
+        '<td>' + escapeAnalyticsHtml(row.name) + '</td>' +
+        '<td class="text-end">' + row.qty + '</td>' +
+        '<td class="text-end">' +
+          '<span class="analytics-total-delta ' + qtyFmt.className + '">' +
+            escapeAnalyticsHtml(qtyFmt.text) +
+          '</span>' +
+        '</td>' +
+        '<td class="text-end fw-semibold">NT$ ' +
+          row.revenue.toLocaleString() +
+        '</td>' +
+        '<td class="text-end">' +
+          '<span class="analytics-total-delta ' + revFmt.className + '">' +
+            escapeAnalyticsHtml(revFmt.text) +
+          '</span>' +
+        '</td>' +
+      '</tr>'
+    );
+  });
+}
+
+/** 各營地收入（summary byCampground） */
+function renderCampgroundBarFromSummary(rows) {
+  var labels = rows.map(function (r) { return r.campgroundName || r.campgroundId || '—'; });
+  var data = rows.map(function (r) { return analyticsApiNum(r.revenue); });
+
+  if (labels.length === 0 || !data.some(function (v) { return v > 0; })) {
+    showChartEmpty('campgroundBarEmpty', 'campgroundBarCanvasWrap');
+    if (_campgroundBar) { _campgroundBar.destroy(); _campgroundBar = null; }
+    return;
+  }
+  hideChartEmpty('campgroundBarEmpty', 'campgroundBarCanvasWrap');
+  if (_campgroundBar) _campgroundBar.destroy();
+
+  _campgroundBar = new Chart(document.getElementById('campgroundBookingBarChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '預約收入 (NT$)',
+        data: data,
+        backgroundColor: 'rgba(36,77,77,0.75)',
+        borderColor: '#244d4d',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) { return ' NT$ ' + ctx.parsed.x.toLocaleString(); },
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+        y: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+/** 各地區收入（summary byRegion；北中南東 + 其他） */
+function renderRegionBarFromSummary(rows) {
+  var regionOrder = ['北部', '中部', '南部', '東部', '其他'];
+  var regionRevenue = {};
+  regionOrder.forEach(function (r) { regionRevenue[r] = 0; });
+  rows.forEach(function (row) {
+    var key = row.region || '其他';
+    if (regionOrder.indexOf(key) === -1) {
+      regionOrder.push(key);
+      regionRevenue[key] = 0;
+    }
+    regionRevenue[key] = analyticsApiNum(row.revenue);
+  });
+
+  var data = regionOrder.map(function (r) { return regionRevenue[r]; });
+  var hasData = data.some(function (v) { return v > 0; });
+
+  if (!hasData) {
+    showChartEmpty('regionBarEmpty', 'regionBarCanvasWrap');
+    if (_regionBar) { _regionBar.destroy(); _regionBar = null; }
+    return;
+  }
+  hideChartEmpty('regionBarEmpty', 'regionBarCanvasWrap');
+  if (_regionBar) _regionBar.destroy();
+
+  _regionBar = new Chart(document.getElementById('regionRevenueBarChart'), {
+    type: 'bar',
+    data: {
+      labels: regionOrder,
+      datasets: [{
+        label: '預約收入 (NT$)',
+        data: data,
+        backgroundColor: ['#244d4d', '#3d7d7d', '#779988', '#aabbaa'],
+        borderWidth: 0,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return ' NT$ ' + ctx.parsed.y.toLocaleString();
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function (val) {
+              return val >= 1000
+                ? 'NT$ ' + (val / 1000).toFixed(0) + 'K'
+                : 'NT$ ' + val;
+            },
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ═══ 裝備商城 Tab ═══════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════
 
 /** 期間改變時，重新渲染商城所有 KPI 與圖表 */
 function refreshShopSection() {
+  if (isAnalyticsSummaryMode()) {
+    loadShopSummaryAndRender();
+    renderShopDonut(); // v1 仍前端；無 orders 列表時可能為空
+    return;
+  }
   renderShopKpis();
   renderShopLineChart();
   renderShopDonut();
-  renderShopTopProducts(); // 熱銷商品金額（跟 shopState 期間連動）
+  renderShopTopProducts();
 }
 
 /**
@@ -668,11 +1161,7 @@ function renderShopKpis() {
   $('#shopKpiSoldQty').text(soldQty);
 
   // ── 卡片 6：低庫存商品（不受期間限制，任一分店庫存 < 最低閾值即計入）──
-  // Low-stock products: any branch below its minimum threshold counts, regardless of date filter
-  var lowStock = products.filter(function (p) {
-    return isAnalyticsProductLowStock(p);
-  }).length;
-  $('#shopKpiLowStock').text(lowStock);
+  renderShopLowStockKpi();
 }
 
 /**
@@ -914,6 +1403,11 @@ function escapeAnalyticsHtml(text) {
 
 /** 期間改變時，重新渲染預約/租借所有 KPI 與圖表 */
 function refreshBookingSection() {
+  if (isAnalyticsSummaryMode()) {
+    loadBookingSummaryAndRender();
+    renderRentalDonut(); // v1 仍 Mock rental-skus；無 bookings 列表時可能為空
+    return;
+  }
   renderBookingKpis();
   renderBookingLineChart();
   renderRentalDonut();
@@ -1479,10 +1973,10 @@ function buildNavFilter(kpiId) {
       status: ['unshipped'], paymentStatus: [],
       dateStart: null, dateEnd: null
     },
-    // 退貨/退款：當前期間 returned 訂單
+    // 退貨/退款：W3 口徑 = cancelled 且已退款（非只 returned）
     shopKpiRefund: {
       section: 'orders',
-      status: ['returned'], paymentStatus: [],
+      status: ['cancelled'], paymentStatus: ['refunded'],
       dateStart: shopStart, dateEnd: shopEnd
     },
     // 已售商品件數：當前期間 shipped 訂單

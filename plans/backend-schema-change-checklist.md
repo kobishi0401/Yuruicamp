@@ -86,15 +86,6 @@
 
 ---
 
-## Phase 7.1 — Branch active 映射修復（2026-07-23）
-
-- [x] **7.1-1** `branches.active boolean DEFAULT true NOT NULL`
-- [x] **7.1-2** Reference Seed 明確寫入並在重跑時恢復三間公開門市為啟用
-- [x] **7.1-3** 同步 Branch API、Schema Guide、database-document 與 README
-- [x] **7.1-4** 非破壞性更新目前資料庫，並通過 Hibernate `ddl-auto=validate` 與門市 PostgreSQL 整合測試
-
----
-
 ## Phase 5 — 可選／非本輪
 
 - [ ] **5-1** 草稿訂單佔位（Service 常數，不改 schema）

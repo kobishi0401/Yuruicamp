@@ -52,6 +52,18 @@ public class CouponClaim {
 		return claim;
 	}
 
+	/** 付款成功後把已套用到訂單的券改成 consumed（重複呼叫安全）。 */
+	public boolean consume(Instant now) {
+		if (status != CouponClaimStatus.claimed) {
+			return false;
+		}
+
+		status = CouponClaimStatus.consumed;
+		consumedAt = now;
+
+		return true;
+	}
+
 	public Long getId() {
 		return id;
 	}
@@ -74,12 +86,6 @@ public class CouponClaim {
 
 	public Instant getConsumedAt() {
 		return consumedAt;
-	}
-
-	// 付款或 COD 成立後將已領取優惠券標記為已使用。
-	public void consume(Instant now) {
-		status = CouponClaimStatus.consumed;
-		consumedAt = now;
 	}
 
 	// 取消或逾時時將 claim 標記為不可再使用，並保留失效時間。

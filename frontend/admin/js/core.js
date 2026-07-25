@@ -57,13 +57,14 @@ window.loadAdminJsonResource = function (options) {
 // === 各模組「無 edit 權限」時需停用的選擇器 ===
 // ==========================================================
 var EDIT_PERMISSION_SELECTORS = {
-  orders: '.btn-ship-order, .btn-complete-order, #btnSaveSellerNote, #modalSellerNote',
-  products: '[data-bs-target="#addProductModal"], .edit-product-name, .stock-edit-btn, .stock-confirm-btn, .stock-cancel-btn, #submitAddProduct',
+  orders: '.btn-ship-order, .btn-complete-order, .btn-cancel-order, #confirmOrderCancelBtn, #orderCancelReasonInput, #btnSaveSellerNote, #modalSellerNote',
+  products: '[data-bs-target="#addProductModal"], .edit-product-name, .stock-edit-btn, .stock-confirm-btn, .stock-cancel-btn, #submitAddProduct, #generateMovementRecord, #confirmProductStockMovementReason, .pending-line-nature-select, .pending-line-note-input, .pending-transfer-note-input',
+  movement: '.movement-line-reason-input, .btn-save-movement-line-reason, .movement-line-nature-select',
   customers: '#addCustomerBtn, #saveCustomerBtn, #addCustomerModal input:not([readonly]), #addCustomerModal select, #addCustomerModal button:not(.btn-close):not([data-bs-dismiss="modal"]), .shipping-address-edit-btn, #saveCustomerShippingAddressBtn, #customerShippingAddressModal input, #customerShippingAddressModal select, #customerShippingAddressModal button:not(.btn-close):not([data-bs-dismiss="modal"]), .phone-edit-btn, .email-edit-btn, .birthday-edit-btn, .tier-edit-btn, .points-edit-btn, .tags-edit-btn, .tags-done-btn, .tags-cancel-btn, .tag-add-btn, .tag-delete-btn, .customer-edit-confirm-btn, .customer-edit-cancel-all-btn, #customerEditConfirmBtn',
   discounts: '#submitAddCoupon, .btn-toggle-coupon, .btn-delete-coupon, #generateCouponCode, #addCouponForm input, #addCouponForm select, #addCouponForm textarea, #addCouponForm button:not(.btn-close)',
   reviews: '.btn-delete-review, #confirmDeleteReviewBtn',
-  bookings: '.btn-confirm-booking, .btn-cancel-booking, #btnSaveBookingSellerNote, #bkModalSellerNote',
-  'booking-calendar': '#bcBtnClosureSettings, #bcBtnSaveClosure, #bcBtnCloseSingleDay, .bc-btn-delete-closure',
+  bookings: '.btn-confirm-booking, .btn-cancel-booking, #btnSaveBookingSellerNote, #bkModalSellerNote, #confirmCancelBtn',
+  'booking-calendar': '#bcBtnClosureSettings, #bcBtnCampgrounds, #bcBtnCalendarDates, #bcBtnSaveClosure, #bcBtnCloseSingleDay, .bc-btn-delete-closure, #bcCampgroundCreateBtn, .bc-btn-campground-toggle, .bc-btn-campground-delete, #bcCampgroundCreateForm input, #bcCampgroundCreateForm button, #bcZoneCreateBtn, #bcZoneCancelEditBtn, .bc-btn-zone-edit, .bc-btn-zone-toggle, .bc-btn-zone-delete, #bcZoneCreateForm input, #bcZoneCreateForm button, #bcZoneCampgroundSelect, .bc-cal-holiday-cb, .bc-cal-holiday-name, .bc-btn-cal-save-name',
   permissions: '#addEmployeeBtn, .btn-edit-employee, .btn-toggle-employee, #employeeModal input:not([readonly]), #employeeModal select, #employeeModal button:not(.btn-close):not([data-bs-dismiss]), #saveEmployeeBtn, .perm-view-cb, .perm-edit-cb',
 };
 
@@ -178,9 +179,9 @@ window.applyEditPermission = function (section, $container) {
         .prop('disabled', false)
         .removeAttr('data-permission-disabled');
     }
-    // 訂單明細 Modal 在 dashboard 全域（賣家備註）
+    // 訂單明細／取消 Modal 在 dashboard 全域
     if (section === 'orders') {
-      $('#btnSaveSellerNote, #modalSellerNote')
+      $('#btnSaveSellerNote, #modalSellerNote, #confirmOrderCancelBtn, #orderCancelReasonInput')
         .prop('disabled', false)
         .removeAttr('data-permission-disabled');
     }
@@ -211,9 +212,9 @@ window.applyEditPermission = function (section, $container) {
       .attr('title', noEditTitle);
   }
 
-  // 訂單明細 Modal：賣家備註（從訂單管理或客戶管理開啟皆適用）
+  // 訂單明細／取消 Modal（從訂單管理或客戶管理開啟皆適用）
   if (section === 'orders') {
-    $('#btnSaveSellerNote, #modalSellerNote')
+    $('#btnSaveSellerNote, #modalSellerNote, #confirmOrderCancelBtn, #orderCancelReasonInput')
       .prop('disabled', true)
       .attr('data-permission-disabled', 'true')
       .attr('title', noEditTitle);
@@ -321,6 +322,13 @@ $(document).ready(async function () {
 
     const section = $(this).data('section');   // 取得模組名稱（例："orders"）
     const title = $(this).data('title');       // 取得頁面標題（例："訂單管理"）
+
+    // ADM-W2-08：有未產異動的庫存變更時，離開商品頁要先確認（R1）
+    // Leave products with pending stock audit? Confirm first.
+    if (typeof window.confirmLeaveWithPendingStockMovements === 'function'
+        && !window.confirmLeaveWithPendingStockMovements(section)) {
+      return;
+    }
 
     // 更新 Active 狀態：移除所有 active，只加在被點擊的連結
     // 注意：使用 class 選擇器 `.sidebar-link` 同時更新兩個 Sidebar（桌面版 + 手機版）

@@ -29,7 +29,7 @@ calendar_dates
 
 ### 資料流程
 預約可用性與價格計算時：
-1. 依入住日期讀取 calendar_dates，判斷是否為假日並選擇平日或假日價格。
+1. 依入住日期讀取 `calendar_dates`，判斷是否為**特殊節日**（`is_holiday=true`）並選擇**一般價**或**特殊節日價**（見 [`booking-api-contract.md`](../../api/booking-api-contract.md) §0.1；**不是**週一～五／週六日規則）。
 2. 取得指定營區與營位區的基礎可售數量 `campground_zones.total_sites`。
 3. 新增或修改 zone_blocks 時，`trg_zone_blocks_validate_capacity` 會驗證單筆及同日重疊封鎖總量不得超過 `campground_zones.total_sites`。
 4. 匯總命中日期區間的 zone_blocks.blocked_quantity，從可售數量扣除；`get_zone_availability()` 以 `greatest(..., 0)` 保證可用量不為負數。
@@ -117,7 +117,7 @@ calendar_dates
 
 
 ## 運作模式
-* 平假日資料與價格依據 > calendar_dates
+* **一般價／特殊節日價** tier 存在 zone／listing；哪一晚用哪個 tier → **`calendar_dates`**
 * 指定營位區維修／停售 > zone_blocks
 * 指定營區整體公休 > campground_closures
 * zone_blocks 只扣減指定營位區的可售數；campground_closures 則關閉該營區的所有營位區。

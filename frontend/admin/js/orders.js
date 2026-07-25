@@ -7,7 +7,7 @@
  *      Mock：orders.json + 可選 localStorage overlay；快取命中可跳過 fetch
  *   2. 訂單含 customerId；items 含 productId（可從 customers.orders 反查）
  *   2. 付款狀態：已付款 / 未付款 / 已退款；貨到付款看 payment==='cod'（不是 paymentStatus）
- *   3. 訂單狀態：未出貨 / 已出貨 / 已退貨 / 已完成 / 已取消
+ *   3. 訂單狀態：未出貨 / 已出貨 / 已退貨 / 已完成
  *   4. 點擊訂單編號開啟 modal，modal 內顯示訂單紀錄時間軸
  *   5. 點擊出貨按鈕後更新 status 並 push 新 history 紀錄
  *   6. 欄位排序（可疊加）：訂單日期、總金額
@@ -36,10 +36,10 @@ var DEFAULT_ORDER_SORT = [{ key: 'createdAt', dir: 'desc' }];
  * dateStart / dateEnd 為 YYYY-MM-DD 字串，null = 不篩選
  */
 var filterState = {
-  paymentStatus: [], // e.g. ['paid', 'unpaid']
-  status: [], // e.g. ['unshipped']
-  dateStart: null, // e.g. '2026-05-23'
-  dateEnd: null, // e.g. '2026-06-22'
+  paymentStatus: [],   // e.g. ['paid', 'unpaid']
+  status:   [],   // e.g. ['unshipped']
+  dateStart:     null, // e.g. '2026-05-23'
+  dateEnd:       null  // e.g. '2026-06-22'
 };
 
 /**
@@ -69,13 +69,13 @@ function normalizeBackendOrder(order) {
       return Object.assign({}, item, {
         name: item.productName,
         specLabel: item.specification,
-        price: Number(item.unitPrice || 0),
+        price: Number(item.unitPrice || 0)
       });
     }),
     history: (detail.history || []).map(function (entry) {
       return { time: entry.occurredAt || '', action: entry.note || entry.status };
     }),
-    backendDetailLoaded: Array.isArray(detail.items),
+    backendDetailLoaded: Array.isArray(detail.items)
   });
 }
 
@@ -84,15 +84,12 @@ function loadBackendOrderDetail(order) {
     window.showOrderModal(order);
     return;
   }
-  AdminAPI.orders
-    .getById(order.id)
+  AdminAPI.orders.getById(order.id)
     .then(function (result) {
       Object.assign(order, normalizeBackendOrder(result.data));
       window.showOrderModal(order);
     })
-    .catch(function (err) {
-      AdminAPI.handleError(err, '載入訂單詳情失敗');
-    });
+    .catch(function (err) { AdminAPI.handleError(err, '載入訂單詳情失敗'); });
 }
 
 // ─────────────────────────────────────────────
@@ -109,21 +106,21 @@ window.initOrders = function () {
   $(document).off('.customers');
 
   // ── 每次進入訂單頁重置排序與篩選狀態（排序回到隱含預設：日期降冪） ──
-  sortStack = [];
-  filterState = { paymentStatus: [], status: [], dateStart: null, dateEnd: null };
+  sortStack      = [];
+  filterState    = { paymentStatus: [], status: [], dateStart: null, dateEnd: null };
   // 日期選鈕狀態也同步重置（預設「近 30 天」）
   orderDateState = { days: 30, startDate: null, endDate: null };
 
   // ── 初始化日期篩選器 UI ─────────────────────────
   setupOrderPeriodFilter(); // 綁定快速選鈕點擊事件
-  initOrderFlatpickr(); // 初始化 flatpickr
+  initOrderFlatpickr();     // 初始化 flatpickr
 
   // ── 讀取並消費 pendingNavFilter（從 KPI 卡片點擊跳來時） ──
   if (window.pendingNavFilter && window.pendingNavFilter.section === 'orders') {
     var nav = window.pendingNavFilter;
-    filterState.status = nav.status || [];
+    filterState.status   = nav.status   || [];
     filterState.paymentStatus = nav.paymentStatus || [];
-    window.pendingNavFilter = null; // 消費後立即清除，避免切換回來時重複套用
+    window.pendingNavFilter   = null; // 消費後立即清除，避免切換回來時重複套用
 
     if (nav.dateStart && nav.dateEnd) {
       // KPI 帶日期（如「本期訂單數」）→ 自定義範圍，自定義按鈕 active
@@ -154,7 +151,7 @@ window.initOrders = function () {
       },
       onError: function () {
         loadOrdersData();
-      },
+      }
     });
   }
 
@@ -163,9 +160,7 @@ window.initOrders = function () {
   // 首次點擊某欄只排序該欄（不自動疊加 createdAt，避免日期篩選後點總金額無效）
   $(document).on('click.orders', '#ordersTable .sortable-th', function () {
     var key = $(this).data('sort-key');
-    var idx = sortStack.findIndex(function (s) {
-      return s.key === key;
-    });
+    var idx = sortStack.findIndex(function (s) { return s.key === key; });
 
     if (idx === -1) {
       sortStack.push({ key: key, dir: 'asc' });
@@ -181,7 +176,7 @@ window.initOrders = function () {
   // ── 篩選 Dropdown 開關：點擊漏斗 icon ──────────────
   // 點擊 .filter-icon → 顯示/隱藏同一個 th 內的 .filter-dropdown
   $(document).on('click.orders', '#ordersTable .filter-icon', function (e) {
-    e.stopPropagation(); // 防止冒泡到 document，避免立即被關閉
+    e.stopPropagation();   // 防止冒泡到 document，避免立即被關閉
     var $th = $(this).closest('.filter-th');
     var $dropdown = $th.find('.filter-dropdown');
 
@@ -202,8 +197,8 @@ window.initOrders = function () {
 
   // ── 篩選 checkbox 勾選/取消 ────────────────────────
   $(document).on('change.orders', '#ordersTable .filter-dropdown input[type="checkbox"]', function () {
-    var $th = $(this).closest('.filter-th');
-    var key = $th.data('filter-key'); // 'paymentStatus' 或 'status'
+    var $th  = $(this).closest('.filter-th');
+    var key  = $th.data('filter-key');   // 'paymentStatus' 或 'status'
 
     // 收集該欄位所有勾選中的 checkbox 值
     var selected = [];
@@ -219,7 +214,7 @@ window.initOrders = function () {
   $(document).on('click.orders', '#btnClearSort', function () {
     sortStack = [];
     filterState.paymentStatus = [];
-    filterState.status = [];
+    filterState.status   = [];
     // applyOrderDayRange 內部會呼叫 applyFiltersAndSort()
     applyOrderDayRange(30);
   });
@@ -227,9 +222,7 @@ window.initOrders = function () {
   // ── 點擊訂單編號 → 開啟訂單明細 modal ───────────────
   $(document).on('click.orders', '.order-id-link', function () {
     var orderId = $(this).data('order-id');
-    var order = (window.ordersCache || []).find(function (o) {
-      return window.sameId(o.id, orderId);
-    });
+    var order = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
     if (!order) return;
     loadBackendOrderDetail(order);
   });
@@ -245,28 +238,21 @@ window.initOrders = function () {
   // ── 「完成」按鈕：已出貨 + 非貨到付款 訂單才可標記完成 ──────────
   // 點擊後：更新 status → 'completed'，push history，顯示 Toast，重新渲染表格
   $(document).on('click.orders', '.btn-complete-order', function () {
-    var $row = $(this).closest('tr');
+    var $row    = $(this).closest('tr');
     var orderId = $row.data('order-id');
-    var order = (window.ordersCache || []).find(function (o) {
-      return window.sameId(o.id, orderId);
-    });
+    var order   = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
     if (!order) return;
 
     if (isOrderBackendEnabled()) {
       var $button = $(this).prop('disabled', true);
-      AdminAPI.orders
-        .complete(orderId, {})
+      AdminAPI.orders.complete(orderId, {})
         .then(function (result) {
           Object.assign(order, normalizeBackendOrder(result.data));
           window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已標記為「已完成」');
           applyFiltersAndSort();
         })
-        .catch(function (err) {
-          AdminAPI.handleError(err, '訂單完成失敗');
-        })
-        .finally(function () {
-          $button.prop('disabled', false);
-        });
+        .catch(function (err) { AdminAPI.handleError(err, '訂單完成失敗'); })
+        .finally(function () { $button.prop('disabled', false); });
       return;
     }
 
@@ -274,21 +260,13 @@ window.initOrders = function () {
 
     // 產生當下時間字串，格式：YYYY-MM-DD HH:MM:SS（與出貨邏輯一致）
     var now = new Date();
-    var pad = function (n) {
-      return String(n).padStart(2, '0');
-    };
-    var timeStr =
-      now.getFullYear() +
-      '-' +
-      pad(now.getMonth() + 1) +
-      '-' +
-      pad(now.getDate()) +
-      ' ' +
-      pad(now.getHours()) +
-      ':' +
-      pad(now.getMinutes()) +
-      ':' +
-      pad(now.getSeconds());
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    var timeStr = now.getFullYear() + '-' +
+                  pad(now.getMonth() + 1) + '-' +
+                  pad(now.getDate()) + ' ' +
+                  pad(now.getHours()) + ':' +
+                  pad(now.getMinutes()) + ':' +
+                  pad(now.getSeconds());
 
     order.history = order.history || [];
     order.history.push({ time: timeStr, action: '已完成' });
@@ -296,71 +274,109 @@ window.initOrders = function () {
     window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已標記為「已完成」');
 
     if (typeof AdminAPI !== 'undefined' && AdminAPI.orders) {
-      AdminAPI.orders
-        .complete(orderId, {
-          status: order.status,
-          history: order.history,
-        })
-        .catch(function (err) {
-          AdminAPI.handleError(err, '同步訂單完成狀態失敗');
-        });
+      AdminAPI.orders.complete(orderId, {
+        status: order.status,
+        history: order.history
+      }).catch(function (err) {
+        AdminAPI.handleError(err, '同步訂單完成狀態失敗');
+      });
     }
 
     // 重新跑管線，讓篩選器即時反映新的 status
     applyFiltersAndSort();
   });
 
+  // ── 取消未出貨訂單（W3-01／W3-02）：開 Bootstrap Modal，不用 window.confirm ──
+  $(document).on('click.orders', '.btn-cancel-order', function () {
+    var orderId = $(this).closest('tr').data('order-id');
+    if (!orderId) return;
+    window._cancelOrderTargetId = orderId;
+    $('#orderCancelModalOrderId').text(window.formatOrderId(orderId));
+    $('#orderCancelReasonInput').val('');
+    new bootstrap.Modal('#orderCancelModal').show();
+  });
+
+  $(document).on('click.orders', '#confirmOrderCancelBtn', function () {
+    var orderId = window._cancelOrderTargetId;
+    if (!orderId) return;
+
+    var reason = $('#orderCancelReasonInput').val().trim();
+    var $confirmBtn = $(this).prop('disabled', true);
+
+    function closeOrderCancelModal() {
+      var modalEl = document.getElementById('orderCancelModal');
+      var instance = bootstrap.Modal.getInstance(modalEl);
+      if (instance) instance.hide();
+      window._cancelOrderTargetId = null;
+    }
+
+    if (isOrderBackendEnabled()) {
+      AdminAPI.orders.cancel(orderId, { note: reason || undefined })
+        .then(function (result) {
+          var target = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
+          if (target && result && result.data) Object.assign(target, normalizeBackendOrder(result.data));
+          closeOrderCancelModal();
+          window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已取消');
+          applyFiltersAndSort();
+        })
+        .catch(function (err) { AdminAPI.handleError(err, '訂單取消失敗'); })
+        .finally(function () { $confirmBtn.prop('disabled', false); });
+      return;
+    }
+
+    var order = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
+    if (order) {
+      order.status = 'cancelled';
+      if (order.paymentStatus === 'paid') {
+        order.paymentStatus = 'refunded';
+        order.refundStatus = 'refunded';
+      }
+      order.history = order.history || [];
+      order.history.push({
+        time: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        action: reason ? ('已取消（原因：' + reason + '）') : '已取消'
+      });
+    }
+    closeOrderCancelModal();
+    window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已取消（Mock）');
+    applyFiltersAndSort();
+    $confirmBtn.prop('disabled', false);
+  });
+
   // ── 出貨按鈕 ──────────────────────────────────────
   $(document).on('click.orders', '.btn-ship-order', function () {
-    var $btn = $(this);
-    var $row = $btn.closest('tr');
+    var $btn    = $(this);
+    var $row    = $btn.closest('tr');
     var orderId = $row.data('order-id');
 
     if (isOrderBackendEnabled()) {
       $btn.prop('disabled', true);
-      AdminAPI.orders
-        .ship(orderId, {})
+      AdminAPI.orders.ship(orderId, {})
         .then(function (result) {
-          var target = (window.ordersCache || []).find(function (o) {
-            return window.sameId(o.id, orderId);
-          });
+          var target = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
           if (target) Object.assign(target, normalizeBackendOrder(result.data));
           window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已更新為「已出貨」');
           applyFiltersAndSort();
         })
-        .catch(function (err) {
-          AdminAPI.handleError(err, '訂單出貨失敗');
-        })
-        .finally(function () {
-          $btn.prop('disabled', false);
-        });
+        .catch(function (err) { AdminAPI.handleError(err, '訂單出貨失敗'); })
+        .finally(function () { $btn.prop('disabled', false); });
       return;
     }
 
     // 更新記憶體中的快取資料
-    var order = (window.ordersCache || []).find(function (o) {
-      return window.sameId(o.id, orderId);
-    });
+    var order = (window.ordersCache || []).find(function (o) { return window.sameId(o.id, orderId); });
     if (order) {
       order.status = 'shipped';
 
       // 產生當下時間字串，格式：YYYY-MM-DD HH:MM:SS
       var now = new Date();
-      var pad = function (n) {
-        return String(n).padStart(2, '0');
-      };
-      var timeStr =
-        now.getFullYear() +
-        '-' +
-        pad(now.getMonth() + 1) +
-        '-' +
-        pad(now.getDate()) +
-        ' ' +
-        pad(now.getHours()) +
-        ':' +
-        pad(now.getMinutes()) +
-        ':' +
-        pad(now.getSeconds());
+      var pad = function (n) { return String(n).padStart(2, '0'); };
+      var timeStr = now.getFullYear() + '-' +
+                    pad(now.getMonth() + 1) + '-' +
+                    pad(now.getDate()) + ' ' +
+                    pad(now.getHours()) + ':' +
+                    pad(now.getMinutes()) + ':' +
+                    pad(now.getSeconds());
 
       order.history = order.history || [];
       order.history.push({ time: timeStr, action: '已出貨' });
@@ -369,14 +385,12 @@ window.initOrders = function () {
     window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已更新為「已出貨」');
 
     if (order && typeof AdminAPI !== 'undefined' && AdminAPI.orders) {
-      AdminAPI.orders
-        .ship(orderId, {
-          status: order.status,
-          history: order.history,
-        })
-        .catch(function (err) {
-          AdminAPI.handleError(err, '同步訂單出貨狀態失敗');
-        });
+      AdminAPI.orders.ship(orderId, {
+        status: order.status,
+        history: order.history
+      }).catch(function (err) {
+        AdminAPI.handleError(err, '同步訂單出貨狀態失敗');
+      });
     }
 
     // 出貨後重新跑管線：讓篩選器能即時反映新的 status
@@ -398,13 +412,9 @@ window.initOrders = function () {
  */
 function fmtOrderDate(d) {
   if (!d) return '';
-  return (
-    d.getFullYear() +
-    '/' +
-    String(d.getMonth() + 1).padStart(2, '0') +
-    '/' +
-    String(d.getDate()).padStart(2, '0')
-  );
+  return d.getFullYear() + '/' +
+    String(d.getMonth() + 1).padStart(2, '0') + '/' +
+    String(d.getDate()).padStart(2, '0');
 }
 
 /**
@@ -414,13 +424,9 @@ function fmtOrderDate(d) {
  */
 function fmtOrderDateISO(d) {
   if (!d) return null;
-  return (
-    d.getFullYear() +
-    '-' +
-    String(d.getMonth() + 1).padStart(2, '0') +
-    '-' +
-    String(d.getDate()).padStart(2, '0')
-  );
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
 }
 
 /**
@@ -433,33 +439,33 @@ function fmtOrderDateISO(d) {
 function applyOrderDayRange(days) {
   if (days === 'all') {
     // 清空日期限制
-    orderDateState.days = 'all';
+    orderDateState.days      = 'all';
     orderDateState.startDate = null;
-    orderDateState.endDate = null;
-    filterState.dateStart = null;
-    filterState.dateEnd = null;
+    orderDateState.endDate   = null;
+    filterState.dateStart    = null;
+    filterState.dateEnd      = null;
   } else if (days === 'month') {
     // 本月：從本月 1 日到今天
     // new Date(year, month, 1) 的 month 是 0-indexed，getMonth() 回傳值剛好吻合
-    var now = new Date();
+    var now   = new Date();
     var start = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    orderDateState.days = 'month';
+    orderDateState.days      = 'month';
     orderDateState.startDate = start;
-    orderDateState.endDate = new Date(now);
-    filterState.dateStart = fmtOrderDateISO(start);
-    filterState.dateEnd = fmtOrderDateISO(new Date(now));
+    orderDateState.endDate   = new Date(now);
+    filterState.dateStart    = fmtOrderDateISO(start);
+    filterState.dateEnd      = fmtOrderDateISO(new Date(now));
   } else {
     // 往前推 days-1 天（含今天共 days 天），與 analytics.js applyDayRange() 邏輯相同
-    var now = new Date();
+    var now   = new Date();
     var start = new Date(now);
     start.setDate(start.getDate() - (days - 1));
 
-    orderDateState.days = days;
+    orderDateState.days      = days;
     orderDateState.startDate = start;
-    orderDateState.endDate = new Date(now);
-    filterState.dateStart = fmtOrderDateISO(start);
-    filterState.dateEnd = fmtOrderDateISO(new Date(now));
+    orderDateState.endDate   = new Date(now);
+    filterState.dateStart    = fmtOrderDateISO(start);
+    filterState.dateEnd      = fmtOrderDateISO(new Date(now));
   }
   // 非 custom 模式：收起 flatpickr input
   if (days !== 'custom') {
@@ -478,12 +484,12 @@ function applyOrderDayRange(days) {
  * @param {string} dateEnd   - e.g. '2026-06-22'
  */
 function applyOrderCustomRange(dateStart, dateEnd) {
-  orderDateState.days = 'custom';
+  orderDateState.days      = 'custom';
   // 解析字串為 Date 物件，供期間文字格式化使用
   orderDateState.startDate = dateStart ? new Date(dateStart + 'T00:00:00') : null;
-  orderDateState.endDate = dateEnd ? new Date(dateEnd + 'T00:00:00') : null;
-  filterState.dateStart = dateStart || null;
-  filterState.dateEnd = dateEnd || null;
+  orderDateState.endDate   = dateEnd   ? new Date(dateEnd   + 'T00:00:00') : null;
+  filterState.dateStart    = dateStart || null;
+  filterState.dateEnd      = dateEnd   || null;
   updateOrderPeriodLabel();
   applyFiltersAndSort();
 
@@ -527,7 +533,9 @@ function updateOrderPeriodLabel() {
     $label.text('全部期間');
   } else if (orderDateState.startDate && orderDateState.endDate) {
     // 格式與 flatpickr 一致：YYYY-MM-DD 至 YYYY-MM-DD
-    $label.text(fmtOrderDateISO(orderDateState.startDate) + ' 至 ' + fmtOrderDateISO(orderDateState.endDate));
+    $label.text(
+      fmtOrderDateISO(orderDateState.startDate) + ' 至 ' + fmtOrderDateISO(orderDateState.endDate)
+    );
   } else {
     $label.text('');
   }
@@ -542,7 +550,9 @@ function initOrderFlatpickr() {
   if (typeof flatpickr === 'undefined') return; // CDN 未載入時安全跳過
 
   // 取繁體中文語系（與 analytics.js 邏輯一致）
-  var locale = flatpickr.l10ns && flatpickr.l10ns.zh_tw ? flatpickr.l10ns.zh_tw : 'default';
+  var locale = (flatpickr.l10ns && flatpickr.l10ns.zh_tw)
+    ? flatpickr.l10ns.zh_tw
+    : 'default';
 
   flatpickr('#orderDateRangePicker', {
     mode: 'range',
@@ -552,11 +562,11 @@ function initOrderFlatpickr() {
       // 必須兩個日期都選完才觸發；只選一個就關閉時維持上一次狀態
       if (selectedDates.length === 2) {
         var start = fmtOrderDateISO(selectedDates[0]);
-        var end = fmtOrderDateISO(selectedDates[1]);
+        var end   = fmtOrderDateISO(selectedDates[1]);
         applyOrderCustomRange(start, end);
       }
       // 否則不更新，維持現狀
-    },
+    }
   });
 }
 
@@ -694,7 +704,7 @@ function applyFiltersAndSort() {
       if (cmp !== 0) return cmp * dir;
     }
     // 時間相同時依 id 降序（較新 id 在前）
-    return b.id - a.id;
+    return (b.id - a.id);
   });
 
   // ── Step 3：渲染 + 更新 UI ────────────────────────
@@ -712,7 +722,9 @@ function applyFiltersAndSort() {
  */
 function updateSortUI() {
   // 所有排序 icon 先重置為雙箭頭（灰色、未排序狀態）
-  $('#ordersTable .sort-icon').removeClass('fa-sort-up fa-sort-down sort-active').addClass('fa-sort');
+  $('#ordersTable .sort-icon')
+    .removeClass('fa-sort-up fa-sort-down sort-active')
+    .addClass('fa-sort');
 
   // 依有效排序堆疊設定對應欄位的箭頭方向和顏色
   getEffectiveSortStack().forEach(function (s) {
@@ -720,14 +732,17 @@ function updateSortUI() {
     $icon
       .removeClass('fa-sort')
       .addClass(s.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down')
-      .addClass('sort-active'); // 換成品牌色
+      .addClass('sort-active');   // 換成品牌色
   });
 
   // 預設排序：使用者尚未明確修改 sortStack（隱含 createdAt desc）
   var isDefaultSort = sortStack.length === 0;
 
   // 欄位篩選：付款狀態 / 訂單狀態任一有勾選
-  var hasColumnFilter = filterState.paymentStatus.length > 0 || filterState.status.length > 0;
+  var hasColumnFilter = (
+    filterState.paymentStatus.length > 0 ||
+    filterState.status.length > 0
+  );
 
   // 日期篩選：預設為「近 30 天」
   var isDefaultDate = orderDateState.days === 30;
@@ -748,9 +763,9 @@ function updateSortUI() {
 function updateFilterUI() {
   // 遍歷兩個可篩選的欄位（漏斗 icon + 紅點）
   ['paymentStatus', 'status'].forEach(function (key) {
-    var $th = $('#ordersTable .filter-th[data-filter-key="' + key + '"]');
+    var $th   = $('#ordersTable .filter-th[data-filter-key="' + key + '"]');
     var $icon = $th.find('.filter-icon');
-    var $dot = $th.find('.filter-dot');
+    var $dot  = $th.find('.filter-dot');
 
     if (filterState[key].length > 0) {
       // 有啟用中的篩選條件：icon 變品牌色 + 顯示紅點
@@ -785,8 +800,8 @@ function renderOrdersTable(orders) {
   if (!orders || orders.length === 0) {
     $('#ordersTableBody').html(
       '<tr><td colspan="7" class="text-center text-muted py-4">' +
-        '<i class="fas fa-inbox me-2"></i>沒有符合條件的訂單' +
-        '</td></tr>'
+      '<i class="fas fa-inbox me-2"></i>沒有符合條件的訂單' +
+      '</td></tr>'
     );
     return;
   }
@@ -794,108 +809,81 @@ function renderOrdersTable(orders) {
   // 付款顯示：COD 看 payment 欄（藍）；其餘看 paymentStatus
   // Display: COD from payment method; otherwise payment_status badge
   var payBadgeMap = {
-    paid: '<span class="badge bg-success">已付款</span>',
-    unpaid: '<span class="badge bg-warning text-dark">未付款</span>',
+    paid:     '<span class="badge bg-success">已付款</span>',
+    unpaid:   '<span class="badge bg-warning text-dark">未付款</span>',
     refunded: '<span class="badge bg-secondary">已退款</span>',
-    cod: '<span class="badge bg-info text-dark">貨到付款</span>',
+    cod:      '<span class="badge bg-info text-dark">貨到付款</span>'
   };
 
-  // 訂單狀態 badge（5 種），cancelled 與預約訂單統一顯示「已取消」。
+  // 訂單狀態 badge（4 種）
+  // unshipped = 黃色 / shipped = 綠色 / returned = 紅色 / completed = 藍色
   var statusMap = {
     unshipped: '<span class="badge bg-warning text-dark order-status-badge">未出貨</span>',
-    shipped: '<span class="badge bg-success order-status-badge">已出貨</span>',
-    returned: '<span class="badge bg-danger order-status-badge">已退貨</span>',
-    completed: '<span class="badge bg-primary order-status-badge">已完成</span>',
-    cancelled: '<span class="badge bg-danger order-status-badge">已取消</span>',
+    shipped:   '<span class="badge bg-success order-status-badge">已出貨</span>',
+    returned:  '<span class="badge bg-danger order-status-badge">已退貨</span>',
+    completed: '<span class="badge bg-primary order-status-badge">已完成</span>'
   };
 
   // 建立「訂單編號 → 顧客 id」對照表
   // 優先使用 orders.json 的 customerId，其次才從 customers.orders 反查
   var orderCustomerMap = buildOrderToCustomerMap();
 
-  var html = orders
-    .map(function (order) {
-      // COD 優先顯示「貨到付款」；否則顯示付款狀態 badge
-      var payBadge = order.payment === 'cod' ? payBadgeMap.cod : payBadgeMap[order.paymentStatus] || '';
-      var statusBadge = statusMap[order.status] || '';
+  var html = orders.map(function (order) {
+    // COD 優先顯示「貨到付款」；否則顯示付款狀態 badge
+    var payBadge = order.payment === 'cod'
+      ? payBadgeMap.cod
+      : (payBadgeMap[order.paymentStatus] || '');
+    var statusBadge = statusMap[order.status] || '';
 
-      // 操作欄按鈕邏輯：
-      //   未出貨               → 顯示「出貨」按鈕
-      //   已出貨 且 非貨到付款 → 顯示「完成」按鈕（COD 看 payment，送達時無法確認付款）
-      //   其餘狀態             → 不顯示按鈕
-      var actionBtn = '';
-      if (order.status === 'unshipped') {
-        actionBtn =
-          '<button class="btn btn-sm btn-outline-success btn-ship-order" title="確認出貨">' +
-          '<i class="fas fa-truck me-1"></i>出貨</button>';
-      } else if (order.status === 'shipped') {
-        actionBtn =
-          '<button class="btn btn-sm btn-outline-primary btn-complete-order" title="確認送達完成">' +
-          '<i class="fas fa-check-circle me-1"></i>完成</button>';
-      }
+    // 操作欄按鈕邏輯：
+    //   未出貨 → 出貨＋取消；已出貨 → 完成；其餘無按鈕
+    var actionBtn = '';
+    if (order.status === 'unshipped') {
+      actionBtn =
+        '<button class="btn btn-sm btn-outline-success btn-ship-order me-1" title="確認出貨">' +
+        '<i class="fas fa-truck me-1"></i>出貨</button>' +
+        '<button class="btn btn-sm btn-outline-danger btn-cancel-order" title="取消未出貨訂單">' +
+        '<i class="fas fa-ban me-1"></i>取消</button>';
+    } else if (order.status === 'shipped') {
+      actionBtn = '<button class="btn btn-sm btn-outline-primary btn-complete-order" title="確認送達完成">' +
+                  '<i class="fas fa-check-circle me-1"></i>完成</button>';
+    }
 
-      // 只取日期部分（YYYY-MM-DD），不顯示時間
-      var date = (order.createdAt || '').split(/[ T]/)[0] || '';
+    // 只取日期部分（YYYY-MM-DD），不顯示時間
+    var date = (order.createdAt || '').split(/[ T]/)[0] || '';
 
-      // 訂單編號：可點擊連結樣式
-      var idLink =
-        '<span class="admin-cell-link order-id-link" ' +
-        'data-order-id="' +
-        order.id +
-        '" ' +
-        'title="點擊查看訂單明細">' +
-        window.formatOrderId(order.id) +
+    // 訂單編號：可點擊連結樣式
+    var idLink = '<span class="admin-cell-link order-id-link" ' +
+                 'data-order-id="' + order.id + '" ' +
+                 'title="點擊查看訂單明細">' +
+                 window.formatOrderId(order.id) + '</span>';
+
+    // ── 顧客姓名超連結（參考 bookings.js）──
+    var customerId   = orderCustomerMap[order.id];
+    var displayName  = order.buyerName || '';
+    var customerCell;
+    if (customerId) {
+      customerCell =
+        '<span class="admin-cell-link order-customer-link fw-semibold" ' +
+        'data-customer-id="' + customerId + '" ' +
+        'title="查看顧客檔案">' +
+        displayName +
         '</span>';
+    } else {
+      customerCell = '<span class="fw-semibold">' + displayName + '</span>';
+    }
 
-      // ── 顧客姓名超連結（參考 bookings.js）──
-      var customerId = orderCustomerMap[order.id];
-      var displayName = order.buyerName || '';
-      var customerCell;
-      if (customerId) {
-        customerCell =
-          '<span class="admin-cell-link order-customer-link fw-semibold" ' +
-          'data-customer-id="' +
-          customerId +
-          '" ' +
-          'title="查看顧客檔案">' +
-          displayName +
-          '</span>';
-      } else {
-        customerCell = '<span class="fw-semibold">' + displayName + '</span>';
-      }
-
-      return (
-        '<tr data-order-id="' +
-        order.id +
-        '"' +
-        ' data-order-status="' +
-        order.status +
-        '">' +
-        '<td>' +
-        idLink +
-        '</td>' +
-        '<td>' +
-        date +
-        '</td>' +
-        '<td>' +
-        customerCell +
-        '</td>' +
-        '<td class="admin-cell-amount">NT$ ' +
-        order.total.toLocaleString() +
-        '</td>' +
-        '<td>' +
-        payBadge +
-        '</td>' +
-        '<td>' +
-        statusBadge +
-        '</td>' +
-        '<td>' +
-        actionBtn +
-        '</td>' +
-        '</tr>'
-      );
-    })
-    .join('');
+    return '<tr data-order-id="' + order.id + '"' +
+           ' data-order-status="' + order.status + '">' +
+           '<td>' + idLink + '</td>' +
+           '<td>' + date + '</td>' +
+           '<td>' + customerCell + '</td>' +
+           '<td class="admin-cell-amount">NT$ ' + order.total.toLocaleString() + '</td>' +
+           '<td>' + payBadge + '</td>' +
+           '<td>' + statusBadge + '</td>' +
+           '<td>' + actionBtn + '</td>' +
+           '</tr>';
+  }).join('');
 
   $('#ordersTableBody').html(html);
 
@@ -919,39 +907,27 @@ window.showOrderModal = function (order) {
   $('#modalOrderId').text(window.formatOrderId(order.id));
   $('#modalBuyerName').text(order.buyerName);
 
-  // 訂單狀態 badge（5 種，需與 renderOrdersTable 的 statusMap 保持一致）
+  // 訂單狀態 badge（4 種，需與 renderOrdersTable 的 statusMap 保持一致）
   var statusMap = {
     unshipped: '<span class="badge bg-warning text-dark">未出貨</span>',
-    shipped: '<span class="badge bg-success">已出貨</span>',
-    returned: '<span class="badge bg-danger">已退貨</span>',
-    completed: '<span class="badge bg-primary">已完成</span>',
-    cancelled: '<span class="badge bg-danger">已取消</span>',
+    shipped:   '<span class="badge bg-success">已出貨</span>',
+    returned:  '<span class="badge bg-danger">已退貨</span>',
+    completed: '<span class="badge bg-primary">已完成</span>'
   };
   $('#modalOrderStatus').html(statusMap[order.status] || '');
 
   // 商品清單
-  var itemsHtml = (order.items || [])
-    .map(function (item) {
-      var specLine = item.specLabel ? '<div class="text-muted small">' + item.specLabel + '</div>' : '';
-      return (
-        '<tr>' +
-        '<td>' +
-        item.name +
-        specLine +
-        '</td>' +
-        '<td class="text-center">' +
-        item.quantity +
-        '</td>' +
-        '<td class="text-end">NT$ ' +
-        item.price.toLocaleString() +
-        '</td>' +
-        '<td class="text-end">NT$ ' +
-        (item.quantity * item.price).toLocaleString() +
-        '</td>' +
-        '</tr>'
-      );
-    })
-    .join('');
+  var itemsHtml = (order.items || []).map(function (item) {
+    var specLine = item.specLabel
+      ? '<div class="text-muted small">' + item.specLabel + '</div>'
+      : '';
+    return '<tr>' +
+      '<td>' + item.name + specLine + '</td>' +
+      '<td class="text-center">' + item.quantity + '</td>' +
+      '<td class="text-end">NT$ ' + item.price.toLocaleString() + '</td>' +
+      '<td class="text-end">NT$ ' + (item.quantity * item.price).toLocaleString() + '</td>' +
+      '</tr>';
+  }).join('');
   $('#modalItemsList').html(itemsHtml);
   $('#modalTotal').text('NT$ ' + order.total.toLocaleString());
 
@@ -976,21 +952,16 @@ window.showOrderModal = function (order) {
   // 記錄已儲存版本，供 dirty 比對（有改動才顯示「儲存」按鈕）
   $('#orderDetailModal').data('seller-note-saved', savedNote);
 
-  // 訂單紀錄時間軸
-  var historyHtml = (order.history || [])
-    .map(function (entry) {
-      return (
-        '<li class="d-flex align-items-start gap-2 mb-1">' +
-        '<i class="fas fa-circle mt-1" style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-        '<span><span class="text-muted me-2">' +
-        entry.time +
-        '</span>' +
-        entry.action +
-        '</span>' +
-        '</li>'
-      );
-    })
-    .join('');
+  // 訂單紀錄時間軸（時間顯示：台北 yyyy-MM-dd HH:mm）
+  var historyHtml = (order.history || []).map(function (entry) {
+    var timeLabel = typeof window.formatAdminDateTimeDisplay === 'function'
+      ? window.formatAdminDateTimeDisplay(entry.time)
+      : String(entry.time || '');
+    return '<li class="d-flex align-items-start gap-2 mb-1">' +
+           '<i class="fas fa-circle mt-1" style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
+           '<span><span class="text-muted me-2">' + timeLabel + '</span>' + entry.action + '</span>' +
+           '</li>';
+  }).join('');
   $('#modalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');
 
   // 依 orders 編輯權限停用 Modal 內的賣家備註欄位
@@ -998,8 +969,7 @@ window.showOrderModal = function (order) {
     window.applyEditPermission('orders', $('#orderDetailModal'));
   }
   if (isOrderBackendEnabled()) {
-    $('#modalSellerNote').prop('disabled', true).attr('placeholder', '正式後端尚未提供賣家備註端點');
-    $('#btnSaveSellerNote').addClass('d-none');
+    $('#modalSellerNote').attr('placeholder', '輸入內部備註（僅後台可見）');
   }
 
   // 開啟時無未儲存變更 → 隱藏「儲存」按鈕
@@ -1019,7 +989,7 @@ function updateSellerNoteSaveButton() {
     return;
   }
 
-  var saved = ($('#orderDetailModal').data('seller-note-saved') || '').toString().trim();
+  var saved   = ($('#orderDetailModal').data('seller-note-saved') || '').toString().trim();
   var current = ($('#modalSellerNote').val() || '').trim();
   var isDirty = current !== saved;
 
@@ -1127,8 +1097,8 @@ function loadOrdersData() {
   }
 
   if (typeof AdminAPI !== 'undefined' && AdminAPI.isBackendEnabled && AdminAPI.isBackendEnabled()) {
-    AdminAPI.orders
-      .list({ page: 0, size: 100, sort: 'placedAt,desc' })
+    // size 上限 100（契約／後端 validate）；超過會 400
+    AdminAPI.orders.list({ page: 0, size: 100, sort: 'placedAt,desc' })
       .then(function (res) {
         window.ordersCache = extractAdminListRows(res).map(normalizeBackendOrder);
         applyFiltersAndSort();
@@ -1137,8 +1107,8 @@ function loadOrdersData() {
         AdminAPI.handleError(err, '載入訂單失敗');
         $('#ordersTableBody').html(
           '<tr><td colspan="7" class="text-center text-danger py-4">' +
-            '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
-            '</td></tr>'
+          '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
+          '</td></tr>'
         );
       });
     return;
@@ -1155,8 +1125,8 @@ function loadOrdersData() {
   }).fail(function () {
     $('#ordersTableBody').html(
       '<tr><td colspan="7" class="text-center text-danger py-4">' +
-        '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
-        '</td></tr>'
+      '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
+      '</td></tr>'
     );
   });
 }
@@ -1184,12 +1154,8 @@ function buildOrderToCustomerMap() {
  * @returns {string|null}
  */
 function getOrderCustomerId(order) {
-  if (!order) {
-    return null;
-  }
-  if (order.customerId) {
-    return order.customerId;
-  }
+  if (!order) { return null; }
+  if (order.customerId) { return order.customerId; }
   var map = buildOrderToCustomerMap();
   return map[order.id] || null;
 }

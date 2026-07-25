@@ -91,6 +91,56 @@ class AdminFulfillmentPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void paidUnshippedOrderCanBeCancelledWithStubRefund() throws Exception {
+		jdbc.update("""
+				INSERT INTO payment_notifications (
+				  provider, merchant_trade_no, provider_trade_no, order_id, booking_id,
+				  raw_payload, result, processed_at)
+				VALUES ('ecpay','MTN-G2B-ORDER','TN1','G2B-ORDER',null,'{}'::jsonb,'success',now())
+				""");
+
+		mockMvc.perform(post("/api/admin/orders/G2B-ORDER/cancel")
+						.header("Authorization", TOKEN)
+						.contentType("application/json")
+						.content("{\"note\":\"客服取消未出貨\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("cancelled"))
+				.andExpect(jsonPath("$.data.paymentStatus").value("refunded"))
+				.andExpect(jsonPath("$.data.refundStatus").value("refunded"));
+
+		// 冪等
+		mockMvc.perform(post("/api/admin/orders/G2B-ORDER/cancel").header("Authorization", TOKEN))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("cancelled"));
+	}
+
+	@Test
+	void shippedOrderCannotBeCancelled() throws Exception {
+		mockMvc.perform(post("/api/admin/orders/G2B-ORDER/ship").header("Authorization", TOKEN))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/admin/orders/G2B-ORDER/cancel").header("Authorization", TOKEN))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void paidBookingCanBeCancelledWithStubRefund() throws Exception {
+		jdbc.update("""
+				INSERT INTO payment_notifications (
+				  provider, merchant_trade_no, provider_trade_no, order_id, booking_id,
+				  raw_payload, result, processed_at)
+				VALUES ('ecpay','MTN-G2B-BOOKING','TN2',null,'G2B-BOOKING','{}'::jsonb,'success',now())
+				""");
+
+		mockMvc.perform(post("/api/admin/bookings/G2B-BOOKING/cancel")
+						.header("Authorization", TOKEN)
+						.contentType("application/json")
+						.content("{\"note\":\"預約取消\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("cancelled"))
+				.andExpect(jsonPath("$.data.paymentStatus").value("refunded"));
+	}
+
+	@Test
 	void internalNoteCanBeUpdatedAndClearedWithoutChangingStatus() throws Exception {
 		mockMvc.perform(patch("/api/admin/orders/G2B-ORDER/internal-note")
 						.header("Authorization", TOKEN)
@@ -119,8 +169,10 @@ class AdminFulfillmentPostgreSqlIntegrationTest {
 	}
 
 	private void cleanup() {
+		jdbc.update("DELETE FROM order_event_history WHERE order_id='G2B-ORDER'");
 		jdbc.update("DELETE FROM order_status_history WHERE order_id='G2B-ORDER'");
 		jdbc.update("DELETE FROM booking_status_history WHERE booking_id='G2B-BOOKING'");
+		jdbc.update("DELETE FROM payment_notifications WHERE order_id='G2B-ORDER' OR booking_id='G2B-BOOKING'");
 		jdbc.update("DELETE FROM orders WHERE id='G2B-ORDER'");
 		jdbc.update("DELETE FROM bookings WHERE id='G2B-BOOKING'");
 		jdbc.update("DELETE FROM admin_users WHERE id='G2B-ADMIN'");

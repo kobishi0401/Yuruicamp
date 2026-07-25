@@ -104,7 +104,7 @@ erDiagram
 
 1. **商品下單**：`equipment_items` → `products` → `product_variants`；進結帳寫待付款 `orders`、`order_items`（快照）、`product_stock_reservations` 與 `checkout_expires_at`。`orders.checkout_idempotency_key` 以會員為範圍唯一，搭配 `checkout_request_hash` 防止重送建單與同鍵異內容。狀態寫 `order_status_history`；ECPay 通知寫 `payment_notifications`／`order_event_history`。用券：`coupon_claims`（consumed）+ `order_coupons`。
 2. **營區預約**：讀 `campgrounds`／zones／closures／`zone_blocks`，呼叫 `get_zone_availability()`。成立後寫 `bookings`（含付款欄位、禁止 COD、會員範圍 Checkout 冪等鍵與請求指紋）、選取明細與 `rental_stock_reservations`。入住區間 `[check_in, check_out)`。占用狀態僅政策允許的 `pending`／`confirmed`。
-3. **庫存異動**：`inventory_movements` 草稿 + store／rental 明細；`posted` 才正式生效。`inventory_conversions` 將商城規格轉入租借規格。
+3. **庫存異動**：`inventory_movements` 可為稽核單（`product_stock_update`：post 定稿、不改 on-hand；明細可帶列級 from／to／`line_reason`／`line_nature`）。商城 on-hand 主要由 Admin Products 寫入（ADM-W2-08）。`inventory_conversions` 將商城規格轉入租借規格（過帳仍改兩邊庫存）。
 4. **內容與評價**：`articles` + 區塊／標籤／關聯商品。正式評論僅能對 `order_items` 一筆 `reviews`；圖在 `review_photos`。
 
 ## 設計上值得注意的地方
@@ -1098,7 +1098,7 @@ erDiagram
 ### `public.store_inventory_movement_items`
 **用途：** （見 DDL／database-documents）
 **鍵：** PRIMARY KEY: id
-**關聯：** movement_id, inventory_domain → inventory_movements(id, inventory_domain)；variant_id → product_variants(id)
+**關聯：** movement_id, inventory_domain → inventory_movements(id, inventory_domain)；variant_id → product_variants(id)；source／destination_location_id, inventory_domain → inventory_locations(id, inventory_domain)
 
 | 欄位 | 型別 | 必填 | 預設值 |
 | --- | --- | --- | --- |
@@ -1109,6 +1109,10 @@ erDiagram
 | `sku_snapshot` | `character varying(64)` | 是 | `—` |
 | `item_name_snapshot` | `character varying(200)` | 是 | `—` |
 | `quantity` | `integer` | 是 | `—` |
+| `source_location_id` | `character varying(32)` | 否 | `—` |
+| `destination_location_id` | `character varying(32)` | 否 | `—` |
+| `line_reason` | `text` | 否 | `—` |
+| `line_nature` | `character varying(32)` | 否 | `—` |
 
 ### `public.zone_blocks`
 **用途：** （見 DDL／database-documents）

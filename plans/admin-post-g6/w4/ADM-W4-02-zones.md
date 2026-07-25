@@ -3,57 +3,56 @@
 | 欄位 | 內容 |
 |------|------|
 | **波次** | W4｜P2 |
-| **狀態** | ⬜ 未開始 |
+| **狀態** | ✅ 完成 |
 | **總覽** | [`../../admin-post-g6-task-list.md`](../../admin-post-g6-task-list.md) § ADM-W4-02 |
 | **索引** | [`../README.md`](../README.md) |
-| **Dependencies** | **硬依賴** [`ADM-W4-01-campgrounds.md`](./ADM-W4-01-campgrounds.md) |
+| **Dependencies** | **硬依賴** [`ADM-W4-01-campgrounds.md`](./ADM-W4-01-campgrounds.md) ✅ |
 
 ---
 
 ## 0. 開工前必讀
 
-- [ ] 確認專案中「營位／區域」實際表名（zones／campground_zones 等）
-- [ ] **容量調降**：不得造成已占用 pending／confirmed「幽靈超訂」— 契約必須寫是否允許、如何拒絕
+- [x] 表名：`campground_zones`
+- [x] 容量調降：`totalSites < peak(booked+blocked)` → 409
 
 ---
 
 ## 1. 契約
 
-- [ ] Admin zones CRUD（容量、啟停、所屬營區）
-- [ ] 與 `check-availability` 行為文件化
+- [x] Admin zones CRUD（Admin v0.21 §11.1）
+- [x] 與 `check-availability` 行為文件化
 
 ---
 
 ## 2. Schema
 
-- [ ] 通常不需改；不足才加
+- [x] 不需改
 
 ---
 
 ## 3. 後端
 
-- [ ] CRUD＋容量變更驗證（對照占用）
-- [ ] RBAC
+- [x] CRUD＋容量變更驗證（`get_zone_availability` 峰值）
+- [x] RBAC `booking-calendar.*`
 
 ---
 
 ## 4. 前端
 
-- [ ] 營位維護 UI
+- [x] 營位 tab（`booking-calendar.zones`）；列表「編輯」→ PATCH 類型／價格／可賣上限
 
 ---
 
 ## 5. 測試與驗收
 
-- [ ] 新建 zone 後 availability 反映
-- [ ] 降容量低於占用 → 409（若契約如此）
-- [ ] check-availability 案例回歸
+- [x] `AdminCampgroundZonePostgreSqlIntegrationTest`
+- [x] `npm run test:admin-campgrounds`（含 zones 路徑）
 
 ---
 
 ## 6. 收尾
 
-- [ ] 總覽 W4-02；本檔 ✅
+- [x] 總覽 W4-02；本檔 ✅ → 可開工 W4-03
 
 ---
 
@@ -61,4 +60,4 @@
 
 | 日期 | 執行者 | 結果 | 備註 |
 |------|--------|------|------|
-|  |  | ⬜／✅ |  |
+| 2026-07-25 | Agent | ✅ | 降容量 409；公開詳情／check-availability 連動 |

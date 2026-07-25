@@ -15,11 +15,15 @@
   var ID_PREFIX = {
     order: 'ORD',
     booking: 'BK',
-    movement: 'MV'
+    movement: 'MOV',
+    conversion: 'CVT'
   };
 
   /** 顯示用零補位數（4 位 → 0001）/ Zero-pad width for display codes */
   var DISPLAY_PAD = 4;
+
+  /** 庫存異動／轉換顯示用補零（3 位 → 015；超過自然變長） */
+  var MOVEMENT_DISPLAY_PAD = 3;
 
   /**
    * 從 id 取出數字（支援舊字串格式 ORD-0001 或純數字 1）
@@ -68,9 +72,61 @@
     return formatDisplayId(ID_PREFIX.booking, id);
   }
 
-  /** 庫存異動顯示編號 / Movement display code */
+  /**
+   * 庫存異動顯示編號 MOV-015（用 DB id；補零 3 位）
+   * Movement display code MOV-015 (DB id, pad 3)
+   */
   function formatMovementId(id) {
-    return formatDisplayId(ID_PREFIX.movement, id);
+    var num = parseNumericId(id);
+    if (num === null) {
+      return String(id || '');
+    }
+    return ID_PREFIX.movement + '-' + String(num).padStart(MOVEMENT_DISPLAY_PAD, '0');
+  }
+
+  /**
+   * 轉換配對顯示編號 CVT-065（用 conversion id；補零 3 位）
+   * Conversion pair display code CVT-065
+   */
+  function formatConversionId(id) {
+    var num = parseNumericId(id);
+    if (num === null) {
+      return String(id || '');
+    }
+    return ID_PREFIX.conversion + '-' + String(num).padStart(MOVEMENT_DISPLAY_PAD, '0');
+  }
+
+  /**
+   * 後台時間顯示：台北時區 yyyy-MM-dd HH:mm
+   * Admin datetime display in Asia/Taipei
+   */
+  function formatAdminDateTimeDisplay(value) {
+    if (value == null || value === '') {
+      return '—';
+    }
+    var date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) {
+      var raw = String(value).replace('T', ' ');
+      return raw.length >= 16 ? raw.slice(0, 16) : raw;
+    }
+    try {
+      var parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).formatToParts(date);
+      var map = {};
+      parts.forEach(function (part) {
+        map[part.type] = part.value;
+      });
+      return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute;
+    } catch (err) {
+      return String(value);
+    }
   }
 
   /**
@@ -126,6 +182,8 @@
   global.formatOrderId = formatOrderId;
   global.formatBookingId = formatBookingId;
   global.formatMovementId = formatMovementId;
+  global.formatConversionId = formatConversionId;
+  global.formatAdminDateTimeDisplay = formatAdminDateTimeDisplay;
   global.sameId = sameId;
   global.getNextOrderId = getNextOrderId;
   global.getNextBookingId = getNextBookingId;

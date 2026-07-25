@@ -41,8 +41,10 @@ public class AdminInventoryMovementRepository {
 				.addValue("query", "%" + query.toLowerCase(java.util.Locale.ROOT) + "%")
 				.addValue("limit", size)
 				.addValue("offset", page * size);
+		// M1：列表不列出 conversion_in（與 conversion_out 合併成一列 CVT-xxx）
 		StringBuilder where = new StringBuilder("""
-				 WHERE (lower(movement.movement_no) LIKE :query
+				 WHERE movement.movement_type <> 'conversion_in'
+				   AND (lower(movement.movement_no) LIKE :query
 				    OR lower(movement.reason) LIKE :query
 				    OR lower(movement.employee_id) LIKE :query)
 				""");
@@ -76,10 +78,20 @@ public class AdminInventoryMovementRepository {
 				       movement.destination_location_id, destination.name AS destination_location_name,
 				       movement.employee_id, employee.name AS employee_name, movement.reason,
 				       movement.occurred_at, movement.posted_at,
-				       movement.created_at, movement.updated_at
+				       movement.created_at, movement.updated_at,
+				       COALESCE(conv_src.id, conv_dst.id) AS conversion_id,
+				       CASE
+				         WHEN conv_src.id IS NOT NULL THEN conv_src.destination_movement_id
+				         WHEN conv_dst.id IS NOT NULL THEN conv_dst.source_movement_id
+				         ELSE NULL
+				       END AS paired_movement_id
 				FROM inventory_movements movement
 				LEFT JOIN inventory_locations source ON source.id = movement.source_location_id
 				LEFT JOIN inventory_locations destination ON destination.id = movement.destination_location_id
+				LEFT JOIN inventory_conversions conv_src
+				       ON conv_src.source_movement_id = movement.id
+				LEFT JOIN inventory_conversions conv_dst
+				       ON conv_dst.destination_movement_id = movement.id
 				JOIN admin_users employee ON employee.id = movement.employee_id
 				WHERE movement.id IN (:ids)
 				""", parameters, this::mapHeader);
@@ -207,19 +219,30 @@ public class AdminInventoryMovementRepository {
 			long movementId,
 			String inventoryDomain,
 			VariantSnapshot variant,
-			int quantity) {
+			int quantity,
+			String sourceLocationId,
+			String destinationLocationId,
+			String lineReason,
+			String lineNature) {
 		MapSqlParameterSource parameters = new MapSqlParameterSource()
 				.addValue("movementId", movementId)
 				.addValue("variantId", variant.id())
 				.addValue("sku", variant.sku())
 				.addValue("productName", variant.productName())
-				.addValue("quantity", quantity);
+				.addValue("quantity", quantity)
+				.addValue("sourceLocationId", sourceLocationId)
+				.addValue("destinationLocationId", destinationLocationId)
+				.addValue("lineReason", lineReason)
+				.addValue("lineNature", lineNature);
 		if ("store".equals(inventoryDomain)) {
 			jdbc.update("""
 					INSERT INTO store_inventory_movement_items (
 					    movement_id, inventory_domain, variant_id,
-					    sku_snapshot, item_name_snapshot, quantity)
-					VALUES (:movementId, 'store', :variantId, :sku, :productName, :quantity)
+					    sku_snapshot, item_name_snapshot, quantity,
+					    source_location_id, destination_location_id, line_reason, line_nature)
+					VALUES (
+					    :movementId, 'store', :variantId, :sku, :productName, :quantity,
+					    :sourceLocationId, :destinationLocationId, :lineReason, :lineNature)
 					""", parameters);
 		} else {
 			jdbc.update("""
@@ -229,6 +252,58 @@ public class AdminInventoryMovementRepository {
 					VALUES (:movementId, 'rental', :variantId, :sku, :productName, :quantity)
 					""", parameters);
 		}
+	}
+
+	public void updateMovementReason(long movementId, String reason) {
+		int updated = jdbc.update("""
+				UPDATE inventory_movements
+				SET reason = :reason, updated_at = :now
+				WHERE id = :id
+				""", new MapSqlParameterSource()
+				.addValue("id", movementId)
+				.addValue("reason", reason)
+				.addValue("now", databaseTime(Instant.now())));
+		if (updated == 0) {
+			throw new IllegalStateException("Inventory movement not found: " + movementId);
+		}
+	}
+
+	/** 更新明細備註與／或異動性質（null 參數＝該欄不改）。 */
+	public void updateItemAnnotations(
+			long movementId,
+			long itemId,
+			String lineReason,
+			boolean updateLineReason,
+			String lineNature,
+			boolean updateLineNature) {
+		if (!updateLineReason && !updateLineNature) {
+			return;
+		}
+		StringBuilder sql = new StringBuilder("UPDATE store_inventory_movement_items SET ");
+		MapSqlParameterSource parameters = new MapSqlParameterSource()
+				.addValue("itemId", itemId)
+				.addValue("movementId", movementId);
+		if (updateLineReason) {
+			sql.append("line_reason = :lineReason");
+			parameters.addValue("lineReason", lineReason);
+		}
+		if (updateLineNature) {
+			if (updateLineReason) {
+				sql.append(", ");
+			}
+			sql.append("line_nature = :lineNature");
+			parameters.addValue("lineNature", lineNature);
+		}
+		sql.append(" WHERE id = :itemId AND movement_id = :movementId");
+		int updated = jdbc.update(sql.toString(), parameters);
+		if (updated == 0) {
+			throw new IllegalStateException("Inventory movement item not found: " + itemId);
+		}
+	}
+
+	@Deprecated
+	public void updateItemLineReason(long movementId, long itemId, String lineReason) {
+		updateItemAnnotations(movementId, itemId, lineReason, true, null, false);
 	}
 
 	public List<AdminInventoryMovementItemResponse> findItems(long movementId) {
@@ -372,7 +447,8 @@ public class AdminInventoryMovementRepository {
 		Map<Long, List<AdminInventoryMovementItemResponse>> result = new HashMap<>();
 		jdbc.query("""
 				SELECT id, movement_id, inventory_domain, variant_id,
-				       sku_snapshot, item_name_snapshot, quantity
+				       sku_snapshot, item_name_snapshot, quantity,
+				       source_location_id, destination_location_id, line_reason, line_nature
 				FROM inventory_movement_items_view
 				WHERE movement_id IN (:ids)
 				ORDER BY movement_id, id
@@ -384,7 +460,11 @@ public class AdminInventoryMovementRepository {
 							row.getString("variant_id"),
 							row.getString("sku_snapshot"),
 							row.getString("item_name_snapshot"),
-							row.getInt("quantity")));
+							row.getInt("quantity"),
+							row.getString("source_location_id"),
+							row.getString("destination_location_id"),
+							row.getString("line_reason"),
+							row.getString("line_nature")));
 		});
 
 		return result;
@@ -417,6 +497,8 @@ public class AdminInventoryMovementRepository {
 	}
 
 	private MovementHeader mapHeader(ResultSet row, int rowNumber) throws SQLException {
+		Number conversionId = (Number) row.getObject("conversion_id");
+		Number pairedMovementId = (Number) row.getObject("paired_movement_id");
 		return new MovementHeader(
 				row.getLong("id"),
 				row.getString("movement_no"),
@@ -433,7 +515,9 @@ public class AdminInventoryMovementRepository {
 				toInstant(row, "occurred_at"),
 				toInstant(row, "posted_at"),
 				toInstant(row, "created_at"),
-				toInstant(row, "updated_at"));
+				toInstant(row, "updated_at"),
+				conversionId == null ? null : conversionId.longValue(),
+				pairedMovementId == null ? null : pairedMovementId.longValue());
 	}
 
 	private AdminInventoryMovementLookupResponse.VariantOption mapVariantOption(
@@ -473,6 +557,8 @@ public class AdminInventoryMovementRepository {
 				header.postedAt(),
 				header.createdAt(),
 				header.updatedAt(),
+				header.conversionId(),
+				header.pairedMovementId(),
 				items);
 	}
 
@@ -510,6 +596,8 @@ public class AdminInventoryMovementRepository {
 			Instant occurredAt,
 			Instant postedAt,
 			Instant createdAt,
-			Instant updatedAt) {
+			Instant updatedAt,
+			Long conversionId,
+			Long pairedMovementId) {
 	}
 }

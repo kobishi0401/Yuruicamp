@@ -48,7 +48,6 @@
 - [x] `ApiResponse`／錯誤碼／`GlobalExceptionHandler`
 - [x] Firebase ID Token（含 `dev:` stub）
 - [x] Customer／Admin session、`GET /api/me`、`GET /api/health`、Swagger
-- [x] 會員本人預設配送地址 `GET/PUT /api/me/shipping-address`（Principal 隔離、PostgreSQL 保存、前端 Mock／Backend 分流）
 - [x] MapStruct；架構書認證 Mode B（不自簽 JWT）
 
 ---
@@ -71,8 +70,7 @@
 | B-3  | 分頁 `page`／`size`／`sort`           | ✅ PostgreSQL／Controller 整合驗收通過（Product API Contract v0.2）               |
 | B-4  | 篩選 category／brand／價格            | ✅ PostgreSQL 實際端點驗收通過；無篩選、品牌、價格與錯誤區間皆符合契約            |
 | B-5a | 基本商品規格 `variants[]`             | ✅ 已隨 B-1／B-2 落地；只回 active variant，包含 SKU／顏色／尺寸／規格／價格      |
-| B-5b | 規格層級可售庫存（View／Read Model）  | 🔄 Product API Contract v0.4 與程式已完成；待 PostgreSQL 驗收                     |
-| B-5c | 正式評論評分統計                      | ✅ Product API Contract v0.4 已提供 `rating`、`reviewCount`，列表採批次聚合       |
+| B-5b | 規格層級可售庫存（View／Read Model）  | 🔄 Product API Contract v0.3 與程式已完成；待 PostgreSQL 驗收                     |
 | B-6  | Security：`GET /api/products/**` 公開 | ✅                                                                                |
 | B-7  | （作業）`GET /api/branches` 同套路    | 🔄 已實作公開 Envelope、固定排序與 Swagger；待實際端點驗收                        |
 
@@ -111,19 +109,22 @@
 
 ## 線 D — Payment（P0）
 
-- [ ] D-1 ECPay Gateway + 本機 stub
-- [ ] D-2 `POST .../ecpay`
-- [ ] D-3 `POST /api/payments/ecpay/notify`（冪等）
-- [ ] D-4 Return URL 導頁
-- [ ] D-5 COD（僅商城）
-- [ ] D-6 預約禁止 COD
+- [x] D-1 ECPay Gateway + 本機 stub（`StubEcpayGateway`、`/api/payments/ecpay/stub/simulate-paid`；CMV 對齊 skill test-vectors）
+- [x] D-2 `POST .../ecpay`（商城／預約 launch；`EcpayLaunchService`；stub `aio-checkout`；IT：`EcpayLaunchReturnPostgreSqlIntegrationTest`）
+- [x] D-3 `POST /api/payments/ecpay/notify`（驗簽、`payment_notifications` 冪等、order／booking → `paid`；訂單 reservation `fulfilled`、券 `consumed`）
+- [x] D-4 Return URL 導頁（`EcpayReturnController`／`EcpayReturnService`；不當付款真相）
+- [x] D-5 COD（僅商城：`confirm-cod`；Admin `complete` → `completeCod`／`paid`）
+- [x] D-6 預約禁止 COD（Booking checkout／launch 拒 `cod`；DB `ck_bookings_no_cod`）
+
+> D-1～D-6（2026-07-25 文件對齊）：Notify 回純文字 `1|OK`；驗簽失敗回 `0|CheckMacValueInvalid`。本機預設 `yuruicamp.ecpay.stub=true`。  
+> 取消／退款規則見 [`payment-api-contract.md`](../docs/api/payment-api-contract.md) §7；**綠界退款 HTTP 屬 Admin W3**（[`ADM-W3-00`](./admin-post-g6/w3/ADM-W3-00-payment-gate.md) Gate ✅，可開工 W3-01～03）。
 
 ---
 
 ## 線 E — Booking（P1）
 
 - [x] E-0 Booking Checkout 冪等 Schema（key、request hash、會員範圍唯一約束）
-- [x] E-1 公開讀：營區環境／設施標籤、裝備、policy、closures（PostgreSQL + Controller 7 項整合測試通過）
+- [x] E-1 公開讀：營區／裝備／policy／closures（PostgreSQL + Controller 7 項整合測試通過）
 - [x] E-2 `POST /api/booking/check-availability`（日期／政策驗證、跨晚最低量、公休、zone block、pending／confirmed 占用；PostgreSQL 11 項整合測試通過）
 - [x] E-3 `POST /api/booking/checkout/sessions`（會員冪等、固定順序悲觀鎖、後端日曆計價、pending／unpaid 快照；PostgreSQL 7 項整合測試通過）
 - [x] E-4 租借加購綁預約（營區庫位解析、實體庫存鎖、跨日 active 保留、快照與並發防超租；PostgreSQL 8 項整合測試通過）
@@ -184,7 +185,7 @@
 
 - [ ] H-1 `calendar_dates` API
 - [ ] H-2 文章 API
-- [x] H-3 評價 API（會員 `GET／POST /api/me/reviews`、商品公開 `GET /api/products/{productId}/reviews` 已完成）
+- [ ] H-3 評價 API
 
 ---
 

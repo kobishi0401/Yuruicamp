@@ -16,6 +16,17 @@
 
 公開讀營區／政策並查詢跨日可用性；進結帳才建 **pending + unpaid** 預約並鎖位／租借；金額後端重算。線 E 先完成待付款預約，ECPay 付款與付款後確認延後至線 D。
 
+### 0.1 計價用語（**不是**週一～五／週六日）
+
+| UI／文件用語 | JSON／DB 欄位（**不更名**，相容舊 client） | 何時套用 |
+|--------------|-------------------------------------------|----------|
+| **一般價**、**一般日**（晩） | `priceWeekday`、`pricePerDayWeekday`、`weekdayCount` | 住宿區間 `[checkIn, checkOut)` 內，該日在 `calendar_dates` **未**標 `is_holiday=true` 的每一晚 |
+| **特殊節日價**、**特殊節日**（晩） | `priceHoliday`、`pricePerDayHoliday`、`holidayCount` | 同上區間內，該日在 `calendar_dates` **已**標 `is_holiday=true` 的每一晚（國定假、連假等；**不一定是週六日**） |
+
+- **公休**（`campground_closures`）只決定能不能訂，**不**決定用哪個價格 tier。
+- 後台維護假日曆 → **ADM-W4-03** `GET/PUT /api/admin/calendar-dates`；未標記的週六日仍算**一般日**、走一般價。
+- 前台 Mock（`camp-detail.js` 週五週六 heuristic）僅供估價參考；**結帳以本契約＋`calendar_dates` 為準**。
+
 ---
 
 ## 1. 端點
@@ -67,8 +78,8 @@
 | `id`              | string  | `campground_zones.id` |
 | `type`            | string  | `type`                |
 | `capacityPerSite` | integer | `capacity_per_site`   |
-| `priceWeekday`    | string  | `price_weekday`       |
-| `priceHoliday`    | string  | `price_holiday`       |
+| `priceWeekday`    | string  | `price_weekday`（UI：**一般價**）       |
+| `priceHoliday`    | string  | `price_holiday`（UI：**特殊節日價**）   |
 | `totalSites`      | integer | `total_sites`         |
 | `active`          | boolean | `active`              |
 
@@ -80,8 +91,8 @@
 | `rentalSkuVariantId` | string  | `rental_sku_variants.id`                  |
 | `campgroundId`       | string  | `rental_listings.campground_id`           |
 | `name`               | string  | `equipment_items.name`                    |
-| `pricePerDayWeekday` | string  | `rental_listings.price_per_day_weekday`   |
-| `pricePerDayHoliday` | string  | `rental_listings.price_per_day_holiday`   |
+| `pricePerDayWeekday` | string  | `rental_listings.price_per_day_weekday`（UI：**一般價／日**）   |
+| `pricePerDayHoliday` | string  | `rental_listings.price_per_day_holiday`（UI：**特殊節日價／日**） |
 | `active`             | boolean | listing、SKU 與 variant 都可用才為 `true` |
 
 > `id` 是營區上架項目，不是 SKU variant。建立預約時同時傳 `rentalListingId` 與 `rentalSkuVariantId`，後端必須驗證兩者確實屬於同一筆有效上架資料。
@@ -187,7 +198,7 @@
 1. 驗證 active 會員、日期政策、付款方式及冪等鍵。
 2. 鎖定 active 營區，再依 `zoneId` 固定排序悲觀鎖定 active zones。
 3. 在同一交易內重新執行跨晚可用性查詢；不足或公休回 `409 ZONE_UNAVAILABLE`。
-4. 依 `[checkIn, checkOut)` 與 `calendar_dates.is_holiday` 計算平日／假日晚數。
+4. 依 `[checkIn, checkOut)` 與 `calendar_dates.is_holiday` 計算**一般日／特殊節日**晩數（→ `weekdayCount`／`holidayCount`）。
 5. 使用鎖定後的營位價格計算金額並保存快照，不接受前端金額。
 6. 有租借時，依 variant ID 固定排序，解析營區的 rental location 並鎖定 `rental_sku_variant_stocks`。
 7. 扣除日期重疊的 active `rental_stock_reservations`；不足回 `409 RENTAL_STOCK_INSUFFICIENT`。
@@ -209,7 +220,7 @@
 | `region`                       | string  | `region_snapshot`                                                                    |
 | `checkIn`／`checkOut`          | string  | date                                                                                 |
 | `guestCount`                   | integer |                                                                                      |
-| `weekdayCount`／`holidayCount` | integer | 後端依 `calendar_dates` 算                                                           |
+| `weekdayCount`／`holidayCount` | integer | 後端依 `calendar_dates` 算（UI：**一般日／特殊節日**晩數）                               |
 | `pricing`                      | object  | 見下                                                                                 |
 | `zones`                        | array   | 選位快照                                                                             |
 | `rentals`                      | array   | 可空                                                                                 |
@@ -244,8 +255,8 @@ rental_sku_variant_stocks.on_hand_quantity
 | -------------- | ------------------------ |
 | `zoneId`       | 營位 ID                  |
 | `type`         | 建立當下的營位類型快照   |
-| `priceWeekday` | 建立當下的平日單價字串   |
-| `priceHoliday` | 建立當下的假日單價字串   |
+| `priceWeekday` | 建立當下的一般價字串（DB `price_weekday`）   |
+| `priceHoliday` | 建立當下的特殊節日價字串（DB `price_holiday`） |
 | `quantity`     | 整段住宿每晚占用數量     |
 | `lineTotal`    | 後端計算的該營位小計字串 |
 
@@ -258,13 +269,13 @@ rental_sku_variant_stocks.on_hand_quantity
 | `sku`                | 建立當下的 SKU 快照                       |
 | `name`               | 建立當下的裝備名稱快照                    |
 | `specification`      | 建立當下的規格快照                        |
-| `priceWeekday`       | 平日每日租金字串                          |
-| `priceHoliday`       | 假日每日租金字串                          |
+| `priceWeekday`       | 一般價每日租金字串（DB 欄位名不變）                          |
+| `priceHoliday`       | 特殊節日價每日租金字串                                      |
 | `discountRate`       | listing 折扣比率字串，範圍 `0.00`～`0.30` |
 | `quantity`           | 租借數量                                  |
 | `lineTotal`          | 折扣後租借小計字串                        |
 
-租借小計公式：`((平日價 × 平日晚數) + (假日價 × 假日晚數)) × quantity × (1 - discountRate)`，最後四捨五入至兩位。
+租借小計公式：`((一般價 × 一般日晩數) + (特殊節日價 × 特殊節日晩數)) × quantity × (1 - discountRate)`，最後四捨五入至兩位。
 
 ---
 
@@ -290,7 +301,7 @@ rental_sku_variant_stocks.on_hand_quantity
 
 ### 4.2 詳情 — `GET /api/booking/bookings/{id}`
 
-詳情包含列表欄位，以及 `campgroundId`、`paymentMethod`、`paidAt`、`checkoutExpiresAt`、平假日晚數、`pricing`、`zones`、`rentals` 與 `updatedAt`。`pricing`、`zones`、`rentals` 欄位形狀與 `BookingCheckoutSession` 相同，並且全部取建立當下快照。
+詳情包含列表欄位，以及 `campgroundId`、`paymentMethod`、`paidAt`、`checkoutExpiresAt`、一般日／特殊節日晩數、`pricing`、`zones`、`rentals` 與 `updatedAt`。`pricing`、`zones`、`rentals` 欄位形狀與 `BookingCheckoutSession` 相同，並且全部取建立當下快照。
 
 ### 4.3 Checkout 讀取 — `GET /api/booking/checkout/sessions/{bookingId}`
 

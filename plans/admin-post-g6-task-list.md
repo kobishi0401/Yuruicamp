@@ -2,10 +2,10 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Active（需求已對焦，待開工） |
-| **日期** | 2026-07-23 |
+| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後） |
+| **日期** | 2026-07-25 |
 | **前提** | 線 G-1～G-6 已完成；見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) |
-| **契約現況** | [`docs/api/admin-api-contract.md`](../docs/api/admin-api-contract.md) v0.8 |
+| **契約現況** | [`docs/api/admin-api-contract.md`](../docs/api/admin-api-contract.md) v0.23 |
 | **Schema** | [`docs/latest_schema.sql`](../docs/latest_schema.sql) |
 | **缺漏分析** | 本對話「Admin 模組缺漏分析報告」＋ HITL 問答定案 |
 | **實作 Checklist 資料夾** | [`admin-post-g6/`](./admin-post-g6/README.md)（每個 ADM-W* 一份可勾選步驟） |
@@ -53,24 +53,24 @@ W1 P0  營運半套補齊（備註／標籤／地址偏好／評論刪除／低�
   ↓
 W2 P1  目錄與庫存進階（分類品牌／租借寫入／跨領域轉換／庫位門市）
   ↓
-W3 P1  付款後例外流程（Blocked by 線 D：取消／退款）
+W3 P1  付款後例外流程（Gate ✅；取消／退款可開工）
   ↓
 W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／報表 API）
 ```
 
 | 波次 | Priority | 目標（給新手） | 狀態 |
 |------|----------|----------------|------|
-| **W1** | P0 | 後台「看得見、寫得了」的日常客服缺口 | ⬜ |
-| **W2** | P1 | 可持續上架租借／調撥商店↔租借、維護商品維度主檔 | ⬜ |
-| **W3** | P1 | 付款成功後的取消與退款閉環 | ⬜ Blocked by 線 D |
-| **W4** | P2～P3 | 少改 SQL、內容與報表可營運化 | ⬜ |
+| **W1** | P0 | 後台「看得見、寫得了」的日常客服缺口 | ✅ |
+| **W2** | P1 | 可持續上架租借／調撥商店↔租借、維護商品維度主檔 | ✅ |
+| **W3** | P1 | 付款成功後的取消與退款閉環 | ✅ |
+| **W4** | P2～P3 | 少改 SQL、內容與報表可營運化 | ✅（04／05 延後） |
 
 ### 跨波次硬依賴（請先記住）
 
 | 依賴 | 說明 |
 |------|------|
 | **線 D（Payment）** | W3 全部任務開工前，至少要有：ECPay notify 冪等、paid 真相、退款／取消與金流對齊的契約 |
-| **G-3 庫存異動** | 跨領域轉換建立在同領域過帳規則之上；租借 on-hand 仍只經異動單，不經商品 PUT |
+| **G-3 庫存異動** | 跨領域轉換建立在同領域過帳規則之上；**商城** on-hand 可經 W2-08 Products 寫入；**租借** on-hand 仍只經異動／conversion／rental transfer |
 | **G-2c 商城商品** | 分類／品牌 Admin CRUD 是「lookup 可新增來源」；商品 API 本身已完成 |
 | **契約先於程式** | 每一任務建議拆「契約／Schema」子步驟，再實作 |
 
@@ -222,7 +222,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **為什麼需要** | Admin Products 建立依賴 `categoryId` lookup；不能新增分類就無法長期上架。 |
 | **資料流向** | Admin → `categories` → Products lookups／建立商品引用。 |
 | **注意** | 已被商品引用的分類：禁硬刪或僅停用（契約寫死）。 |
-| **DoD** | [ ] CRUD＋安全刪除 [ ] lookups 自動出現新分類 [ ] RBAC（建議 `products.edit`） |
+| **DoD** | [x] CRUD＋安全刪除 [x] lookups 自動出現新分類 [x] RBAC（建議 `products.edit`） |
 
 ---
 
@@ -236,7 +236,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 可緊接或與 ADM-W2-01 同 PR 切片；**建議 01 先於 02 僅為驗收單純** |
 | **為什麼需要** | 同分類。 |
 | **資料流向** | Admin → `brands` → Products lookups。 |
-| **DoD** | 同 ADM-W2-01 精神 |
+| **DoD** | [x] 同 ADM-W2-01 精神（CRUD＋安全刪除＋lookups＋RBAC） |
 
 ---
 
@@ -249,9 +249,9 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Priority** | P1 |
 | **Dependencies** | **建議先有 ADM-W2-01／02**（若租借也掛分類／品牌經 `equipment_items`）；G-2c 裝備主檔建立模式可參考 |
 | **為什麼需要** | 商城商品可寫、租借不可寫；預約可租清單會僵死在 seed。 |
-| **資料流向** | Admin → `equipment_items`（可新建或重用）→ `rental_skus` → `rental_sku_variants`（active／inactive）→ **庫存數量仍只經 G-3 rental 異動**。 |
-| **關聯** | 前端 `products.updateRental`；readiness `products.rentalWrite`。 |
-| **DoD** | [ ] 契約（獨立 `/api/admin/rentals` 或掛 products 下，**需寫死**） [ ] 建立／更新／上下架規格 [ ] SKU 唯一 [ ] 不接受直接寫 on-hand [ ] 前端解除部分 gate |
+| **資料流向** | Admin → `equipment_items`（可新建或重用）→ `rental_skus` → `rental_sku_variants`（active／inactive）→ **租借庫存數量仍只經 G-3 rental 異動／W2-05 conversion**。 |
+| **關聯** | 前端 `AdminAPI.rentals`；readiness `products.rentalWrite`。 |
+| **DoD** | [x] 契約（獨立 `/api/admin/rentals`） [x] 建立／更新／上下架規格 [x] SKU 唯一 [x] 不接受直接寫 on-hand [x] 前端解除 gate |
 
 ---
 
@@ -265,7 +265,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | **ADM-W2-03**；營區需已存在（seed 可先撐；新營區靠 W4 的 K5） |
 | **為什麼需要** | 沒有 `rental_listings` 就無法把規格賣到特定營區與日租價。裝備規格／標籤影響前台展示與篩選一致性。 |
 | **資料流向** | Admin → `rental_listings`（campground × variant × price × active）→ Booking 公開讀 equipment。同步維護 `equipment_specifications`／`equipment_tags`（與商城共用裝備主檔時要避免兩邊互相覆蓋，契約需定義「依 itemId 更新」）。 |
-| **DoD** | [ ] listing CRUD [ ] 公開 booking equipment 看得到變更 [ ] 規格／標籤可維護 [ ] `products.rentalWrite` 全就緒 |
+| **DoD** | [x] listing CRUD [x] 公開 booking equipment 看得到變更 [x] 規格／標籤：後端 API 可用；**Admin Modal 刻意不做（W2 定案接受）** [x] `products.rentalWrite` 全就緒 |
 
 ---
 
@@ -280,7 +280,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **為什麼需要** | 同一實體貨要從「可賣」轉「可租」；Schema 已有 `inventory_conversions`，G-3 刻意未開放。 |
 | **資料流向（概念）** | 一筆業務轉換 → 同交易建立 store `conversion_out`＋rental `conversion_in` 兩張異動（或 draft 後一次過帳）→ 寫 `inventory_conversions` 綁定＋冪等鍵 → 過帳時兩邊庫存一併變更；失敗整筆 rollback。 |
 | **關聯** | 不可負庫、不可低於 active 保留；posted 不可改。 |
-| **DoD** | [ ] 契約升版（含錯誤碼） [ ] 建立／過帳／重送冪等 [ ] 併發與不足庫存 409 [ ] 前端調撥／轉換 UI 接真 API [ ] PostgreSQL 整合測試 |
+| **DoD** | [x] 契約升版（含錯誤碼） [x] 建立／過帳／重送冪等 [x] 併發與不足庫存 409 [x] 前端調撥／轉換 UI 接真 API [x] PostgreSQL 整合測試 |
 
 ---
 
@@ -295,7 +295,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **為什麼需要** | 新倉庫／營區庫位不能永遠靠 SQL。 |
 | **資料流向** | Admin → `inventory_locations`（domain=store｜rental、type、active、可選 branch 關聯）→ movement lookups。 |
 | **注意** | 停用庫位：禁止新保留／新異動指向它；既有庫存需先調撥清零（契約寫規則）。 |
-| **DoD** | [ ] CRUD＋啟停規則 [ ] lookups 只回 active（或含 inactive 需標示） |
+| **DoD** | [x] CRUD＋啟停規則 [x] lookups 只回 active（或含 inactive 需標示） |
 
 ---
 
@@ -309,37 +309,49 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 可接在 K3 後（門市常對應商店庫位／取貨） |
 | **為什麼需要** | Checkout 取貨、庫位 `branch_id`、公開 branches 讀取的資料來源。 |
 | **資料流向** | Admin → `branches` → 公開 `GET /api/branches` 與訂單 pickup 外鍵。 |
-| **DoD** | [ ] CRUD＋安全停用 [ ] 公開讀與後台一致 |
+| **DoD** | [x] CRUD＋安全停用 [x] 公開讀與後台一致 |
+
+---
+
+### ADM-W2-08　商品寫商城庫存＋異動稽核（追加切片）
+
+> 實作 Checklist：[`admin-post-g6/w2/ADM-W2-08-product-stock-update.md`](./admin-post-g6/w2/ADM-W2-08-product-stock-update.md)
+
+| 欄位 | 內容 |
+|------|------|
+| **Priority** | P1（追加） |
+| **Dependencies** | G-2c、G-3；W2-05 conversion／rental transfer 維持例外 |
+| **為什麼需要** | 翻轉「商城 on-hand 只能經異動單」；商品 Modal 可寫分店庫存，異動頁改以 `product_stock_update` 做稽核定稿。 |
+| **DoD** | [x] 契約 v0.17／方案 B [x] Products `stockLocations` [x] 稽核單 post 不改 on_hand [x] 手動驗收通過 |
 
 ---
 
 ### W2 完成門檻
 
-- [ ] W2 七項皆勾選  
-- [ ] 租借可從後台完整上架到至少一個營區並被 booking 公開讀看到  
-- [ ] 至少一筆 store→rental 轉換過帳整合測試通過  
-- [ ] 契約與 readiness 更新  
+- [x] W2 七項皆勾選（另含追加 **ADM-W2-08**）  
+- [x] 租借可從後台完整上架到至少一個營區並被 booking 公開讀看到  
+- [x] 至少一筆 store→rental 轉換過帳整合測試通過  
+- [x] 契約與 readiness 更新  
+- [x] UI follow-up 手動驗收：上架＋store→rental＋營地互轉（[`W2-ui-followups.md`](./admin-post-g6/w2/W2-ui-followups.md)）  
 
-> **⚠️ 刻意延後的前端（不擋「後端／契約／IT」門檻，但擋完整營運 UX）**  
-> 專檔：[`admin-post-g6/w2/W2-ui-followups.md`](./admin-post-g6/w2/W2-ui-followups.md)  
-> 1. 舊版 `products.js` **租借整頁**（定價／上架）尚未改新資料模型（W2-04 UI）  
-> 2. 舊版「**調撥到租借**」Modal 仍是前端記憶體，尚未打真的 conversion API（W2-05 UI）  
+> **✅ W2 UI follow-up 已完成**（原刻意延後項已遷移並手動驗收）  
+> 專檔：[`admin-post-g6/w2/W2-ui-followups.md`](./admin-post-g6/w2/W2-ui-followups.md)
 
 ---
 
-## 4. W3 — P1 付款後例外流程（Blocked by 線 D）
+## 4. W3 — P1 付款後例外流程（Gate ✅；可開工）
 
-> **開工條件（Gate）**：線 D 至少完成「paid 真相＋notify 冪等」；退款 API／ECPay 退款策略在 Payment 契約有定義。  
-> Admin 任務仍寫在此清單，但狀態維持 Blocked 直到 Gate 通過。
+> **開工條件（Gate）**：線 D「paid 真相＋notify 冪等」＋ Payment 契約取消／退款／券規則已定案。  
+> **2026-07-25**：[`ADM-W3-00`](./admin-post-g6/w3/ADM-W3-00-payment-gate.md) ✅；綠界退款 HTTP 仍屬 W3-02 實作。
 
 ### 線 D Gate 檢查清單（不是 Admin 實作項，但是 W3 前置）
 
 > 實作 Checklist：[`admin-post-g6/w3/ADM-W3-00-payment-gate.md`](./admin-post-g6/w3/ADM-W3-00-payment-gate.md)
 
-- [ ] D：ECPay 付款成功寫入 `payment_status=paid`（訂單／預約）  
-- [ ] D：notify 冪等  
-- [ ] D：退款或取消與金流的官方步驟已定案（契約）  
-- [ ] D：優惠券 `consumed` 與取消／退款是否回滾的規則已定案  
+- [x] D：ECPay 付款成功寫入 `payment_status=paid`（訂單／預約）  
+- [x] D：notify 冪等  
+- [x] D：退款或取消與金流的官方步驟已定案（契約 §7）  
+- [x] D：優惠券 `consumed` 與取消／退款是否回滾的規則已定案（契約 §7.4）  
 
 ---
 
@@ -350,11 +362,11 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 欄位 | 內容 |
 |------|------|
 | **Priority** | P1 |
-| **Dependencies** | **Blocked by 線 D Gate**；既有 G-2b；庫存釋放需對齊 Checkout／reservation 規則 |
+| **Dependencies** | **Gate ✅**；既有 G-2b；庫存釋放需對齊 Checkout／reservation 規則 |
 | **為什麼需要** | 已付款但未出貨時，客服需取消並釋放庫存；不能只改 status 字串。 |
 | **資料流向** | Admin `POST .../cancel`（名稱以契約為準）→ 悲觀鎖訂單 → 僅允許 `unshipped`＋允許的付款／退款前置條件 → `cancelled`＋history → 釋放 active `product_stock_reservations`（或依已扣庫策略回補）→ 觸發退款流程（見 W3-02）或標記待退款。 |
 | **注意** | COD unpaid 取消 vs 線上 paid 取消規則分開寫。會員 Checkout cancel 只覆蓋未付款場景，不取代本命令。 |
-| **DoD** | [ ] 契約狀態機 [ ] 庫存／保留正確 [ ] 冪等 [ ] RBAC [ ] 整合測試 |
+| **DoD** | [x] 契約狀態機 [x] 庫存／保留正確 [x] 冪等 [x] RBAC [x] 整合測試 |
 
 ---
 
@@ -365,11 +377,11 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 欄位 | 內容 |
 |------|------|
 | **Priority** | P1 |
-| **Dependencies** | **Blocked by 線 D**；常與 ADM-W3-01 同一業務交易或緊接呼叫 |
+| **Dependencies** | **Gate ✅**；常與 ADM-W3-01 同一業務交易或緊接呼叫 |
 | **為什麼需要** | DB 已有完整 `refund_status` ENUM，但 Admin 不能推進；金流與帳務會對不上。 |
 | **資料流向** | 退款請求 → 更新 `refund_status`＋`order_event_history` → 呼叫 Payment 退款埠（ECPay）→ 成功則 `payment_status=refunded`／`refund_status=refunded`。Admin **不**偽造綠界結果。 |
 | **不做** | O2 退貨（`returned`）本波不做。 |
-| **DoD** | [ ] 契約與 Payment 契約交叉引用 [ ] 非法轉換 409 [ ] 事件歷程可查 [ ] 與取消命令整合驗收 |
+| **DoD** | [x] 契約與 Payment 契約交叉引用 [x] 非法轉換 409 [x] 事件歷程可查 [x] 與取消命令整合驗收（本波＝cancel 同交易全額退款） |
 
 ---
 
@@ -380,20 +392,20 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 欄位 | 內容 |
 |------|------|
 | **Priority** | P1 |
-| **Dependencies** | **Blocked by 線 D**；E-6 會員未付款取消可參考釋放邏輯，但已付款路徑不同 |
+| **Dependencies** | **Gate ✅**；E-6 會員未付款取消可參考釋放邏輯，但已付款路徑不同 |
 | **為什麼需要** | 客人取消已付款行程：需釋放營位占用、租借保留，並走退款。 |
 | **資料流向** | Admin 取消命令 → 鎖 booking → 允許的 status／payment 組合 → `cancelled`＋history → 釋放 zone 占用與 rental reservations → 觸發退款（對齊 Payment）。 |
 | **關聯** | 不得讓 Admin 直接把 unpaid 改 paid；退款真相在 Payment。 |
-| **DoD** | [ ] 契約 [ ] 釋放正確且冪等 [ ] 與退款連動 [ ] 整合測試 [ ] 前端 Bookings 操作接線 |
+| **DoD** | [x] 契約 [x] 釋放正確且冪等 [x] 與退款連動 [x] 整合測試 [x] 前端 Bookings 操作接線 |
 
 ---
 
 ### W3 完成門檻
 
-- [ ] 線 D Gate 全勾  
-- [ ] O1／O3／B1 皆驗收  
-- [ ] 明確文件寫「O2 退貨不在本波」  
-- [ ] Admin 契約升版  
+- [x] 線 D Gate 全勾  
+- [x] O1／O3／B1 皆驗收  
+- [x] 明確文件寫「O2 退貨不在本波」  
+- [x] Admin 契約升版（v0.19）＋Payment v0.3  
 
 ---
 
@@ -411,7 +423,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 無硬鎖；**利於** W2 listing 擴新營區 |
 | **為什麼需要** | 公休、listing、預約都掛 campground。 |
 | **資料流向** | Admin → `campgrounds` → 公開 booking／closures。 |
-| **DoD** | [ ] CRUD＋啟停 [ ] 公開讀一致 |
+| **DoD** | [x] CRUD＋啟停 [x] 公開讀一致 |
 
 ---
 
@@ -426,7 +438,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **為什麼需要** | 容量與可訂性不能只靠 seed。 |
 | **資料流向** | Admin → zones（或專案內對應表）→ availability／checkout。 |
 | **注意** | 改容量不得讓已占用的 pending／confirmed 預約變成「幽靈超訂」——契約需定義是否允許降容量低於已占用。 |
-| **DoD** | [ ] CRUD [ ] 與 check-availability 行為文件化並驗收 |
+| **DoD** | [x] CRUD [x] 與 check-availability 行為文件化並驗收 |
 
 ---
 
@@ -440,13 +452,14 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 對齊架構書線 H／P2；Booking 計價讀假日 |
 | **為什麼需要** | 公休 ≠ 假日價；沒有後台假日曆就只能改 DB。 |
 | **資料流向** | Admin → `calendar_dates` → Booking 日曆計價 weekday／holiday。 |
-| **DoD** | [ ] 契約 `GET/PUT` 或 CRUD [ ] 計價整合驗收一筆假日價 |
+| **DoD** | [x] 契約 `GET/PUT/DELETE` [x] 計價整合驗收（IT holidayCount） |
 
 ---
 
 ### ADM-W4-04　文章 Admin API（K8）
 
-> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-04-articles.md`](./admin-post-g6/w4/ADM-W4-04-articles.md)
+> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-04-articles.md`](./admin-post-g6/w4/ADM-W4-04-articles.md)  
+> **狀態：⏭️ 延後（靜態 JSON）**
 
 | 欄位 | 內容 |
 |------|------|
@@ -454,13 +467,14 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 可與線 H 公開讀一起規劃；Admin 寫、公開讀可分兩任務 |
 | **為什麼需要** | 內容營運。 |
 | **資料流向** | Admin → `articles`（draft／published／archived）→ 公開 `GET /api/articles`（若尚未實作則本任務含公開讀或另開 H 任務並互列依賴）。 |
-| **DoD** | [ ] Admin CRUD＋發布規則 [ ] 公開讀只回 published |
+| **DoD** | ⏭️ 現階段不做；維持 `articles.json` |
 
 ---
 
 ### ADM-W4-05　圖檔上傳 Cloud Storage（K10）
 
-> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-05-image-upload.md`](./admin-post-g6/w4/ADM-W4-05-image-upload.md)
+> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-05-image-upload.md`](./admin-post-g6/w4/ADM-W4-05-image-upload.md)  
+> **狀態：⏭️ 延後（GCP 部署後）；商品圖先貼 URL**
 
 | 欄位 | 內容 |
 |------|------|
@@ -468,27 +482,30 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | **Dependencies** | 線 J／GCP 基礎；可先於正式環境用簽名 URL 方案 |
 | **為什麼需要** | G-2c 只接受既有 URL；營運需要上傳。 |
 | **資料流向** | Admin 選檔 → 後端發上傳憑證或代傳 → 回傳 URL → 既有 Products／Articles 圖片欄位引用。 |
-| **DoD** | [ ] 上傳成功取得 HTTPS URL [ ] 權限與檔案類型限制 [ ] 商品／文章至少一處接上 |
+| **DoD** | ⏭️ 現階段不做上傳 API |
 
 ---
 
 ### ADM-W4-06　Analytics 專用彙總 API（K11）
 
-> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-06-analytics-api.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api.md)
+> 實作 Checklist：[`admin-post-g6/w4/ADM-W4-06-analytics-api.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api.md)  
+> **Spec（ready-for-agent）：** [`ADM-W4-06-analytics-api-spec.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api-spec.md)
 
 | 欄位 | 內容 |
 |------|------|
 | **Priority** | P3 |
 | **Dependencies** | 訂單／預約資料穩定；建議 W3 後再做以免退款狀態影響報表口徑 |
 | **為什麼需要** | 前端聚合 list API 在資料量大時慢且權限過粗。 |
-| **資料流向** | Admin → 伺服器端彙總（營收、單量、熱銷）→ Dashboard；權限可用 `orders.view` 或另立 `analytics.view`。 |
-| **DoD** | [ ] 契約（口徑：是否含退款／取消） [ ] API＋快取策略（可先無快取） [ ] 前端 Analytics 改打彙總端點 |
+| **資料流向** | Admin → `shop-summary`／`booking-summary` → Analytics 頁；RBAC **`analytics.view`** |
+| **DoD** | [x] Spec 實作 [x] Admin v0.23 [x] IT + facade [x] 前端改打 summary |
 
 ---
 
 ### W4 完成門檻
 
-- [ ] K5～K11 對應六項皆勾選  
+- [x] K5～K7（W4-01～03）  
+- [x] K8～K10：W4-04／05 **延後**（不阻塞；文章仍靜態 JSON、圖檔等 GCP）  
+- [x] K11：W4-06 Analytics API（含手動驗收）  
 - [ ] 營運文件：哪些主檔改後台、哪些仍需工程師  
 
 ---
@@ -555,3 +572,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 2026-07-23 | **ADM-W1-05 完成**：`PUT .../preferences`＋`GET /preference-options`；契約 v0.14；`preferences=true`；PostgreSQL IT 通過 |
 | 2026-07-23 | 文件對齊：總覽 changelog／開工表／DoD；checklist 格式；契約 Customers 段落改為 W1-02→03→04→05 |
 | 2026-07-23 | 標註 W2 **刻意延後 UI**：[`admin-post-g6/w2/W2-ui-followups.md`](./admin-post-g6/w2/W2-ui-followups.md)（租借整頁／調撥 Modal） |
+| 2026-07-25 | **W2 波次完成（文件收斂）**：W2-01～08 DoD／checklist 全勾；UI follow-up 手動驗收通過；契約現況改記 v0.18；波次表 W1／W2 ✅；下一步 W3 Gate |
+| 2026-07-25 | **W3 Gate ✅**：對齊 Payment 契約 v0.2 §6／§7；線 D D-1～D-6 勾完；解鎖 W3-01～03（綠界退款 HTTP 仍屬 W3-02） |
+| 2026-07-25 | **W3 波次完成**：O1／O3／B1；Admin v0.19、Payment v0.3 stub 全額退款 port；下一步 W4 |
+| 2026-07-25 | **W4-06 完成＋手動驗收**：Analytics summary API；Admin v0.23；**W4 波次收斂**（04／05 延後） |

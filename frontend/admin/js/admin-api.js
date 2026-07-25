@@ -304,6 +304,10 @@
       /** 語意化捷徑：完成 */
       complete: function (orderId, payload) {
         return request('POST', '/orders/' + encodeURIComponent(orderId) + '/complete', payload || {});
+      },
+      /** W3-01／W3-02：未出貨取消（已付款線上單同交易退款） */
+      cancel: function (orderId, payload) {
+        return request('POST', '/orders/' + encodeURIComponent(orderId) + '/cancel', payload || {});
       }
     },
 
@@ -350,6 +354,10 @@
       /** POST /api/admin/bookings/:id/complete */
       complete: function (bookingId, payload) {
         return request('POST', '/bookings/' + encodeURIComponent(bookingId) + '/complete', payload || {});
+      },
+      /** W3-03：已付款預約取消＋同交易退款 */
+      cancel: function (bookingId, payload) {
+        return request('POST', '/bookings/' + encodeURIComponent(bookingId) + '/cancel', payload || {});
       }
     },
 
@@ -385,11 +393,149 @@
       deactivate: function (productId) {
         return request('POST', '/products/' + encodeURIComponent(productId) + '/deactivate', {});
       },
-      /** PUT /api/admin/rentals/:id — 租借庫存 */
+      /**
+       * Mock 專用：舊版租借庫存寫入。
+       * 正式模式請改用 AdminAPI.rentals.*／inventoryConversions／listings。
+       */
       updateRental: function (rentalId, rental) {
-        return unsupported('products.rentalWrite', '正式後端尚未提供租借商品寫入', function () {
+        return unsupported('products.rentalWrite', '正式模式請改用 AdminAPI.rentals 與 listings', function () {
           return request('PUT', '/rentals/' + encodeURIComponent(rentalId), rental);
         });
+      }
+    },
+
+    // ── 分類主檔 / Categories（W2-01）──
+    categories: {
+      list: function () {
+        return request('GET', '/categories');
+      },
+      getById: function (categoryId) {
+        return request('GET', '/categories/' + encodeURIComponent(categoryId));
+      },
+      create: function (payload) {
+        return request('POST', '/categories', payload);
+      },
+      update: function (categoryId, payload) {
+        return request('PATCH', '/categories/' + encodeURIComponent(categoryId), payload);
+      },
+      remove: function (categoryId) {
+        return request('DELETE', '/categories/' + encodeURIComponent(categoryId));
+      }
+    },
+
+    // ── 品牌主檔 / Brands（W2-02）──
+    brands: {
+      list: function () {
+        return request('GET', '/brands');
+      },
+      getById: function (brandId) {
+        return request('GET', '/brands/' + encodeURIComponent(brandId));
+      },
+      create: function (payload) {
+        return request('POST', '/brands', payload);
+      },
+      update: function (brandId, payload) {
+        return request('PATCH', '/brands/' + encodeURIComponent(brandId), payload);
+      },
+      remove: function (brandId) {
+        return request('DELETE', '/brands/' + encodeURIComponent(brandId));
+      }
+    },
+
+    // ── 租借 SKU／上架 / Rentals（W2-03／04）──
+    rentals: {
+      /** GET /api/admin/rentals */
+      list: function (query) {
+        var params = new URLSearchParams(query || { page: 0, size: 100, sort: 'id,asc' });
+        var suffix = params.toString() ? '?' + params.toString() : '';
+        return request('GET', '/rentals' + suffix, null, true);
+      },
+      /** GET /api/admin/rentals/:id */
+      getById: function (rentalId) {
+        return request('GET', '/rentals/' + encodeURIComponent(rentalId));
+      },
+      /** POST /api/admin/rentals */
+      create: function (payload) {
+        return request('POST', '/rentals', payload);
+      },
+      /** PUT /api/admin/rentals/:id — SKU／規格主檔（不含庫存、不含定價） */
+      update: function (rentalId, payload) {
+        return request('PUT', '/rentals/' + encodeURIComponent(rentalId), payload);
+      },
+      activate: function (rentalId) {
+        return request('POST', '/rentals/' + encodeURIComponent(rentalId) + '/activate', {});
+      },
+      deactivate: function (rentalId) {
+        return request('POST', '/rentals/' + encodeURIComponent(rentalId) + '/deactivate', {});
+      },
+      /** GET /api/admin/rentals/:id/listings */
+      listListings: function (rentalId) {
+        return request('GET', '/rentals/' + encodeURIComponent(rentalId) + '/listings');
+      },
+      /** PUT /api/admin/rentals/:id/listings — 整組取代上架／定價 */
+      replaceListings: function (rentalId, payload) {
+        return request('PUT', '/rentals/' + encodeURIComponent(rentalId) + '/listings', payload);
+      }
+    },
+
+    // ── 裝備規格／標籤 / Equipment items（W2-04；商城與租借共用 itemId）──
+    equipmentItems: {
+      getSpecs: function (itemId) {
+        return request('GET', '/equipment-items/' + encodeURIComponent(itemId) + '/specs');
+      },
+      replaceSpecs: function (itemId, payload) {
+        return request('PUT', '/equipment-items/' + encodeURIComponent(itemId) + '/specs', payload);
+      },
+      getTags: function (itemId) {
+        return request('GET', '/equipment-items/' + encodeURIComponent(itemId) + '/tags');
+      },
+      replaceTags: function (itemId, payload) {
+        return request('PUT', '/equipment-items/' + encodeURIComponent(itemId) + '/tags', payload);
+      }
+    },
+
+    // ── 跨領域庫存轉換 / Inventory conversions（W2-05）──
+    inventoryConversions: {
+      list: function (query) {
+        var params = new URLSearchParams(query || { page: 0, size: 100 });
+        var suffix = params.toString() ? '?' + params.toString() : '';
+        return request('GET', '/inventory-conversions' + suffix, null, true);
+      },
+      getById: function (conversionId) {
+        return request('GET', '/inventory-conversions/' + encodeURIComponent(conversionId));
+      },
+      /** POST /api/admin/inventory-conversions — 建立草稿（不改庫存） */
+      createDraft: function (payload) {
+        return request('POST', '/inventory-conversions', payload);
+      },
+      /** POST /api/admin/inventory-conversions/:id/post — 過帳 */
+      post: function (conversionId) {
+        return request('POST', '/inventory-conversions/' + encodeURIComponent(conversionId) + '/post', {});
+      },
+      /** POST /api/admin/inventory-conversions/:id/cancel — 作廢草稿 */
+      cancel: function (conversionId) {
+        return request('POST', '/inventory-conversions/' + encodeURIComponent(conversionId) + '/cancel', {});
+      }
+    },
+
+    // ── 庫位主檔 / Inventory locations（W2-06）──
+    inventoryLocations: {
+      list: function (query) {
+        var params = new URLSearchParams(query || {});
+        var suffix = params.toString() ? '?' + params.toString() : '';
+        return request('GET', '/inventory-locations' + suffix);
+      },
+      getById: function (locationId) {
+        return request('GET', '/inventory-locations/' + encodeURIComponent(locationId));
+      },
+      create: function (payload) {
+        return request('POST', '/inventory-locations', payload);
+      },
+      update: function (locationId, payload) {
+        return request('PATCH', '/inventory-locations/' + encodeURIComponent(locationId), payload);
+      },
+      remove: function (locationId) {
+        return request('DELETE', '/inventory-locations/' + encodeURIComponent(locationId));
       }
     },
 
@@ -433,7 +579,7 @@
       },
       /** DELETE /api/admin/reviews/:id — 硬刪整則（photos CASCADE） */
       remove: function (reviewId) {
-        return request('DELETE', '/reviews/' + encodeURIComponent(reviewId));
+          return request('DELETE', '/reviews/' + encodeURIComponent(reviewId));
       }
     },
 
@@ -486,9 +632,60 @@
       cancel: function (movementId) {
         return request('POST', '/inventory-movements/' + encodeURIComponent(movementId) + '/cancel', {});
       },
+      // ADM-W2-08：改表頭 reason（不更新 employeeId）
+      updateReason: function (movementId, payload) {
+        return request('PATCH', '/inventory-movements/' + encodeURIComponent(movementId), payload);
+      },
+      // ADM-W2-08：改列備註 lineReason 與／或異動性質 lineNature
+      updateItemLineReason: function (movementId, itemId, payload) {
+        return request(
+          'PATCH',
+          '/inventory-movements/' + encodeURIComponent(movementId)
+            + '/items/' + encodeURIComponent(itemId),
+          payload
+        );
+      },
       // Mock 模式保留舊 create 名稱；Backend 模式一律使用 createDraft。
       create: function (record) {
         return request('POST', '/inventory-movements', record);
+      }
+    },
+
+    // ── 營區主檔 / Campgrounds（W4-01）──
+    campgrounds: {
+      list: function () {
+        return request('GET', '/campgrounds');
+      },
+      getById: function (campgroundId) {
+        return request('GET', '/campgrounds/' + encodeURIComponent(campgroundId));
+      },
+      create: function (payload) {
+        return request('POST', '/campgrounds', payload);
+      },
+      update: function (campgroundId, payload) {
+        return request('PATCH', '/campgrounds/' + encodeURIComponent(campgroundId), payload);
+      },
+      remove: function (campgroundId) {
+        return request('DELETE', '/campgrounds/' + encodeURIComponent(campgroundId));
+      },
+      /** W4-02：營位列表（含停用） */
+      listZones: function (campgroundId) {
+        return request('GET', '/campgrounds/' + encodeURIComponent(campgroundId) + '/zones');
+      },
+      getZone: function (campgroundId, zoneId) {
+        return request('GET', '/campgrounds/' + encodeURIComponent(campgroundId)
+          + '/zones/' + encodeURIComponent(zoneId));
+      },
+      createZone: function (campgroundId, payload) {
+        return request('POST', '/campgrounds/' + encodeURIComponent(campgroundId) + '/zones', payload);
+      },
+      updateZone: function (campgroundId, zoneId, payload) {
+        return request('PATCH', '/campgrounds/' + encodeURIComponent(campgroundId)
+          + '/zones/' + encodeURIComponent(zoneId), payload);
+      },
+      removeZone: function (campgroundId, zoneId) {
+        return request('DELETE', '/campgrounds/' + encodeURIComponent(campgroundId)
+          + '/zones/' + encodeURIComponent(zoneId));
       }
     },
 
@@ -510,6 +707,36 @@
       },
       remove: function (id) {
         return request('DELETE', '/campground-closures/' + encodeURIComponent(id));
+      }
+    },
+
+    // ── 特殊節日曆 / Calendar dates（W4-03）──
+    calendarDates: {
+      /** 區間內每一天一列（含未標記的一般日） */
+      listRange: function (from, to) {
+        var params = new URLSearchParams({ from: from, to: to });
+        return request('GET', '/calendar-dates?' + params.toString());
+      },
+      /** isHoliday=true 標記；false 刪列恢復一般日 */
+      upsert: function (date, payload) {
+        return request('PUT', '/calendar-dates/' + encodeURIComponent(date), payload);
+      },
+      remove: function (date) {
+        return request('DELETE', '/calendar-dates/' + encodeURIComponent(date));
+      }
+    },
+
+    // ── 分析報表彙總 / Analytics summaries（W4-06）──
+    analytics: {
+      /** 商城 KPI、折線、Top10；query from/to 為 YYYY-MM-DD */
+      shopSummary: function (from, to) {
+        var params = new URLSearchParams({ from: from, to: to });
+        return request('GET', '/analytics/shop-summary?' + params.toString());
+      },
+      /** 預約 KPI、折線、營地／地區 */
+      bookingSummary: function (from, to) {
+        var params = new URLSearchParams({ from: from, to: to });
+        return request('GET', '/analytics/booking-summary?' + params.toString());
       }
     }
   };

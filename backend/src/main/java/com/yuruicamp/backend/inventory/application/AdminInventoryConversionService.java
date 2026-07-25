@@ -115,7 +115,15 @@ public class AdminInventoryConversionService {
 				reason,
 				occurredAt,
 				now);
-		movementRepository.insertItem(sourceMovementId, "store", sourceVariant, request.quantity());
+		movementRepository.insertItem(
+				sourceMovementId,
+				"store",
+				sourceVariant,
+				request.quantity(),
+				sourceLocationId,
+				null,
+				null,
+				null);
 
 		long destinationMovementId = movementRepository.insertMovement(
 				generateMovementNo(now),
@@ -127,7 +135,8 @@ public class AdminInventoryConversionService {
 				reason,
 				occurredAt,
 				now);
-		movementRepository.insertItem(destinationMovementId, "rental", destinationVariant, request.quantity());
+		movementRepository.insertItem(
+				destinationMovementId, "rental", destinationVariant, request.quantity(), null, null, null, null);
 
 		long conversionId;
 		try {

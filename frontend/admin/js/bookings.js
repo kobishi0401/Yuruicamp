@@ -304,10 +304,6 @@ window.initBookings = function () {
 
   // ── 取消按鈕 → 開啟取消確認 Modal ───────────────────────────
   $(document).on('click.bookings', '.btn-cancel-booking', function () {
-    if (isBookingBackendEnabled()) {
-      window.showAdminToast('正式後端取消流程將由線 D 處理', 'warning');
-      return;
-    }
     var $row = $(this).closest('tr');
     // 暫存目標 booking id，供 #confirmCancelBtn click 讀取
     window._cancelTargetId = $row.data('booking-id');
@@ -322,6 +318,28 @@ window.initBookings = function () {
     if (!bookingId) return;
 
     var reason = $('#cancelReasonInput').val().trim();
+    var $confirmBtn = $(this).prop('disabled', true);
+
+    // Backend：打真 API（已付款取消＋退款）
+    if (isBookingBackendEnabled()) {
+      AdminAPI.bookings.cancel(bookingId, { note: reason || undefined })
+        .then(function (result) {
+          var booking = (window.bookingsCache || []).find(function (b) {
+            return window.sameId(b.id, bookingId);
+          });
+          if (booking && result && result.data) {
+            Object.assign(booking, normalizeBackendBooking(result.data));
+          }
+          bootstrap.Modal.getInstance(document.getElementById('bookingCancelModal')).hide();
+          window._cancelTargetId = null;
+          window.showAdminToast('預約 ' + window.formatBookingId(bookingId) + ' 已取消並退款', 'info');
+          applyBookingFiltersAndSort();
+        })
+        .catch(function (err) { AdminAPI.handleError(err, '預約取消失敗'); })
+        .finally(function () { $confirmBtn.prop('disabled', false); });
+      return;
+    }
+
     var actionText = reason
       ? '已取消（原因：' + reason + '）'
       : '已取消';
@@ -353,6 +371,7 @@ window.initBookings = function () {
     // 關閉 Modal
     bootstrap.Modal.getInstance(document.getElementById('bookingCancelModal')).hide();
     window._cancelTargetId = null;
+    $confirmBtn.prop('disabled', false);
 
     window.showAdminToast('預約 ' + window.formatBookingId(bookingId) + ' 已取消', 'info');
   });
@@ -898,17 +917,19 @@ function renderBookingsTable(bookings) {
       : '<span class="badge bg-secondary">無</span>';
 
     // ── 操作按鈕（依狀態顯示）──
+    // 確認：僅 paid+pending；取消：僅 paid 的 pending／confirmed（未付款走會員 Checkout）
     var actionBtns = '';
-    if (booking.status === 'pending') {
+    var paid = booking.paymentStatus === 'paid';
+    if (booking.status === 'pending' && paid) {
       actionBtns =
         '<button class="btn btn-sm btn-outline-primary btn-confirm-booking me-1" ' +
         'title="確認預約"><i class="fas fa-check me-1"></i>確認預約</button>' +
         '<button class="btn btn-sm btn-outline-danger btn-cancel-booking" ' +
-        'title="取消預約"><i class="fas fa-times me-1"></i>取消</button>';
-    } else if (booking.status === 'confirmed') {
+        'title="取消並退款"><i class="fas fa-times me-1"></i>取消</button>';
+    } else if (booking.status === 'confirmed' && paid) {
       actionBtns =
         '<button class="btn btn-sm btn-outline-danger btn-cancel-booking" ' +
-        'title="取消預約"><i class="fas fa-times me-1"></i>取消</button>';
+        'title="取消並退款"><i class="fas fa-times me-1"></i>取消</button>';
     }
 
     // ── 下單日期：只取 YYYY-MM-DD ──
@@ -1013,8 +1034,8 @@ function showBookingModal(booking) {
     '<div class="mb-2 text-muted small">' +
     '<i class="fas fa-calendar-alt me-1"></i>' +
     info.checkIn + ' ～ ' + info.checkOut +
-    '（共 ' + info.totalDays + ' 晚，平日 ' + info.weekdayCount +
-    ' 晚・假日 ' + info.holidayCount + ' 晚）' +
+    '（共 ' + info.totalDays + ' 晚，一般日 ' + info.weekdayCount +
+    ' 晚・特殊節日 ' + info.holidayCount + ' 晚）' +
     '</div>' +
     '<div class="mb-2 text-muted small">' +
     '<i class="fas fa-users me-1"></i>' + info.guestCount + ' 人' +
@@ -1108,12 +1129,15 @@ function showBookingModal(booking) {
     $('#btnCompleteBooking').addClass('d-none');
   }
 
-  // ── 狀態紀錄時間軸 ──
+  // ── 狀態紀錄時間軸（時間顯示：台北 yyyy-MM-dd HH:mm）──
   var historyHtml = (booking.history || []).map(function (entry) {
+    var timeLabel = typeof window.formatAdminDateTimeDisplay === 'function'
+      ? window.formatAdminDateTimeDisplay(entry.time)
+      : String(entry.time || '');
     return '<li class="d-flex align-items-start gap-2 mb-1">' +
            '<i class="fas fa-circle mt-1" ' +
            'style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-           '<span><span class="text-muted me-2">' + entry.time + '</span>' +
+           '<span><span class="text-muted me-2">' + timeLabel + '</span>' +
            entry.action + '</span>' +
            '</li>';
   }).join('');

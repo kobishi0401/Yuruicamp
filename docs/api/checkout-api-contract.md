@@ -1,10 +1,10 @@
-# Checkout API Contract（v0.12）
+# Checkout API Contract（v0.13）
 
 | 欄位         | 內容                                                                                                                                                             |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **狀態**     | Implemented（Prepare、Read、Update、COD Confirm、Cancel）；ECPay 待實作                                                                                          |
-| **日期**     | 2026-07-24                                                                                                                                                       |
-| **版本**     | 0.12                                                                                                                                                             |
+| **狀態**     | Implemented（Prepare、Read、Update、COD Confirm、Cancel、ECPay Launch）                                                                                          |
+| **日期**     | 2026-07-25                                                                                                                                                       |
+| **版本**     | 0.13                                                                                                                                                             |
 | **共用**     | [`common-api-conventions.md`](./common-api-conventions.md)                                                                                                       |
 | **相關**     | [`order-api-contract.md`](./order-api-contract.md)、[`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md) |
 | **實作說明** | [`../backend-specs/checkout/README.md`](../backend-specs/checkout/README.md)                                                                                     |
@@ -15,20 +15,20 @@
 
 ## 0. 一句話
 
-購物車 Drawer（前端 localStorage）**不鎖庫存**；進入 Storefront 確認背包頁才建立 **unpaid 草稿訂單 + 保留帳**，金額**以後端重算為準**。
+購物車（前端 localStorage）**不鎖庫存**；進結帳才建 **unpaid 訂單 + 保留帳**，金額**以後端重算為準**。
 
 ---
 
 ## 1. 端點
 
-| 方法    | 路徑                                           | 認證         | 說明                       |
-| ------- | ---------------------------------------------- | ------------ | -------------------------- |
-| `POST`  | `/api/checkout/sessions`                       | 會員         | 進結帳：建草稿單 + 鎖庫    |
-| `GET`   | `/api/checkout/sessions/{orderId}`             | 會員（本人） | 讀取結帳中訂單             |
-| `PATCH` | `/api/checkout/sessions/{orderId}`             | 會員（本人） | 更新收件／付款方式／套券   |
-| `POST`  | `/api/checkout/sessions/{orderId}/confirm-cod` | 會員         | 確認 COD（不走 ECPay）     |
-| `POST`  | `/api/checkout/sessions/{orderId}/ecpay`       | 會員         | 取得／刷新綠界付款表單參數 |
-| `POST`  | `/api/checkout/sessions/{orderId}/cancel`      | 會員         | 取消並釋放保留             |
+| 方法 | 路徑 | 認證 | 說明 |
+|------|------|------|------|
+| `POST` | `/api/checkout/sessions` | 會員 | 進結帳：建草稿單 + 鎖庫 |
+| `GET` | `/api/checkout/sessions/{orderId}` | 會員（本人） | 讀取結帳中訂單 |
+| `PATCH` | `/api/checkout/sessions/{orderId}` | 會員（本人） | 更新收件／付款方式／套券 |
+| `POST` | `/api/checkout/sessions/{orderId}/confirm-cod` | 會員 | 確認 COD（不走 ECPay） |
+| `POST` | `/api/checkout/sessions/{orderId}/ecpay` | 會員 | 取得／刷新綠界付款表單參數 |
+| `POST` | `/api/checkout/sessions/{orderId}/cancel` | 會員 | 取消並釋放保留 |
 
 > `{orderId}` = `orders.id`。路徑用 sessions 語意，持久化用 orders。
 
@@ -38,31 +38,31 @@
 
 ### 2.1 Request
 
-| 欄位                      | 型別           | 必填 | 說明                                          |
-| ------------------------- | -------------- | ---- | --------------------------------------------- |
-| `items`                   | array          | 是   | 至少 1 筆                                     |
-| `items[].variantId`       | string         | 是   | `product_variants.id`                         |
-| `items[].quantity`        | integer        | 是   | `> 0`                                         |
-| `couponClaimId`           | number \| null | 否   | 要用的 `coupon_claims.id`                     |
-| `paymentMethod`           | string \| null | 否   | 初值可後 PATCH；見 ENUM                       |
-| `shipping`                | object \| null | 否   | 未填可用佔位，PATCH 後再送出付款              |
-| `shipping.method`         | string         | 否   | `delivery`（預設）或 `pickup`                 |
-| `shipping.recipientName`  | string         | 條件 |                                               |
-| `shipping.phone`          | string         | 條件 |                                               |
-| `shipping.address`        | string         | 條件 |                                               |
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| `items` | array | 是 | 至少 1 筆 |
+| `items[].variantId` | string | 是 | `product_variants.id` |
+| `items[].quantity` | integer | 是 | `> 0` |
+| `couponClaimId` | number \| null | 否 | 要用的 `coupon_claims.id` |
+| `paymentMethod` | string \| null | 否 | 初值可後 PATCH；見 ENUM |
+| `shipping` | object \| null | 否 | 未填可用佔位，PATCH 後再送出付款 |
+| `shipping.method` | string | 否 | `delivery`（預設）或 `pickup` |
+| `shipping.recipientName` | string | 條件 | |
+| `shipping.phone` | string | 條件 | |
+| `shipping.address` | string | 條件 | |
 | `shipping.pickupBranchId` | string \| null | 條件 | `pickup` 必填，後端依 `branches` 主檔取得地址 |
-| `idempotencyKey`          | string         | 是   | 1～128 字元；防重複建單                       |
+| `idempotencyKey` | string | 是 | 1～128 字元；防重複建單 |
 
 **忽略（不可當真相）：** 前端傳的 `unitPrice`／`total`／`discount`（可選帶入僅供對照；不符 → `CONFLICT`）。
 
 ### 2.2 伺服器行為（寫死）
 
-1. 驗證會員 active
-2. 依 `variantId` 讀可賣價與庫存（交易內悲觀鎖）
-3. 建立 `orders`：`payment_status=unpaid`，`status` 依實作（建議草稿可視為尚未履約的 `unshipped` 或文件化佔位規則）
-4. 建立 `order_items`（快照欄位從 DB 填）
-5. 建立 `product_stock_reservations`（`status=active`，`expires_at=now+15m`）
-6. 若有券：驗證資格後寫入關聯（見 Coupon 契約）；金額重算
+1. 驗證會員 active  
+2. 依 `variantId` 讀可賣價與庫存（交易內悲觀鎖）  
+3. 建立 `orders`：`payment_status=unpaid`，`status` 依實作（建議草稿可視為尚未履約的 `unshipped` 或文件化佔位規則）  
+4. 建立 `order_items`（快照欄位從 DB 填）  
+5. 建立 `product_stock_reservations`（`status=active`，`expires_at=now+15m`）  
+6. 若有券：驗證資格後寫入關聯（見 Coupon 契約）；金額重算  
 7. 回傳 `CheckoutSession`
 
 ### 2.2.1 冪等與空值規則
@@ -76,45 +76,45 @@
 
 ### 2.3 Response — `CheckoutSession`
 
-| JSON                | 型別           | 說明／DB                                                           |
-| ------------------- | -------------- | ------------------------------------------------------------------ |
-| `orderId`           | string         | `orders.id`                                                        |
-| `paymentStatus`     | string         | `unpaid`（建立時）                                                 |
-| `paymentMethod`     | string \| null | `orders.payment_method`                                            |
-| `status`            | string         | `orders.status`                                                    |
-| `checkoutExpiresAt` | string \| null | ISO-8601；COD 確認成立後為 `null`                                  |
-| `pricing`           | object         | **後端重算**（見下）                                               |
-| `items`             | array          | 見 Order 契約精簡版                                                |
-| `shipping`          | object \| null | 收件快照                                                           |
-| `couponClaimId`     | number \| null | 已套用的領券 id                                                    |
-| `checkoutStep`      | string         | `draft` \| `ready_to_pay` \| `completed`；COD 確認後為 `completed` |
+| JSON | 型別 | 說明／DB |
+|------|------|----------|
+| `orderId` | string | `orders.id` |
+| `paymentStatus` | string | `unpaid`（建立時） |
+| `paymentMethod` | string \| null | `orders.payment_method` |
+| `status` | string | `orders.status` |
+| `checkoutExpiresAt` | string \| null | ISO-8601；COD 確認成立後為 `null` |
+| `pricing` | object | **後端重算**（見下） |
+| `items` | array | 見 Order 契約精簡版 |
+| `shipping` | object \| null | 收件快照 |
+| `couponClaimId` | number \| null | 已套用的領券 id |
+| `checkoutStep` | string | `draft` \| `ready_to_pay` \| `completed`；COD 確認後為 `completed` |
 
 #### `pricing`（寫死）
 
-| JSON          | 型別   | DB                    |
-| ------------- | ------ | --------------------- |
-| `subtotal`    | string | `orders.subtotal`     |
+| JSON | 型別 | DB |
+|------|------|-----|
+| `subtotal` | string | `orders.subtotal` |
 | `shippingFee` | string | `orders.shipping_fee` |
-| `discount`    | string | `orders.discount`     |
-| `total`       | string | `orders.total`        |
+| `discount` | string | `orders.discount` |
+| `total` | string | `orders.total` |
 
 必須滿足：`total = max(subtotal + shippingFee - discount, 0)`（與 DB CHECK 一致）。
 
 #### `items[]`（結帳回傳）
 
-| JSON            | 型別           | DB                               |
-| --------------- | -------------- | -------------------------------- |
-| `orderItemId`   | number         | `order_items.id`                 |
-| `productId`     | string         | `order_items.product_id`         |
-| `variantId`     | string         | `order_items.variant_id`         |
-| `sku`           | string         | `sku_snapshot`                   |
-| `productName`   | string         | `product_name_snapshot`          |
-| `specification` | string         | `specification_snapshot`         |
-| `brandName`     | string         | `brand_name_snapshot`            |
-| `imageUrl`      | string \| null | `image_url_snapshot`             |
-| `unitPrice`     | string         | `unit_price_snapshot`            |
-| `quantity`      | integer        | `quantity`                       |
-| `lineTotal`     | string         | `unitPrice * quantity`（後端算） |
+| JSON | 型別 | DB |
+|------|------|-----|
+| `orderItemId` | number | `order_items.id` |
+| `productId` | string | `order_items.product_id` |
+| `variantId` | string | `order_items.variant_id` |
+| `sku` | string | `sku_snapshot` |
+| `productName` | string | `product_name_snapshot` |
+| `specification` | string | `specification_snapshot` |
+| `brandName` | string | `brand_name_snapshot` |
+| `imageUrl` | string \| null | `image_url_snapshot` |
+| `unitPrice` | string | `unit_price_snapshot` |
+| `quantity` | integer | `quantity` |
+| `lineTotal` | string | `unitPrice * quantity`（後端算） |
 
 ---
 
@@ -122,11 +122,11 @@
 
 可更新欄位（僅 `payment_status=unpaid`、未取消且未過期）：
 
-| 欄位            | 說明                                                                   |
-| --------------- | ---------------------------------------------------------------------- |
-| `shipping.*`    | 更新收件快照                                                           |
+| 欄位 | 說明 |
+|------|------|
+| `shipping.*` | 更新收件快照 |
 | `paymentMethod` | `ecpay-credit` \| `ecpay-atm` \| `ecpay-cvs` \| `ecpay-other` \| `cod` |
-| `couponClaimId` | 已完成；非空值套用或切換會員 claim，空 JSON `{}` 清除目前套券          |
+| `couponClaimId` | 已完成；非空值套用或切換會員 claim，空 JSON `{}` 清除目前套券 |
 
 Request 範例：
 
@@ -174,18 +174,15 @@ Request 範例：
 
 ## 5. 錯誤（領域）
 
-| 情況                       | HTTP | code（建議）            |
-| -------------------------- | ---- | ----------------------- |
-| 庫存不足                   | 409  | `STOCK_INSUFFICIENT`    |
-| 規格下架                   | 409  | `VARIANT_NOT_SELLABLE`  |
-| 結帳逾時                   | 409  | `CHECKOUT_EXPIRED`      |
-| 非本人訂單                 | 403  | `FORBIDDEN`             |
-| 券不可用                   | 409  | `COUPON_NOT_APPLICABLE` |
-| 缺少 Body／商品／冪等鍵    | 400  | `VALIDATION_ERROR`      |
-| 相同冪等鍵搭配不同 Payload | 409  | `CONFLICT`              |
-
-`STOCK_INSUFFICIENT` 的 `error.details` 固定回傳一筆 `field=stock`，`reason` 使用
-`equipment_items.name + "商品數量剩餘: " + availableQuantity`，讓前端直接顯示商品名稱與目前可用數量，不顯示內部 `variantId`。
+| 情況 | HTTP | code（建議） |
+|------|------|--------------|
+| 庫存不足 | 409 | `STOCK_INSUFFICIENT` |
+| 規格下架 | 409 | `VARIANT_NOT_SELLABLE` |
+| 結帳逾時 | 409 | `CHECKOUT_EXPIRED` |
+| 非本人訂單 | 403 | `FORBIDDEN` |
+| 券不可用 | 409 | `COUPON_NOT_APPLICABLE` |
+| 缺少 Body／商品／冪等鍵 | 400 | `VALIDATION_ERROR` |
+| 相同冪等鍵搭配不同 Payload | 409 | `CONFLICT` |
 
 （實作時把新 code 加進 `ErrorCode` 與本表。）
 
@@ -193,12 +190,12 @@ Request 範例：
 
 ## 6. v0.1 不做
 
-| 項目                        | 原因                |
-| --------------------------- | ------------------- |
-| 伺服端購物車 CRUD           | MVP 用 localStorage |
-| 結帳中改明細數量            | 簡化；cancel + 重建 |
-| 獨立 `checkout_sessions` 表 | 已選 D1.A           |
-| 預約結帳                    | 見 Booking 契約     |
+| 項目 | 原因 |
+|------|------|
+| 伺服端購物車 CRUD | MVP 用 localStorage |
+| 結帳中改明細數量 | 簡化；cancel + 重建 |
+| 獨立 `checkout_sessions` 表 | 已選 D1.A |
+| 預約結帳 | 見 Booking 契約 |
 
 ---
 
@@ -212,12 +209,13 @@ Request 範例：
 
 | 版本 | 日期       | 說明                                                                                             |
 | ---- | ---------- | ------------------------------------------------------------------------------------------------ |
+| 0.13 | 2026-07-25 | 合併 ECPay Launch（0.8）與 coupon 生命週期（0.12）                                               |
 | 0.12 | 2026-07-24 | 主動取消將已綁 claim 改為 `revoked`；Checkout 逾時將 claim 改為 `expired`                        |
 | 0.11 | 2026-07-24 | COD 確認成立時於同一交易將已套用 claim 改為 `consumed` 並設定 `consumed_at`                      |
 | 0.10 | 2026-07-24 | 同訂單重送相同 claim 改為冪等成功；只有換券時才替換 `order_coupons` 快照                         |
 | 0.9  | 2026-07-23 | Storefront 新增確認背包頁，進頁以 items 建立 Draft 並鎖庫；正式 Checkout 只 PATCH 配送／付款資料 |
-| 0.8  | 2026-07-23 | 庫存不足明細改為商品名稱與目前可用數量，不再回傳買家無法辨識的 variantId                         |
-| 0.7  | 2026-07-22 | 新增配送方式／取貨門市契約與 COD 確認，ECPay 維持待實作                                          |
+| 0.8  | 2026-07-23 | `POST …/ecpay` 已接線 D（見 Payment 契約 v0.2）                                                  |
+| 0.7  | 2026-07-22 | 新增配送方式／取貨門市契約與 COD 確認                                                            |
 | 0.6  | 2026-07-22 | 完成會員本人 Checkout Session 讀取、Bearer 與 PostgreSQL 驗收                                    |
 | 0.5  | 2026-07-21 | F-2：建立／更新 Checkout 可套用會員 claim，後端重算折扣並保存 `order_coupons` 快照               |
 | 0.4  | 2026-07-21 | C-4：完成收件資料與付款方式 PATCH；優惠券套用明確延後至 F-2                                      |

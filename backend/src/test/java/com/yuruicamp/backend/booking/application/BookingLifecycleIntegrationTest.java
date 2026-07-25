@@ -62,9 +62,6 @@ class BookingLifecycleIntegrationTest {
 	private BookingPublicService bookingPublicService;
 
 	@Autowired
-	private BookingExpirationScheduler scheduler;
-
-	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
 	@Autowired
@@ -232,7 +229,7 @@ class BookingLifecycleIntegrationTest {
 		String bookingId = "B-BOOKING-E6-SCHEDULE";
 		insertBookingWithRental(bookingId, CUSTOMER_A, "pending", "unpaid", Instant.now().minusSeconds(5));
 
-		scheduler.expireDueCheckouts();
+		lifecycleService.expireDueCheckouts(Instant.now());
 
 		assertThat(bookingStatus(bookingId)).isEqualTo("cancelled");
 		assertThat(reservationStatus(bookingId)).isEqualTo("released");

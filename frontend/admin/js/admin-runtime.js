@@ -17,15 +17,19 @@
 
   /** 每個模組是否可以在 Backend 模式安全使用；未就緒功能不得發出不存在的 API。 */
   var READINESS = {
-    analytics: { ready: true, level: 'read', note: '由正式訂單、商品與預約列表聚合' },
-    orders: { ready: true, level: 'partial', note: '查詢、履約與內部備註可用；取消／退款待 W3' },
+    analytics: { ready: true, level: 'read', note: '伺服器端彙總 API（shop／booking summary）' },
+    orders: { ready: true, level: 'full', note: '查詢、履約、內部備註、未出貨取消／退款可用' },
     movement: { ready: true, level: 'full', note: '正式庫存異動完整可用' },
-    products: { ready: true, level: 'partial', note: '商城商品與最低庫存閾值可用；租借商品寫入尚未提供端點' },
+    products: {
+      ready: true,
+      level: 'partial',
+      note: '商城商品、最低庫存、分類／品牌、租借 SKU／listing 可用；on-hand 仍走庫存異動'
+    },
     customers: { ready: true, level: 'partial', note: '查詢、基本更新、停權、標籤池／指派與預設地址可用；新增會員尚未提供端點' },
     discounts: { ready: true, level: 'full', note: '優惠券正式 CRUD 可用' },
     reviews: { ready: true, level: 'partial', note: '列表／詳情／硬刪可用；不做回覆與軟隱藏' },
-    'booking-calendar': { ready: true, level: 'partial', note: '公休規則可用；月份容量仍由既有 Booking API 呈現' },
-    bookings: { ready: true, level: 'partial', note: '查詢、履約與內部備註可用；已付款取消待 W3' },
+    'booking-calendar': { ready: true, level: 'partial', note: '公休＋營區／營位＋特殊節日曆可用；月份容量由 Booking API 呈現' },
+    bookings: { ready: true, level: 'full', note: '查詢、履約、內部備註、已付款取消／退款可用' },
     permissions: { ready: true, level: 'full', note: '管理員與有效權限正式可用' },
   };
 
@@ -40,12 +44,32 @@
     /** 會員偏好可編（W1-05）/ Customer preferences editable */
     'customers.preferences': true,
     'orders.sellerNote': true,
+    /** W3-01／W3-02：未出貨取消（含已付款退款） */
+    'orders.cancel': true,
     'bookings.sellerNote': true,
+    /** W3-03：已付款預約取消 */
+    'bookings.cancel': true,
     /** 最低庫存閾值讀寫（W1-07）；on-hand 仍唯讀 / Min-stock ready; on-hand still read-only */
     'products.minStock': true,
-    'products.rentalWrite': false,
+    /** W2-01／02：分類／品牌主檔（共用「分類／品牌」按鈕＋Modal tab） */
+    'products.categoryMaster': true,
+    'products.brandMaster': true,
+    /** W2-03／04：租借 SKU、listing、裝備規格／標籤 */
+    'products.rentalWrite': true,
+    /** W2-06：庫位主檔 */
+    'movement.locations': true,
+    /** W2-05：商店→租借跨領域轉換 */
+    'movement.conversion': true,
     /** 評論列表／硬刪（W1-06）；不做回覆／軟隱藏 */
     'reviews.manage': true,
+    /** W4-01：營區主檔 CRUD／啟停（預約排程頁 Modal） */
+    'booking-calendar.campgrounds': true,
+    /** W4-02：營位主檔 CRUD／啟停（同上 Modal 營位 tab） */
+    'booking-calendar.zones': true,
+    /** W4-03：特殊節日曆 calendar_dates（預約排程頁 Modal） */
+    'booking-calendar.calendarDates': true,
+    /** W4-06：分析報表伺服器端彙總（不再拉 orders／bookings 全列表做 KPI） */
+    'analytics.summary': true,
   };
 
   function isBackendMode() {

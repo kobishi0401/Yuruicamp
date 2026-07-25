@@ -1,16 +1,16 @@
-﻿# AdminMovementPage Spec
+# AdminMovementPage Spec
 
 **Status:** Implemented for G-3 Backend integration; legacy page spec retained
 **Category:** Page
 **Design Ref:** N/A - derived from existing source file `admin/partials/movement.html`
 
-> G-3 已在現有 Bootstrap Admin shell 完成 Mock／Backend 雙模式。Backend 模式提供 draft、多筆明細、商城／租借 lookup、posted 與 cancelled 狀態；只有後端過帳成功才更新畫面，Products 頁不能直接寫庫存。人工驗收見 [`../test/admin-validation.md`](../test/admin-validation.md)，API 契約見 [`../../api/admin-api-contract.md`](../../api/admin-api-contract.md)。
+> G-3 已在現有 Bootstrap Admin shell 完成 Mock／Backend 雙模式。**ADM-W2-08（✅）**：Backend 異動頁為**稽核唯讀**（不建草稿／不過帳改庫存）；詳情可 PATCH 表頭 `reason`、列 `lineReason`（UI「備註」）、列 `lineNature`（異動性質）。**方案 B**：列表**不顯示**異動性質欄；詳情列性質可下拉改（產單依 from／to 帶預設）；改性質不改 from／to。商城 on-hand 由商品頁寫入；`product_stock_update` 僅定稿不定庫存。人工驗收見 [`../test/admin-validation.md`](../test/admin-validation.md)，API 契約見 [`../../api/admin-api-contract.md`](../../api/admin-api-contract.md) **v0.17**。
 
 ---
 
 ## Overview
 
-Admin inventory movement partial with date filters, movement table, and movement detail modal. Use for stock movement audit trails. Keep movement ID and employee ID visible.
+Admin inventory movement partial with date filters, movement table, and movement detail modal. Use for stock movement audit trails. Keep movement ID and employee ID visible. Do **not** show a movement-nature column on the list; show per-line nature only inside the detail modal (editable dropdown: receipt／transfer／stocktake／damage／write_off).
 
 ## TypeScript Interface
 

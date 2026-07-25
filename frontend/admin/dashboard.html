@@ -352,7 +352,6 @@
                     id="btnSaveSellerNote">
               儲存
             </button>
-            <small class="text-muted d-block mt-1">僅後台可見，顧客不會看到此內容。</small>
             <hr class="my-3">
           </div>
 
@@ -465,7 +464,6 @@
                     id="btnSaveBookingSellerNote">
               儲存
             </button>
-            <small class="text-muted d-block mt-1">僅後台可見，買家不會看到此內容。</small>
             <hr class="my-3">
           </div>
 
@@ -656,6 +654,43 @@
   </div>
 
   <!-- ============================================================
+       全域 Modal：取消未出貨訂單（W3；由 orders.js 控制，不用 window.confirm）
+       ============================================================ -->
+  <div class="modal fade" id="orderCancelModal" tabindex="-1"
+       aria-labelledby="orderCancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="orderCancelModalLabel">
+            <i class="fas fa-exclamation-triangle me-2 text-danger"></i>取消訂單確認
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">
+            確定取消訂單
+            <strong id="orderCancelModalOrderId" class="text-primary"></strong>
+            ？
+          </p>
+          <p class="text-muted small mb-2">
+            僅限<strong>未出貨</strong>。若已線上付款，將<strong>同交易全額退款</strong>（綠界／stub）。
+          </p>
+          <label for="orderCancelReasonInput" class="form-label small text-muted mb-1">取消原因（選填）</label>
+          <textarea class="form-control" id="orderCancelReasonInput" rows="3"
+                    placeholder="例：客人要求取消、重複下單..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary"
+                  data-bs-dismiss="modal">不取消</button>
+          <button type="button" id="confirmOrderCancelBtn" class="btn btn-danger">
+            <i class="fas fa-ban me-1"></i>確認取消
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        全域 Modal：刪除評論確認（靜態放在 dashboard，由 reviews.js 控制）
        ============================================================ -->
   <div class="modal fade" id="reviewDeleteModal" tabindex="-1"
@@ -698,6 +733,128 @@
         <div class="modal-body" id="reviewDetailContent" aria-live="polite"></div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       全域 Modal：營區主檔維護（booking-calendar.js｜ADM-W4-01）
+       ============================================================ -->
+  <div class="modal fade" id="bcCampgroundModal" tabindex="-1"
+       aria-labelledby="bcCampgroundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bcCampgroundModalLabel">
+            <i class="fas fa-campground me-2"></i>營區／營位維護
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+        </div>
+        <div class="modal-body">
+          <ul class="nav nav-tabs mb-3" id="bcMasterTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button type="button" class="nav-link active" id="bcMasterTabCampgrounds"
+                      data-bc-master-kind="campgrounds" role="tab" aria-selected="true">營區</button>
+            </li>
+            <li class="nav-item" role="presentation" id="bcMasterTabZonesWrap">
+              <button type="button" class="nav-link" id="bcMasterTabZones"
+                      data-bc-master-kind="zones" role="tab" aria-selected="false">營位</button>
+            </li>
+          </ul>
+
+          <div id="bcMasterPanelCampgrounds">
+            <p class="text-muted small mb-3">
+              建立／啟停營區。有營位、預約、公休或租借上架時不能硬刪，請改停用。
+            </p>
+            <form id="bcCampgroundCreateForm" class="row g-2 mb-3">
+              <div class="col-4">
+                <label class="form-label small mb-0" for="bcCampgroundId">ID</label>
+                <input type="text" class="form-control form-control-sm" id="bcCampgroundId"
+                       placeholder="例：C010" maxlength="32" autocomplete="off" required>
+              </div>
+              <div class="col-8">
+                <label class="form-label small mb-0" for="bcCampgroundName">名稱</label>
+                <input type="text" class="form-control form-control-sm" id="bcCampgroundName"
+                       maxlength="150" autocomplete="off" required>
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0" for="bcCampgroundRegion">地區</label>
+                <input type="text" class="form-control form-control-sm" id="bcCampgroundRegion"
+                       placeholder="例：東部" maxlength="100" autocomplete="off" required>
+              </div>
+              <div class="col-8">
+                <label class="form-label small mb-0" for="bcCampgroundDescription">說明（可空）</label>
+                <input type="text" class="form-control form-control-sm" id="bcCampgroundDescription"
+                       autocomplete="off">
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-sm btn-primary" id="bcCampgroundCreateBtn">
+                  <i class="fas fa-plus me-1"></i>新增營區
+                </button>
+              </div>
+            </form>
+            <ul class="list-group list-group-flush" id="bcCampgroundList"></ul>
+          </div>
+
+          <div id="bcMasterPanelZones" class="d-none">
+            <p class="text-muted small mb-3">
+              在所選營區下建立／調整營位。價格分<strong>一般價</strong>與<strong>特殊節日價</strong>（依假日曆
+              <code>calendar_dates</code> 標記，<strong>不是</strong>週一～五／週六日自動切換；W4-03 可維護假日曆）。
+              調降「可賣上限」若低於已占用會被拒絕（409）。
+            </p>
+            <div class="mb-3">
+              <label class="form-label small mb-0" for="bcZoneCampgroundSelect">所屬營區</label>
+              <select id="bcZoneCampgroundSelect" class="form-select form-select-sm">
+                <option value="">載入中…</option>
+              </select>
+            </div>
+            <form id="bcZoneCreateForm" class="row g-2 mb-3">
+              <div class="col-12">
+                <p class="text-muted small mb-1" id="bcZoneFormModeHint">新增營位：填 ID 與容量；點列表「編輯」可改類型、一般價／特殊節日價與可賣上限。</p>
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0" for="bcZoneId">ID</label>
+                <input type="text" class="form-control form-control-sm" id="bcZoneId"
+                       placeholder="例：C010-Z1" maxlength="32" autocomplete="off" required>
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0" for="bcZoneType">類型</label>
+                <input type="text" class="form-control form-control-sm" id="bcZoneType"
+                       placeholder="草皮區" maxlength="64" autocomplete="off" required>
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0" for="bcZoneCapacity">每區人數</label>
+                <input type="number" class="form-control form-control-sm" id="bcZoneCapacity"
+                       min="1" value="4" required>
+              </div>
+              <div class="col-3">
+                <label class="form-label small mb-0" for="bcZonePriceWeekday">一般價</label>
+                <input type="number" class="form-control form-control-sm" id="bcZonePriceWeekday"
+                       min="0" step="0.01" value="1000" required
+                       title="非假日曆標記日的每晚單價">
+              </div>
+              <div class="col-3">
+                <label class="form-label small mb-0" for="bcZonePriceHoliday">特殊節日價</label>
+                <input type="number" class="form-control form-control-sm" id="bcZonePriceHoliday"
+                       min="0" step="0.01" value="1500" required
+                       title="calendar_dates 標記 is_holiday=true 的每晚單價">
+              </div>
+              <div class="col-3">
+                <label class="form-label small mb-0" for="bcZoneTotalSites">可賣上限</label>
+                <input type="number" class="form-control form-control-sm" id="bcZoneTotalSites"
+                       min="1" value="2" required>
+              </div>
+              <div class="col-3 d-flex align-items-end gap-1">
+                <button type="submit" class="btn btn-sm btn-primary flex-grow-1" id="bcZoneCreateBtn">
+                  <i class="fas fa-plus me-1"></i>新增
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="bcZoneCancelEditBtn"
+                        title="取消編輯，回到新增模式">取消</button>
+              </div>
+            </form>
+            <ul class="list-group list-group-flush" id="bcZoneList"></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -768,6 +925,58 @@
           <button type="button" class="btn btn-primary" id="bcBtnSaveClosure">
             <i class="fas fa-save me-1"></i>儲存公休
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       全域 Modal：特殊節日曆（booking-calendar.js｜ADM-W4-03）
+       ============================================================ -->
+  <div class="modal fade" id="bcCalendarDatesModal" tabindex="-1"
+       aria-labelledby="bcCalendarDatesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bcCalendarDatesModalLabel">
+            <i class="fas fa-star me-2"></i>特殊節日曆
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            標記「特殊節日」的住宿晚會走<strong>特殊節日價</strong>（<code>priceHoliday</code>）；
+            未標記的日期（含週六日）皆為<strong>一般日</strong>、走一般價。
+            與下方「公休」無關——公休是能不能訂，這裡只影響計價 tier。
+          </p>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="bcCalPrevMonth" aria-label="上個月">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <h6 class="mb-0 fw-semibold" id="bcCalModalMonthLabel">—</h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="bcCalNextMonth" aria-label="下個月">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 admin-data-table" id="bcCalendarDatesTable">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 8rem;">日期</th>
+                  <th style="width: 5rem;">星期</th>
+                  <th style="width: 6rem;">特殊節日</th>
+                  <th>節日名稱（選填）</th>
+                  <th style="width: 5rem;"></th>
+                </tr>
+              </thead>
+              <tbody id="bcCalendarDatesTableBody">
+                <tr><td colspan="5" class="text-muted text-center py-3">載入中…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
         </div>
       </div>
     </div>

@@ -24,14 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
  * 後台租借 SKU／規格管理（W2-03）。獨立路徑 {@code /api/admin/rentals}，
  * 不掛在 {@code /api/admin/products} 底下。
  *
- * <p>只管 SKU／規格主檔本身：**不**接受、也**不**回傳庫存（on-hand）欄位；
- * 庫存讀寫一律走 G-3 {@code /api/admin/inventory-movements}。
- * listing／每個營區的租金定價屬於 W2-04，本 Controller 故意不做。</p>
+ * <p>列表／詳情回傳唯讀 on-hand（{@code variants[].stockLocations}），對齊商店商品；
+ * <b>不</b>接受庫存寫入——庫存異動走 G-3，跨領域轉換走 W2-05。
+ * listing／每個營區的租金定價屬於 W2-04。</p>
  */
 @RestController
 @RequestMapping("/api/admin/rentals")
 @SecurityRequirement(name = OpenApiConfig.FIREBASE_BEARER)
-@Tag(name = "Admin Rentals", description = "後台租借 SKU／規格查詢、建立、更新與上下架（不含庫存、不含定價）")
+@Tag(name = "Admin Rentals", description = "後台租借 SKU／規格查詢、建立、更新與上下架（列表含唯讀庫存；寫庫存走 G-3／W2-05）")
 public class AdminRentalController {
 
 	private final AdminRentalService service;

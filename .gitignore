@@ -5,6 +5,20 @@
 # Local ECPay skill (separate git repo — do not embed in main project)
 .ecpay-skill/
 
+# Matt Pocock / skills.sh 本機 skills（勿 commit）
+# Keep project-owned skills tracked; ignore everything else under .agents/skills/
+.agents/skills/*/
+!.agents/skills/frontend-design/
+!.agents/skills/frontend-spec/
+!.agents/skills/pre-review-checklist/
+!.agents/skills/ui-ux-pro-max/
+skills-lock.json
+
+# Matt Pocock local setup（本機票／agents 設定，不上 GitHub）
+# Local issue tracker + agents config — keep out of git
+.scratch/
+docs/agents/
+
 # 依賴相關（前端依賴安裝於 frontend/）
 node_modules/
 .pnpm-store/

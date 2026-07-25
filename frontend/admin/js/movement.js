@@ -6,7 +6,8 @@
  * 功能：
  *   - 期間篩選：近 7/30 天、本月、近 3 個月、自定義（flatpickr）
  *   - 欄位排序（可疊加）：異動日期
- *   - 多選篩選（可疊加）：負責員工 ID、異動性質
+ *   - 多選篩選（可疊加）：負責員工 ID
+ *   - 方案 B：列表不顯示異動性質；詳情列性質可下拉改（lineNature）；產單帶 from／to 推導預設；lineReason UI＝備註
  *
  * 使用 jQuery Event Namespace (.movement) 防止重複導覽時事件堆疊
  */
@@ -21,7 +22,8 @@ var adminMovementLookups = { locations: [], variants: [] };
 var MOVEMENT_TYPE_LABELS = {
   receipt: '進貨',
   write_off: '損耗',
-  transfer: '調撥'
+  transfer: '調撥',
+  product_stock_update: '商品庫存調整'
 };
 
 var MOVEMENT_STATUS_LABELS = {
@@ -30,6 +32,106 @@ var MOVEMENT_STATUS_LABELS = {
   cancelled: '已作廢'
 };
 
+/** 商城庫位 ID → 顯示名（與 products.js 固定分店對齊） */
+var STORE_MOVEMENT_LOCATION_LABELS = {
+  main: '商店主倉',
+  'branch-001': '台北旗艦店',
+  'branch-002': '台中中港店',
+  'branch-003': '高雄左營店'
+};
+
+/** 把 locationId／名稱轉成明細顯示文字；空值顯示 --- */
+function formatMovementLocationLabel(locationId, locationName) {
+  if (locationName) {
+    return locationName;
+  }
+  if (locationId == null || locationId === '') {
+    return '---';
+  }
+  return STORE_MOVEMENT_LOCATION_LABELS[locationId] || String(locationId);
+}
+
+/**
+ * 判斷庫位顯示值是否為「空／---」（方案 A 推導用）。
+ * True when location is empty or the UI null marker.
+ */
+function isEmptyMovementLocationDisplay(value) {
+  if (value == null) {
+    return true;
+  }
+  var text = String(value).trim();
+  return text === '' || text === '---' || text === '—' || text === '-' || text === '進貨';
+}
+
+/**
+ * 依列級 from／to 推導異動性質標籤（產單預設用；之後可手動改）。
+ * Derive default line nature: 進貨／移轉／損耗（盤點／折損僅手動選）。
+ *
+ * --- → 店＝進貨；店 → 店＝移轉；店 → ---＝損耗
+ */
+function deriveLineNatureLabel(item) {
+  if (!item) {
+    return '—';
+  }
+  var fromValue = item.sourceLocationId != null && item.sourceLocationId !== ''
+    ? item.sourceLocationId
+    : item.fromStore;
+  var toValue = item.destinationLocationId != null && item.destinationLocationId !== ''
+    ? item.destinationLocationId
+    : item.toStore;
+  var fromEmpty = isEmptyMovementLocationDisplay(fromValue);
+  var toEmpty = isEmptyMovementLocationDisplay(toValue);
+
+  if (fromEmpty && !toEmpty) {
+    return '進貨';
+  }
+  if (!fromEmpty && toEmpty) {
+    return '損耗';
+  }
+  if (!fromEmpty && !toEmpty) {
+    return '移轉';
+  }
+  return '—';
+}
+
+/** 列級異動性質：API code → UI 中文 */
+var LINE_NATURE_LABELS = {
+  receipt: '進貨',
+  transfer: '移轉',
+  stocktake: '盤點',
+  damage: '折損',
+  write_off: '損耗'
+};
+
+var LINE_NATURE_CODES = ['receipt', 'transfer', 'stocktake', 'damage', 'write_off'];
+
+/** 中文／code → API lineNature code */
+function toLineNatureCode(value) {
+  if (!value) {
+    return null;
+  }
+  var text = String(value).trim();
+  if (LINE_NATURE_CODES.indexOf(text) !== -1) {
+    return text;
+  }
+  var found = Object.keys(LINE_NATURE_LABELS).find(function (code) {
+    return LINE_NATURE_LABELS[code] === text;
+  });
+  return found || null;
+}
+
+/** API code／舊 type → 顯示中文 */
+function toLineNatureLabel(value) {
+  if (!value) {
+    return '—';
+  }
+  var code = toLineNatureCode(value);
+  if (code) {
+    return LINE_NATURE_LABELS[code];
+  }
+  return String(value);
+}
+
 /** 判斷庫存異動頁是否使用正式後端。 */
 function isAdminMovementBackendEnabled() {
   return typeof AdminAPI !== 'undefined' &&
@@ -37,9 +139,13 @@ function isAdminMovementBackendEnabled() {
     AdminAPI.isBackendEnabled();
 }
 
-/** Backend 模式才顯示正式庫存寫入控制。 */
+/** Backend 模式：異動頁唯讀（ADM-W2-08）；隱藏建立草稿／過帳／作廢。 */
 function syncBackendMovementUi() {
-  $('.backend-movement-action').toggleClass('d-none', !isAdminMovementBackendEnabled());
+  var useBackend = isAdminMovementBackendEnabled();
+  // 舊「建立草稿」按鈕改為永遠隱藏（商品頁才產 product_stock_update）
+  $('#openMovementDraftModal').addClass('d-none');
+  $('.backend-movement-write-action').toggleClass('d-none', true);
+  $('.backend-movement-action').toggleClass('d-none', !useBackend);
 }
 
 /**
@@ -71,6 +177,58 @@ function getMovementCreatedAt(record) {
   return (record && (record.createdAt || record.created_at || record.date)) || '';
 }
 
+/**
+ * 畫面短號：轉換配對用 CVT-{conversionId}；其餘用 MOV-{id}（補零 3 位）。
+ * Display code: CVT-xxx for conversion pair, else MOV-xxx.
+ */
+function formatAdminMovementDisplayNo(record) {
+  if (record && record.conversionId != null && record.conversionId !== '') {
+    if (typeof window.formatConversionId === 'function') {
+      return window.formatConversionId(record.conversionId);
+    }
+    return 'CVT-' + String(record.conversionId).padStart(3, '0');
+  }
+  var id = record && record.id;
+  if (typeof window.formatMovementId === 'function') {
+    return window.formatMovementId(id);
+  }
+  return 'MOV-' + String(id || '').padStart(3, '0');
+}
+
+/**
+ * 明細「異動時間」：台北時區 yyyy-MM-dd HH:mm
+ * Detail datetime in Asia/Taipei.
+ */
+function formatMovementDateTimeDisplay(value) {
+  if (!value) {
+    return '—';
+  }
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) {
+    // 已是本地字串時取前 16 碼（去掉秒）
+    var raw = String(value).replace('T', ' ');
+    return raw.length >= 16 ? raw.slice(0, 16) : raw;
+  }
+  try {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+    var map = {};
+    parts.forEach(function (part) {
+      map[part.type] = part.value;
+    });
+    return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute;
+  } catch (err) {
+    return String(value);
+  }
+}
+
 window.initMovement = function () {
   // 清除 orders / movement 舊事件（共用 .sortable-th / .filter-icon 選擇器）
   $(document).off('.orders');
@@ -82,49 +240,52 @@ window.initMovement = function () {
   movementDateState = { days: 30, startDate: null, endDate: null };
 
   var currentMode = isAdminMovementBackendEnabled() ? 'backend' : 'mock';
-  if (window.movementLoadedMode && window.movementLoadedMode !== currentMode) {
-    window.movementBaseLoaded = false;
-    window.movementCache = [];
-  }
+  // ADM-W2-08：每次進異動頁都重抓列表（商品頁產單後切回來才能看到新稽核單）
+  // Always refetch on enter so newly created product_stock_update rows appear.
+  window.movementBaseLoaded = false;
+  window.movementCache = [];
+  window.movementLoadedMode = currentMode;
+
   syncBackendMovementUi();
   if (currentMode === 'backend') {
     loadBackendMovementLookups();
+  }
+  if (typeof window.applyEditPermission === 'function') {
+    window.applyEditPermission('movement', $('#contentArea'));
   }
 
   setupMovementPeriodFilter();
   initMovementFlatpickr();
   applyMovementDayRange(30);
 
-  if (window.movementBaseLoaded) {
-    populateEmployeeFilterOptions(window.movementCache || []);
-    applyMovementFiltersAndSort();
-  } else {
-    loadAdminJsonResource({
-      adminList: AdminAPI && AdminAPI.movement && AdminAPI.movement.list,
-      jsonPath: MockDataPaths.movement,
-      emptyValue: [],
-      errorMessage: '載入庫存異動失敗',
-      onSuccess: function (records) {
-        window.movementCache = mergeMovementRecords(
-          window.generatedMovementRecords,
-          (records || []).map(function (record) {
-            return normalizeMovementRecord(adaptLegacyMovementRecord(record && (record.payload || record)));
-          })
-        );
-        window.movementBaseLoaded = true;
-        window.movementLoadedMode = currentMode;
-        populateEmployeeFilterOptions(window.movementCache);
-        applyMovementFiltersAndSort();
-      },
-      onError: function () {
-        $('#movementTableBody').html(
-          '<tr><td colspan="5" class="text-center text-danger py-4">' +
-          '<i class="fas fa-exclamation-triangle me-2"></i>載入庫存異動紀錄失敗' +
-          '</td></tr>'
-        );
-      }
-    });
-  }
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.movement && AdminAPI.movement.list,
+    jsonPath: MockDataPaths.movement,
+    emptyValue: [],
+    errorMessage: '載入庫存異動失敗',
+    onSuccess: function (records) {
+      window.movementCache = mergeMovementRecords(
+        window.generatedMovementRecords,
+        (records || []).map(function (record) {
+          return normalizeMovementRecord(adaptLegacyMovementRecord(record && (record.payload || record)));
+        }).filter(function (record) {
+          // M1 後備：即使 API 仍回 conversion_in 也不顯示（後端列表已排除）
+          return record.movementType !== 'conversion_in';
+        })
+      );
+      window.movementBaseLoaded = true;
+      window.movementLoadedMode = currentMode;
+      populateEmployeeFilterOptions(window.movementCache);
+      applyMovementFiltersAndSort();
+    },
+    onError: function () {
+      $('#movementTableBody').html(
+        '<tr><td colspan="4" class="text-center text-danger py-4">' +
+        '<i class="fas fa-exclamation-triangle me-2"></i>載入庫存異動紀錄失敗' +
+        '</td></tr>'
+      );
+    }
+  });
 
   // ── 排序：點擊 .sortable-th 標頭（三段式：無 → asc → desc → 移除） ──
   $(document).on('click.movement', '#movementTable .sortable-th', function () {
@@ -235,11 +396,29 @@ window.initMovement = function () {
   $(document).on('click.movement', '#cancelMovementDraft', function () {
     changeOpenMovementStatus('cancel');
   });
+
+  // ADM-W2-08：詳情可改表頭 reason／列 lineReason（draft／posted）
+  $(document).on('click.movement', '#btnSaveMovementReason', function () {
+    saveOpenMovementReason();
+  });
+
+  $(document).on('click.movement', '.btn-save-movement-line-reason', function () {
+    var itemId = $(this).data('item-id');
+    saveOpenMovementLineReason(itemId);
+  });
+
+  // 方案 B：詳情列異動性質下拉一改就 PATCH（不改 from／to）
+  $(document).on('change.movement', '.movement-line-nature-select', function () {
+    var itemId = $(this).data('item-id');
+    var lineNature = String($(this).val() || '').trim();
+    saveOpenMovementLineNature(itemId, lineNature);
+  });
 };
 
 window.addMovementRecord = function (record) {
   if (isAdminMovementBackendEnabled()) {
-    window.showAdminToast('正式庫存請到「庫存異動紀錄」建立草稿並過帳', 'info');
+    // 正式模式改由商品頁「產生異動紀錄」一鍵 create＋post；此處不再導向異動頁建草稿
+    window.showAdminToast('請在商品頁使用「產生異動紀錄」建立稽核單', 'info');
     return;
   }
   var normalizedRecord = normalizeMovementRecord(record);
@@ -323,9 +502,11 @@ function normalizeMovementRecord(record) {
       type: record && record.type
     }];
 
+  var movementId = (record && record.id) || createMovementRecordId();
   return {
-    id: (record && record.id) || createMovementRecordId(),
+    id: movementId,
     movementNo: record && record.movementNo,
+    displayNo: null, // 開啟時用 formatAdminMovementDisplayNo 計算
     inventoryDomain: (record && record.inventoryDomain) || 'legacy',
     movementType: record && record.movementType,
     status: (record && record.status) || 'posted',
@@ -335,23 +516,78 @@ function normalizeMovementRecord(record) {
     destinationLocationName: record && record.destinationLocationName,
     reason: (record && record.reason) || '',
     postedAt: record && record.postedAt,
+    conversionId: record && record.conversionId != null ? record.conversionId : null,
+    pairedMovementId: record && record.pairedMovementId != null ? record.pairedMovementId : null,
     // 權威欄位 camelCase；保留 created_at 一版相容讀取（getMovementCreatedAt 已 fallback）
     createdAt: (record && record.occurredAt) || getMovementCreatedAt(record) || formatMovementDateTime(new Date()),
     employeeId: (record && (record.employeeId || record.adminId || record.staffId)) || '—',
     employeeName: record && record.employeeName,
     items: items.map(function (item) {
+      // 列級庫位優先；沒有則退回表頭（conversion_in 明細常只有表頭目的庫位）
+      var fromLabel = formatMovementLocationLabel(
+        (item && item.sourceLocationId) || (record && record.sourceLocationId),
+        item && (item.fromStore || item.sourceLocationName)
+          || (record && record.sourceLocationName)
+      );
+      // 若舊 mock 用「進貨」當 fromStore，保留語意；正式 API 空值已是 ---
+      if (item && item.fromStore === '進貨') {
+        fromLabel = '---';
+      }
+      var toLabel = formatMovementLocationLabel(
+        (item && item.destinationLocationId) || (record && record.destinationLocationId),
+        item && (item.toStore || item.destinationLocationName)
+          || (record && record.destinationLocationName)
+      );
+      if (item && (item.toStore === '—' || item.toStore === '-')) {
+        toLabel = '---';
+      }
       return {
+        id: (item && item.id) || null,
+        // 轉換合併明細時 PATCH 要用「該列所屬」的 movementId
+        movementId: (item && item.movementId) || movementId,
         inventoryDomain: (item && item.inventoryDomain) || (record && record.inventoryDomain) || 'legacy',
         variantId: (item && item.variantId) || null,
         sku: (item && item.sku) || null,
         productName: (item && item.productName) || '未命名商品',
         quantity: parseInt(item && item.quantity, 10) || 0,
-        fromStore: (item && (item.fromStore || item.sourceLocationId)) ||
-          (record && (record.sourceLocationName || record.sourceLocationId)) || '—',
-        toStore: (item && (item.toStore || item.destinationLocationId)) ||
-          (record && (record.destinationLocationName || record.destinationLocationId)) || '—',
-        type: (item && item.type) || MOVEMENT_TYPE_LABELS[record && record.movementType] ||
-          (record && record.movementType) || '—'
+        sourceLocationId: item && item.sourceLocationId,
+        destinationLocationId: item && item.destinationLocationId,
+        fromStore: fromLabel,
+        toStore: toLabel,
+        lineReason: (item && item.lineReason) || '',
+        // 方案 B：優先用已存 lineNature；沒有才用 from／to 推導預設
+        lineNature: (function () {
+          var stored = item && item.lineNature;
+          if (stored) {
+            return toLineNatureCode(stored);
+          }
+          var fromType = item && item.type ? toLineNatureCode(item.type) : null;
+          if (fromType) {
+            return fromType;
+          }
+          return toLineNatureCode(deriveLineNatureLabel({
+            sourceLocationId: item && item.sourceLocationId,
+            destinationLocationId: item && item.destinationLocationId,
+            fromStore: fromLabel,
+            toStore: toLabel
+          }));
+        })(),
+        type: (function () {
+          var stored = item && item.lineNature;
+          if (stored) {
+            return toLineNatureLabel(stored);
+          }
+          var fromType = item && item.type ? toLineNatureCode(item.type) : null;
+          if (fromType) {
+            return toLineNatureLabel(fromType);
+          }
+          return deriveLineNatureLabel({
+            sourceLocationId: item && item.sourceLocationId,
+            destinationLocationId: item && item.destinationLocationId,
+            fromStore: fromLabel,
+            toStore: toLabel
+          });
+        })()
       };
     })
   };
@@ -415,17 +651,18 @@ function summarizeMovementTypes(items) {
  * Dynamically build employee ID filter checkboxes from cache.
  */
 function populateEmployeeFilterOptions(records) {
-  var ids = {};
+  // value 仍用 employeeId；畫面顯示員工名字
+  var byId = {};
   (records || []).forEach(function (record) {
     var id = record.employeeId;
     if (id && id !== '—') {
-      ids[id] = true;
+      byId[id] = record.employeeName || id;
     }
   });
 
-  var html = Object.keys(ids).sort().map(function (id) {
+  var html = Object.keys(byId).sort().map(function (id) {
     return '<label><input type="checkbox" value="' + escapeMovementHtml(id) + '"> ' +
-      escapeMovementHtml(id) + '</label>';
+      escapeMovementHtml(byId[id]) + '</label>';
   }).join('');
 
   var $dropdown = $('#movementTable .filter-th[data-filter-key="employeeId"] .filter-dropdown');
@@ -704,27 +941,25 @@ function updateMovementFilterUI() {
 function renderMovementTable(records) {
   if (!records || records.length === 0) {
     $('#movementTableBody').html(
-      '<tr><td colspan="6" class="text-center text-muted py-4">目前沒有符合條件的庫存異動紀錄</td></tr>'
+      '<tr><td colspan="4" class="text-center text-muted py-4">目前沒有符合條件的庫存異動紀錄</td></tr>'
     );
     return;
   }
 
   var html = records.map(function (record) {
+    // 轉換列列表只帶出庫側明細；詳情開啟時會合併另一側
     var itemCount = (record.items || []).length;
-    var typesSummary = summarizeMovementTypes(record.items);
 
     return '<tr data-movement-id="' + escapeMovementHtml(record.id) + '">' +
       '<td>' +
       '<span class="admin-cell-link movement-detail-link" ' +
       'data-movement-id="' + escapeMovementHtml(record.id) + '">' +
-      escapeMovementHtml(record.movementNo || window.formatMovementId(record.id)) +
+      escapeMovementHtml(formatAdminMovementDisplayNo(record)) +
       '</span>' +
       '</td>' +
-      '<td>' + escapeMovementHtml(getMovementCreatedAt(record).slice(0, 10)) + '</td>' +
-      '<td>' + escapeMovementHtml(record.employeeId || '—') + '</td>' +
+      '<td>' + escapeMovementHtml(String(getMovementCreatedAt(record)).slice(0, 10)) + '</td>' +
+      '<td>' + escapeMovementHtml(record.employeeName || record.employeeId || '—') + '</td>' +
       '<td>' + itemCount + ' 筆</td>' +
-      '<td>' + buildMovementStatusBadge(record.status) + '</td>' +
-      '<td>' + escapeMovementHtml(typesSummary) + '</td>' +
       '</tr>';
   }).join('');
 
@@ -732,43 +967,207 @@ function renderMovementTable(records) {
 }
 
 function showMovementDetailModal(record) {
+  if (!record) {
+    return;
+  }
   $('#movementDetailModal').data('movement-id', record.id);
-  $('#modalMovementId').text(record.movementNo || window.formatMovementId(record.id));
-  $('#modalMovementDate').text(getMovementCreatedAt(record));
-  $('#modalMovementEmployeeId').text(
-    (record.employeeName ? record.employeeName + ' / ' : '') + (record.employeeId || '—')
-  );
-  $('#modalMovementStatus').html(buildMovementStatusBadge(record.status));
-  $('#modalMovementDomain').text(record.inventoryDomain === 'rental' ? '租借庫存' : '商城庫存');
-  $('#modalMovementReason').text(record.reason || '—');
+  $('#movementDetailModal').data('paired-movement-id', record.pairedMovementId || null);
+  $('#movementDetailModal').data('conversion-id', record.conversionId || null);
+
+  var useBackend = isAdminMovementBackendEnabled();
+  var pairedId = record.pairedMovementId;
+
+  if (useBackend && pairedId) {
+    Promise.all([
+      AdminAPI.movement.getById(record.id),
+      AdminAPI.movement.getById(pairedId)
+    ]).then(function (results) {
+      var primary = normalizeMovementRecord(results[0] && results[0].data);
+      var paired = normalizeMovementRecord(results[1] && results[1].data);
+      renderMovementDetailModalContent(mergeConversionPairForDetail(primary, paired));
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('movementDetailModal')).show();
+    }).catch(function (error) {
+      AdminAPI.handleError(error, '載入轉換異動明細失敗');
+      renderMovementDetailModalContent(record);
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('movementDetailModal')).show();
+    });
+    return;
+  }
+
+  renderMovementDetailModalContent(record);
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('movementDetailModal')).show();
+}
+
+/**
+ * M1：把 conversion_out／conversion_in 合併成一筆明細畫面（編號用 CVT-xxx）。
+ */
+function mergeConversionPairForDetail(a, b) {
+  var outRecord = a.movementType === 'conversion_out' ? a
+    : (b.movementType === 'conversion_out' ? b : a);
+  var inRecord = outRecord === a ? b : a;
+  var mergedItems = []
+    .concat((outRecord.items || []).map(function (item) {
+      return Object.assign({}, item, { movementId: outRecord.id });
+    }))
+    .concat((inRecord.items || []).map(function (item) {
+      return Object.assign({}, item, { movementId: inRecord.id });
+    }));
+
+  return Object.assign({}, outRecord, {
+    conversionId: outRecord.conversionId || inRecord.conversionId,
+    pairedMovementId: inRecord.id,
+    items: mergedItems
+  });
+}
+
+/** 填入明細 Modal 內容（不含表頭原因／狀態／領域／類型）。 */
+function renderMovementDetailModalContent(record) {
+  $('#modalMovementId').text(formatAdminMovementDisplayNo(record));
+  $('#modalMovementDate').text(formatMovementDateTimeDisplay(getMovementCreatedAt(record)));
+  $('#modalMovementEmployeeId').text(record.employeeName || record.employeeId || '—');
+
+  var canEditLines = isAdminMovementBackendEnabled()
+    && typeof window.canEdit === 'function'
+    && window.canEdit('movement')
+    && (record.status === 'draft' || record.status === 'posted');
 
   var itemsHtml = (record.items || []).map(function (item) {
-    var typeBadge = item.type || '—';
-    var typeCellContent = item.type === '損耗'
-      ? '<span class="badge bg-warning text-dark">' + escapeMovementHtml(typeBadge) + '</span>'
-      : escapeMovementHtml(typeBadge);
+    var natureCode = item.lineNature
+      || toLineNatureCode(item.type)
+      || toLineNatureCode(deriveLineNatureLabel(item));
+    var natureLabel = toLineNatureLabel(natureCode) || deriveLineNatureLabel(item) || '—';
+    var typeCellContent;
+    if (canEditLines && item.id) {
+      typeCellContent = buildLineNatureSelectHtml(item.id, natureCode, item.movementId || record.id);
+    } else if (natureLabel === '損耗' || natureLabel === '折損') {
+      typeCellContent = '<span class="badge bg-warning text-dark">'
+        + escapeMovementHtml(natureLabel) + '</span>';
+    } else {
+      typeCellContent = escapeMovementHtml(natureLabel);
+    }
+    var lineReasonCell;
+    if (canEditLines && item.id) {
+      lineReasonCell =
+        '<div class="input-group input-group-sm">' +
+          '<input type="text" class="form-control movement-line-reason-input" ' +
+          'data-item-id="' + escapeMovementHtml(item.id) + '" ' +
+          'data-movement-id="' + escapeMovementHtml(item.movementId || record.id) + '" ' +
+          'maxlength="1000" value="' + escapeMovementHtml(item.lineReason || '') + '" ' +
+          'placeholder="" aria-label="備註">' +
+          '<button type="button" class="btn btn-outline-secondary btn-save-movement-line-reason" ' +
+          'data-item-id="' + escapeMovementHtml(item.id) + '" ' +
+          'data-movement-id="' + escapeMovementHtml(item.movementId || record.id) + '" ' +
+          'title="儲存備註">' +
+          '<i class="fas fa-save"></i></button>' +
+        '</div>';
+    } else {
+      lineReasonCell = escapeMovementHtml(item.lineReason || '—');
+    }
 
-    return '<tr>' +
+    return '<tr data-item-id="' + escapeMovementHtml(item.id || '') + '">' +
       '<td>' + escapeMovementHtml(item.productName) + '</td>' +
       '<td class="text-center fw-semibold">' + escapeMovementHtml(item.quantity) + '</td>' +
       '<td>' + escapeMovementHtml(item.fromStore) + '</td>' +
       '<td>' + escapeMovementHtml(item.toStore) + '</td>' +
       '<td>' + typeCellContent + '</td>' +
+      '<td>' + lineReasonCell + '</td>' +
       '</tr>';
   }).join('');
 
   $('#modalMovementItems').html(
-    itemsHtml || '<tr><td colspan="5" class="text-center text-muted">沒有異動明細</td></tr>'
+    itemsHtml || '<tr><td colspan="6" class="text-center text-muted">沒有異動明細</td></tr>'
   );
 
-  var isDraft = isAdminMovementBackendEnabled() && record.status === 'draft';
-  $('#draftMovementItemEditor').toggleClass('d-none', !isDraft);
-  $('#postMovementDraft, #cancelMovementDraft').toggleClass('d-none', !isDraft);
-  if (isDraft) {
-    renderOpenDraftVariantOptions(record);
-  }
+  $('#draftMovementItemEditor').addClass('d-none');
+  $('#postMovementDraft, #cancelMovementDraft').addClass('d-none');
 
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('movementDetailModal')).show();
+  if (typeof window.applyEditPermission === 'function') {
+    window.applyEditPermission('movement', $('#movementDetailModal'));
+  }
+}
+
+/** PATCH 表頭 reason（不更新 employee_id）。 */
+function saveOpenMovementReason() {
+  var movementId = $('#movementDetailModal').data('movement-id');
+  var reason = String($('#modalMovementReasonInput').val() || '').trim();
+  if (!reason) {
+    window.showAdminToast('異動原因不可空白', 'danger');
+    return;
+  }
+  AdminAPI.movement.updateReason(movementId, { reason: reason }).then(function (response) {
+    var record = upsertBackendMovement(response.data);
+    showMovementDetailModal(record);
+    window.showAdminToast('異動原因已更新');
+  }).catch(function (error) {
+    AdminAPI.handleError(error, '更新異動原因失敗');
+  });
+}
+
+/** 詳情列異動性質下拉 HTML（方案 B）。 */
+function buildLineNatureSelectHtml(itemId, selectedCode, movementId) {
+  var options = LINE_NATURE_CODES.map(function (code) {
+    var selected = code === selectedCode ? ' selected' : '';
+    return '<option value="' + code + '"' + selected + '>'
+      + escapeMovementHtml(LINE_NATURE_LABELS[code]) + '</option>';
+  }).join('');
+  return '<select class="form-select form-select-sm movement-line-nature-select" '
+    + 'data-item-id="' + escapeMovementHtml(itemId) + '" '
+    + 'data-movement-id="' + escapeMovementHtml(movementId || '') + '" '
+    + 'aria-label="異動性質">'
+    + options + '</select>';
+}
+
+/** 依 Modal 上的主單 id 從 cache 找回原紀錄（含 conversion 配對資訊）。 */
+function findCachedMovementForOpenModal() {
+  var movementId = $('#movementDetailModal').data('movement-id');
+  return (window.movementCache || []).find(function (item) {
+    return window.sameId(item.id, movementId);
+  });
+}
+
+/** PATCH 明細 lineReason（轉換合併列時用該列 data-movement-id）。 */
+function saveOpenMovementLineReason(itemId) {
+  var $input = $('.movement-line-reason-input[data-item-id="' + itemId + '"]');
+  var movementId = $input.attr('data-movement-id')
+    || $('#movementDetailModal').data('movement-id');
+  var lineReason = String($input.val() || '').trim();
+  AdminAPI.movement.updateItemLineReason(movementId, itemId, {
+    lineReason: lineReason || null
+  }).then(function () {
+    var cached = findCachedMovementForOpenModal();
+    if (cached) {
+      showMovementDetailModal(cached);
+    }
+    window.showAdminToast('備註已更新');
+  }).catch(function (error) {
+    AdminAPI.handleError(error, '更新備註失敗');
+  });
+}
+
+/**
+ * PATCH 明細 lineNature（不改 from／to／quantity）。
+ * Save line nature only — locations stay unchanged.
+ */
+function saveOpenMovementLineNature(itemId, lineNature) {
+  var $select = $('.movement-line-nature-select[data-item-id="' + itemId + '"]');
+  var movementId = $select.attr('data-movement-id')
+    || $('#movementDetailModal').data('movement-id');
+  var code = toLineNatureCode(lineNature);
+  if (!code) {
+    window.showAdminToast('異動性質無效', 'danger');
+    return;
+  }
+  AdminAPI.movement.updateItemLineReason(movementId, itemId, {
+    lineNature: code
+  }).then(function () {
+    var cached = findCachedMovementForOpenModal();
+    if (cached) {
+      showMovementDetailModal(cached);
+    }
+    window.showAdminToast('異動性質已更新');
+  }).catch(function (error) {
+    AdminAPI.handleError(error, '更新異動性質失敗');
+  });
 }
 
 /** 依異動狀態建立一致的 Bootstrap badge。 */

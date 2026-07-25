@@ -6,6 +6,8 @@ import com.yuruicamp.backend.booking.application.BookingLifecycleService;
 import com.yuruicamp.backend.common.api.ApiResponse;
 import com.yuruicamp.backend.common.security.CustomerPrincipal;
 import com.yuruicamp.backend.config.OpenApiConfig;
+import com.yuruicamp.backend.payment.api.EcpayLaunchResponse;
+import com.yuruicamp.backend.payment.application.EcpayLaunchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,14 +31,17 @@ public class BookingCheckoutController {
 	private final BookingCheckoutService service;
 	private final BookingMemberService memberService;
 	private final BookingLifecycleService lifecycleService;
+	private final EcpayLaunchService ecpayLaunchService;
 
 	public BookingCheckoutController(
 			BookingCheckoutService service,
 			BookingMemberService memberService,
-			BookingLifecycleService lifecycleService) {
+			BookingLifecycleService lifecycleService,
+			EcpayLaunchService ecpayLaunchService) {
 		this.service = service;
 		this.memberService = memberService;
 		this.lifecycleService = lifecycleService;
+		this.ecpayLaunchService = ecpayLaunchService;
 	}
 
 	@PostMapping
@@ -61,5 +66,13 @@ public class BookingCheckoutController {
 			@AuthenticationPrincipal CustomerPrincipal principal,
 			@PathVariable String bookingId) {
 		return ApiResponse.ok(lifecycleService.cancel(principal.customerId(), bookingId));
+	}
+
+	@PostMapping("/{bookingId}/ecpay")
+	@Operation(summary = "D-2：取得綠界（或本機 stub）AIO 表單欄位；不標記 paid")
+	public ApiResponse<EcpayLaunchResponse> ecpay(
+			@AuthenticationPrincipal CustomerPrincipal principal,
+			@PathVariable String bookingId) {
+		return ApiResponse.ok(ecpayLaunchService.launchForBooking(principal.customerId(), bookingId));
 	}
 }

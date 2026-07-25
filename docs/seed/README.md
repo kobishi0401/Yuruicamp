@@ -45,7 +45,7 @@ docs/seed/
     ├── 030-catalog.sql    # 商品與租借 SKU／variant
     ├── 040-inventory.sql  # 商城／租借庫位、listing 與庫存
     ├── 050-coupons.sql    # 優惠券主檔（claim 尚未建立）
-    ├── 060-orders.sql     # 225 筆展示訂單、442 筆明細與歷程
+    ├── 060-orders.sql     # 222 筆展示訂單、435 筆明細與歷程
     ├── 070-bookings.sql   # 90 筆展示預訂、zone／租借快照與歷程
     ├── 080-reviews.sql    # 已購評價（綁 order_items；含照片）
     └── 090-w1-manual-fixtures.sql  # W1 手動驗收固定單（W1-ORD-*／W1-BK-*／W1-REV-DEL／min-stock）
@@ -81,9 +81,9 @@ docs/seed/
 
 - Reference／Identity：13 品牌、8 個 active 營區、13 個 active zone、3 門市、50 會員、18 偏好選項、200 會員偏好、50 預設地址、3 會員標籤、56 標籤指派。
 - Catalog／Inventory：30 商品、39 商城規格、4 商城庫位、156 商城庫存、29 租借 SKU、38 租借規格、17 listing、334 筆租借庫存。商城總 on-hand／active 保留／可用量為 `499／98／401`，其中 active catalog 可用量為 399；租借庫存總量為 555。
-- Coupon／Order／Booking／Review：7 優惠券、0 claim、0 訂單券快照、225 筆零折扣訂單、442 訂單明細、442 商城保留、90 預訂、90 zone 快照、40 租借快照、40 租借保留、1 筆 verified-purchase 評論、0 庫存異動。
+- Coupon／Order／Booking／Review：7 優惠券、0 claim、0 訂單券快照、222 筆零折扣訂單、435 訂單明細、435 商城保留、90 預訂、90 zone 快照、40 租借快照、40 租借保留、1 筆 verified-purchase 評論、0 庫存異動。
 - 會員偏好、地址、會員標籤、訂單會員、訂單規格、預訂會員、營區、zone、租借 listing／variant 的孤兒檢查皆為 `0`；每位展示會員只有一筆預設地址，沒有連線停留在 `idle in transaction`。
-- 2026-07-22 在 PostgreSQL 16 全新獨立資料庫 `yuruicamp_inventory_verify_final_0722` 先執行 `latest_schema.sql`，再完整執行 `010`～`070`，一次成功 `COMMIT`；另在前一個隔離庫連續重跑驗證冪等性。2026-07-23 新增粉紅雞訂單後，已在目前 `yuruicamp` 以同一交易完整重跑 `020` 與 `060` 再回滾，確認可重複執行；目前商城／租借保留為 `442／40`，新增 7 筆商城保留皆為 fulfilled，不改變 active catalog 可用量 399。
+- 2026-07-22 在 PostgreSQL 16 全新獨立資料庫 `yuruicamp_inventory_verify_final_0722` 先執行 `latest_schema.sql`，再完整執行 `010`～`070`，一次成功 `COMMIT`；另在前一個隔離庫連續重跑驗證冪等性。同一版本已套用到目前 `yuruicamp`；商城／租借保留為 `435／40`，active catalog 可用量 399，負庫存、複合 FK 孤兒與租借區間超賣皆為 `0`。
 
 可重做的隔離驗證流程見 [`../backend-specs/test/database-seed-validation.md`](../backend-specs/test/database-seed-validation.md)。驗證使用專用容器與 port，不會停止、重建或清除既有 `yuruicamp-db`。
 
@@ -104,7 +104,7 @@ psql -U postgres -d yuruicamp -f docs/seed/002-dev-seed.sql
 
 入口已設定 `ON_ERROR_STOP`。若自訂了 `POSTGRES_USER` 或 `POSTGRES_DB`，請同步替換指令參數。
 
-> 注意：重跑 seed 會以 reference 主檔覆寫同 ID 的品牌、營區、zone、標籤與門市欄位，並重建 C002～C009 的標籤關聯及 3 門市 features；舊 `C002-Z-A`、`C002-Z-HIDDEN` 只會改為 inactive，不會刪除。它也會覆寫 U001～U050、Firebase 測試會員「粉紅雞」、訂單 1～225、預訂 1～90 及其固定明細／歷程。Seed 會覆寫 156 筆商城庫存、333 筆前端對照租借庫存、442／40 筆交易保留與 `REV031`；不會刪除多出的人工交易明細。優惠券主檔會更新，但既有 `claimed_quantity` 不會被重設。不要在需要保留同 ID 手動測試資料時重跑。`docker compose down -v` 會刪除整個本機資料卷，只能在確定資料可捨棄時使用。
+> 注意：重跑 seed 會以 reference 主檔覆寫同 ID 的品牌、營區、zone、標籤與門市欄位，並重建 C002～C009 的標籤關聯及 3 門市 features；舊 `C002-Z-A`、`C002-Z-HIDDEN` 只會改為 inactive，不會刪除。它也會覆寫 U001～U050、訂單 1～222、預訂 1～90 及其固定明細／歷程。Seed 會覆寫 156 筆商城庫存、333 筆前端對照租借庫存、435／40 筆交易保留與 `REV031`；不會刪除多出的人工交易明細。優惠券主檔會更新，但既有 `claimed_quantity` 不會被重設。不要在需要保留同 ID 手動測試資料時重跑。`docker compose down -v` 會刪除整個本機資料卷，只能在確定資料可捨棄時使用。
 
 ### 維護規則
 

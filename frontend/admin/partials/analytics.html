@@ -60,6 +60,7 @@
         <span class="text-muted small" id="shopPeriodLabel"></span>
       </div>
     </div>
+    <div id="shopSummaryError" class="alert alert-danger d-none mb-3 py-2 small" role="alert"></div>
 
     <!-- ── 圖表區：折線圖（左 8/12）+ 甜甜圈（右 4/12） ── -->
     <div class="row g-4 mb-4">
@@ -304,6 +305,7 @@
         <span class="text-muted small" id="bookingPeriodLabel"></span>
       </div>
     </div>
+    <div id="bookingSummaryError" class="alert alert-danger d-none mb-3 py-2 small" role="alert"></div>
 
     <!-- ── 圖表區上半：折線圖（左 8/12）+ 甜甜圈（右 4/12） ── -->
     <div class="row g-4 mb-4">
@@ -470,13 +472,13 @@
     <!-- ── 圖表區下半：各營地長條圖（左 6/12）+ 各地區長條圖（右 6/12） ── -->
     <div class="row g-4">
 
-      <!-- 水平長條圖：各營地預約筆數 -->
+      <!-- 水平長條圖：各營地預約收入（summary 為金額；Mock 模式為筆數） -->
       <div class="col-lg-6">
         <div class="card shadow-sm border-0">
           <div class="card-header bg-white border-0 pt-3 pb-0">
             <h6 class="fw-semibold mb-0">
               <i class="fas fa-map-marker-alt me-2" style="color: var(--admin-brand-accent);"></i>
-              各營地預約筆數
+              各營地預約收入
             </h6>
           </div>
           <div class="card-body">

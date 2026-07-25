@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/inventory-movements")
 @SecurityRequirement(name = OpenApiConfig.FIREBASE_BEARER)
-@Tag(name = "Admin Inventory Movements", description = "後台庫存異動草稿、明細、過帳與作廢")
+@Tag(name = "Admin Inventory Movements", description = "後台庫存異動：product_stock_update 稽核（post 不定庫存）＋ rental transfer 營地互轉（post 改庫存）")
 public class AdminInventoryMovementController {
 
 	private final AdminInventoryMovementService service;
@@ -32,7 +33,6 @@ public class AdminInventoryMovementController {
 		this.service = service;
 	}
 
-	// 查詢庫存異動分頁列表，包含草稿、已過帳與已作廢資料。
 	@GetMapping
 	@PreAuthorize("hasAuthority('movement.view')")
 	@Operation(summary = "庫存異動列表", description = "RBAC: movement.view")
@@ -56,7 +56,6 @@ public class AdminInventoryMovementController {
 		return ApiResponse.ok(result.data(), result.meta());
 	}
 
-	// 取得單一庫存異動與不可變的商品快照明細。
 	@GetMapping("/{id}")
 	@PreAuthorize("hasAuthority('movement.view')")
 	@Operation(summary = "庫存異動詳情", description = "RBAC: movement.view")
@@ -64,7 +63,6 @@ public class AdminInventoryMovementController {
 		return ApiResponse.ok(service.get(id));
 	}
 
-	// 取得建立草稿時可使用的正式庫位與商品規格。
 	@GetMapping("/lookups")
 	@PreAuthorize("hasAuthority('movement.view')")
 	@Operation(summary = "庫存異動選項", description = "RBAC: movement.view")
@@ -72,17 +70,15 @@ public class AdminInventoryMovementController {
 		return ApiResponse.ok(service.getLookups());
 	}
 
-	// 建立 draft 表頭，這一步不會修改任何庫存數量。
 	@PostMapping
 	@PreAuthorize("hasAuthority('movement.edit')")
-	@Operation(summary = "建立庫存異動草稿", description = "RBAC: movement.edit")
+	@Operation(summary = "建立庫存異動草稿", description = "RBAC: movement.edit；product_stock_update 或 rental transfer")
 	public ApiResponse<AdminInventoryMovementResponse> createDraft(
 			@AuthenticationPrincipal AdminPrincipal principal,
 			@Valid @RequestBody AdminInventoryMovementCreateRequest request) {
 		return ApiResponse.ok(service.createDraft(principal.adminUserId(), request));
 	}
 
-	// 只允許對 draft 新增一筆商品規格明細。
 	@PostMapping("/{id}/items")
 	@PreAuthorize("hasAuthority('movement.edit')")
 	@Operation(summary = "新增庫存異動明細", description = "RBAC: movement.edit")
@@ -92,17 +88,15 @@ public class AdminInventoryMovementController {
 		return ApiResponse.ok(service.addItem(id, request));
 	}
 
-	// 悲觀鎖定異動單與庫存列後原子過帳，重複呼叫不會重複加減庫存。
 	@PostMapping("/{id}/post")
 	@PreAuthorize("hasAuthority('movement.edit')")
-	@Operation(summary = "過帳庫存異動", description = "RBAC: movement.edit；重複過帳冪等")
+	@Operation(summary = "定稿庫存異動", description = "RBAC: movement.edit；product_stock_update 不定 on-hand；rental transfer 改租借庫存；重複過帳冪等")
 	public ApiResponse<AdminInventoryMovementResponse> post(
 			@AuthenticationPrincipal AdminPrincipal principal,
 			@PathVariable long id) {
 		return ApiResponse.ok(service.post(id, principal.adminUserId()));
 	}
 
-	// 作廢尚未過帳的 draft，作廢後不得再新增明細或過帳。
 	@PostMapping("/{id}/cancel")
 	@PreAuthorize("hasAuthority('movement.edit')")
 	@Operation(summary = "作廢庫存異動", description = "RBAC: movement.edit")
@@ -110,5 +104,25 @@ public class AdminInventoryMovementController {
 			@AuthenticationPrincipal AdminPrincipal principal,
 			@PathVariable long id) {
 		return ApiResponse.ok(service.cancel(id, principal.adminUserId()));
+	}
+
+	@PatchMapping("/{id}")
+	@PreAuthorize("hasAuthority('movement.edit')")
+	@Operation(summary = "修改異動表頭原因", description = "RBAC: movement.edit；不更新 employeeId")
+	public ApiResponse<AdminInventoryMovementResponse> patchReason(
+			@PathVariable long id,
+			@Valid @RequestBody AdminInventoryMovementReasonPatchRequest request) {
+		return ApiResponse.ok(service.patchReason(id, request.reason()));
+	}
+
+	@PatchMapping("/{id}/items/{itemId}")
+	@PreAuthorize("hasAuthority('movement.edit')")
+	@Operation(summary = "修改異動明細備註／異動性質", description = "RBAC: movement.edit；不更新 employeeId")
+	public ApiResponse<AdminInventoryMovementResponse> patchItemLineReason(
+			@PathVariable long id,
+			@PathVariable long itemId,
+			@Valid @RequestBody AdminInventoryMovementLineReasonPatchRequest request) {
+		return ApiResponse.ok(service.patchItemLineReason(
+				id, itemId, request.lineReason(), request.lineNature()));
 	}
 }
