@@ -60,6 +60,14 @@ class AdminBookingPostgreSqlIntegrationTest {
 				ON CONFLICT (id) DO UPDATE SET status='active', deleted_at=null, firebase_uid='uid-adm-bk-it'
 				""", CUSTOMER_ID);
 		jdbc.update("""
+				INSERT INTO campground_zones (
+				    id, campground_id, type, capacity_per_site,
+				    price_weekday, price_holiday, total_sites, active
+				)
+				VALUES (?, 'C002', '草地', 4, 500.00, 800.00, 5, true)
+				ON CONFLICT (id) DO UPDATE SET active = true
+				""", ZONE_ID);
+		jdbc.update("""
 				INSERT INTO bookings (
 				    id, display_no, customer_id, campground_id, campground_name_snapshot, region_snapshot,
 				    check_in, check_out, guest_count, weekday_count, holiday_count,
@@ -155,6 +163,11 @@ class AdminBookingPostgreSqlIntegrationTest {
 		jdbc.update("delete from booking_status_history where booking_id = ?", BOOKING_ID);
 		jdbc.update("delete from booking_selected_zones where booking_id = ?", BOOKING_ID);
 		jdbc.update("delete from bookings where id = ?", BOOKING_ID);
-		jdbc.update("delete from customers where id = ?", CUSTOMER_ID);
+		jdbc.update("delete from campground_zones where id = ?", ZONE_ID);
+		Integer customerRows = jdbc.queryForObject(
+				"select count(*) from customers where id = ?", Integer.class, CUSTOMER_ID);
+		if (customerRows != null && customerRows > 0) {
+			jdbc.queryForObject("select soft_delete_customer(?)", Boolean.class, CUSTOMER_ID);
+		}
 	}
 }

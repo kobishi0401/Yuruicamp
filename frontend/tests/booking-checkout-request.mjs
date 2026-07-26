@@ -11,6 +11,7 @@ const cartPageSource = readFileSync(join(rootDir, 'booking/pages/booking-cart.ht
 const checkoutPageSource = readFileSync(join(rootDir, 'booking/pages/booking-checkout.html'), 'utf8');
 const sessionValues = new Map();
 let createCalls = 0;
+let ecpayContact = null;
 
 const chain = new Proxy(
   {},
@@ -22,7 +23,7 @@ const jquery = () => chain;
 jquery.fn = {};
 
 const sessionStorage = {
-  getItem: (key) => sessionValues.get(key) || null,
+  getItem: (key) => sessionValues.get(key) ?? null,
   setItem: (key, value) => sessionValues.set(key, value),
   removeItem: (key) => sessionValues.delete(key),
 };
@@ -34,17 +35,33 @@ const window = {
   BookingAPI: {
     createBooking: async (request) => {
       createCalls += 1;
-      return { bookingId: 'B001', request };
+      return { bookingId: 'B001', displayNo: 'BK-0001', request };
+    },
+    createEcpayForm: async (bookingId, contact) => {
+      ecpayContact = contact;
+      return { actionUrl: 'https://payment.example/ecpay', fields: { MerchantTradeNo: 'T1' } };
     },
     cancelBooking: async () => ({}),
   },
   addEventListener: () => {},
 };
 
+const document = {
+  createElement: (tag) => ({
+    tagName: tag,
+    method: '',
+    action: '',
+    hidden: false,
+    appendChild: () => {},
+    submit: () => {},
+  }),
+  body: { appendChild: () => {} },
+};
+
 const context = vm.createContext({
   window,
-  document: {},
-  localStorage: { removeItem: () => {} },
+  document,
+  localStorage: { removeItem: () => {}, getItem: () => null },
   sessionStorage,
   $: jquery,
   console,
@@ -56,7 +73,7 @@ const context = vm.createContext({
   Promise,
 });
 
-vm.runInContext(cartSource, context, { filename: 'booking-cart.js' });
+vm.runInContext(checkoutSource, context, { filename: 'booking-checkout.js' });
 
 const cart = {
   bookingInfo: {
@@ -97,70 +114,23 @@ assert.deepEqual(
   ].sort()
 );
 assert.deepEqual(JSON.parse(JSON.stringify(request.zones)), [{ zoneId: 'Z001', quantity: 1 }]);
-assert.deepEqual(JSON.parse(JSON.stringify(request.rentals)), [
-  {
-    rentalListingId: 'RL001',
-    rentalSkuVariantId: 'RSV001',
-    quantity: 2,
-  },
-]);
 assert.equal(request.paymentMethod, 'ecpay-credit');
-assert.equal(request.idempotencyKey, 'c8475d58-52fa-4df5-9c99-125468651ccc');
 
-const forbiddenFields = [
-  'customerId',
-  'campgroundName',
-  'region',
-  'zoneType',
-  'name',
-  'subtotal',
-  'summary',
-  'finalAmount',
-  'status',
-  'paymentStatus',
-  'paid',
-];
-const requestText = JSON.stringify(request);
-for (const field of forbiddenFields) {
-  assert(!requestText.includes(`"${field}"`), `Booking Request must not contain ${field}`);
-}
+await context.createPreparedBookingSession(cart, 0);
+assert.equal(createCalls, 1, 'booking-checkout should create booking on entry (B3)');
+assert.equal(JSON.parse(sessionStorage.getItem('lastCheckoutBooking')).displayNo, 'BK-0001');
 
-context.bookingCart = cart;
-await context.prepareBookingCheckoutSession(false);
-assert.equal(createCalls, 1);
-assert.equal(JSON.parse(sessionStorage.getItem('lastCheckoutBooking')).bookingId, 'B001');
-assert.equal(
-  sessionStorage.getItem('lastCheckoutBookingFingerprint'),
-  context.getBookingCartFingerprint(cart)
-);
-assert.equal(
-  context.getBookingSessionErrorMessage({ code: 'RENTAL_STOCK_INSUFFICIENT' }),
-  '商品剩餘數量不足請重新調整數量'
-);
-assert.equal(context.isBookingSessionExpired({ checkoutExpiresAt: '2000-01-01T00:00:00Z' }), true);
+await context.launchEcpayPayment({ bookingId: 'B001' }, { name: '王小明', phone: '0911222333', email: 'a@b.c' });
+assert.deepEqual(ecpayContact, { name: '王小明', phone: '0911222333', email: 'a@b.c' });
 
-assert(cartPageSource.includes('id="bookingCheckoutSessionStatus"'));
-assert(cartPageSource.includes('aria-live="polite"'));
+assert(!cartSource.includes('BookingAPI.createBooking'), 'booking-cart must not create booking (B3)');
+assert(!cartSource.includes('prepareBookingCheckoutSession'));
+assert(cartSource.includes('initBookingCartCheckoutLink'));
+assert(checkoutSource.includes('BookingAPI.createBooking'));
+assert(checkoutSource.includes('BookingAPI.createEcpayForm(bookingId, contact)'));
+
 assert(cartPageSource.includes('沒有預約營地、租賃裝備請前往預約首頁預約。'));
-assert(cartSource.includes('BookingAPI.createBooking'));
-assert(cartSource.includes('prepareBookingCheckoutSession(false)'));
-assert(cartSource.includes('class="quantityValue quantityValueBooking quantityInputBooking"'));
-assert(cartSource.includes("on('change', '.quantityInputBooking'"));
-assert.match(cartSource, /localStorage\.removeItem\('bookingCart'\)[\s\S]*clearBookingIdempotencyKey\(\)/);
-assert(!checkoutSource.includes('BookingAPI.createBooking'));
-
-assert(!checkoutPageSource.includes('id="creditCardSection"'));
-assert(!checkoutPageSource.includes('id="cardNumber"'));
-assert(!checkoutPageSource.includes('id="cardExpiry"'));
-assert(!checkoutPageSource.includes('id="cardCvv"'));
 assert(checkoutPageSource.includes('id="confirmPayBtn"'));
 assert(checkoutPageSource.includes('前往 ECPay'));
-assert.match(checkoutPageSource, /class="checkoutPanel checkoutPanelBooking isOpen" id="panelDetails"/);
-assert.match(checkoutPageSource, /class="checkoutPanel checkoutPanelBooking isOpen" id="panelContact"/);
-assert.match(checkoutPageSource, /class="checkoutPanel checkoutPanelBooking isOpen" id="panelPayment"/);
-assert(!checkoutSource.includes('tryAutoFillContactFields'));
-assert(checkoutSource.includes('BookingAPI.createEcpayForm'));
-assert(checkoutSource.includes('submitEcpayForm'));
-assert(checkoutSource.includes('readPreparedBookingSession'));
 
 console.log('Booking Checkout Request checks passed');

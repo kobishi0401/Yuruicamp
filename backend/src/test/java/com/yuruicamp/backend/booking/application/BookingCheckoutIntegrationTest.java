@@ -152,6 +152,49 @@ class BookingCheckoutIntegrationTest {
 		removeTestData();
 	}
 
+	/** B3：create 前無 booking；create 後才 pending + checkout_expires_at。 */
+	@Test
+	void noBookingBeforeCheckoutCreateThenHoldStartsOnCreate() {
+		assertThat(count("bookings")).isZero();
+		assertThat(count("booking_selected_zones")).isZero();
+
+		BookingCheckoutSessionResponse response = service.create(
+				CUSTOMER_A,
+				request("b3-hold-" + UUID.randomUUID(), List.of(zone(ZONE_A, 1))));
+
+		assertThat(response.checkoutExpiresAt()).isNotNull();
+		assertThat(count("bookings")).isEqualTo(1);
+		assertThat(count("booking_selected_zones")).isEqualTo(1);
+		var expiresAt = jdbcTemplate.queryForObject(
+				"select checkout_expires_at from bookings where id = ?",
+				java.sql.Timestamp.class,
+				response.bookingId());
+		assertThat(expiresAt).isNotNull();
+		assertThat(expiresAt.toInstant()).isAfter(Instant.now());
+	}
+
+	/** displayNo 連續建預約唯一遞增。 */
+	@Test
+	void sequentialCreatesAssignUniqueIncrementingDisplayNos() {
+		BookingCheckoutSessionResponse first = service.create(
+				CUSTOMER_A,
+				request("display-no-1-" + UUID.randomUUID(), List.of(zone(ZONE_A, 1))));
+		BookingCheckoutSessionResponse second = service.create(
+				CUSTOMER_A,
+				request("display-no-2-" + UUID.randomUUID(), List.of(zone(ZONE_B, 1))));
+
+		assertThat(first.displayNo()).matches("BK-\\d{4}");
+		assertThat(second.displayNo()).matches("BK-\\d{4}");
+		assertThat(first.displayNo()).isNotEqualTo(second.displayNo());
+		assertThat(parseDisplaySequence(second.displayNo(), "BK"))
+				.isGreaterThan(parseDisplaySequence(first.displayNo(), "BK"));
+
+		assertThat(jdbcTemplate.queryForObject(
+				"select display_no from bookings where id = ?",
+				String.class,
+				first.bookingId())).isEqualTo(first.displayNo());
+	}
+
 	@AfterAll
 	void restoreBookingPolicy() {
 		jdbcTemplate.update("delete from booking_policy_occupying_statuses where policy_id = 1");
@@ -489,5 +532,9 @@ class BookingCheckoutIntegrationTest {
 			String timezone,
 			int dateBoundaryHour,
 			int lowAvailabilityThreshold) {
+	}
+
+	private static int parseDisplaySequence(String displayNo, String prefix) {
+		return Integer.parseInt(displayNo.substring(prefix.length() + 1));
 	}
 }

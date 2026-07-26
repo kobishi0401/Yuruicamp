@@ -154,12 +154,12 @@ assert(apiClient.includes('Authorization'), 'REST requests must support Firebase
 const checkoutPage = readProjectFile('storefront/js/pages/checkout.js');
 const storefrontCartPage = readProjectFile('storefront/js/pages/cart.js');
 assert(
-  storefrontCartPage.includes('API.checkout.createSession(request)'),
-  'Storefront cart page must create sessions through the shared facade'
+  !storefrontCartPage.includes('API.checkout.createSession'),
+  'Storefront cart page must not hard-lock inventory (B3: checkout entry creates session)'
 );
 assert(
-  !checkoutPage.includes('API.checkout.createSession('),
-  'Checkout confirm must not create another Checkout Session'
+  checkoutPage.includes('API.checkout.createSession('),
+  'Checkout page must create session on entry after login (B3)'
 );
 assert(!checkoutPage.includes('API.orders.create(orderData)'), 'Checkout page must not create Legacy Orders');
 assert(

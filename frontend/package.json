@@ -21,6 +21,7 @@
     "test:checkout-success": "node tests/checkout-success-state.mjs",
     "test:booking-facade": "node tests/booking-api-facade.mjs",
     "test:booking-request": "node tests/booking-checkout-request.mjs",
+    "test:commerce-ux": "node tests/commerce-ux-browser.mjs",
     "test:member-orders": "node tests/member-orders-facade.mjs",
     "test:member-reviews": "node tests/member-reviews-facade.mjs",
     "test:product-reviews": "node tests/product-reviews-facade.mjs",

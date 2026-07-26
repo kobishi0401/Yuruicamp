@@ -97,6 +97,57 @@ class CheckoutPostgreSqlIntegrationTest {
 		removeTestData();
 	}
 
+	/** B3：進 checkout create 前無 active 保留；create 後才建保留並開始倒數。 */
+	@Test
+	void noReservationBeforeCheckoutCreateThenHoldStartsOnCreate() {
+		assertThat(jdbcTemplate.queryForObject(
+				"select count(*) from product_stock_reservations where variant_id = ? and status = 'active'",
+				Integer.class,
+				VARIANT_ID)).isZero();
+		assertThat(jdbcTemplate.queryForObject(
+				"select count(*) from orders where customer_id = ?",
+				Integer.class,
+				CUSTOMER_A)).isZero();
+
+		CheckoutSessionResponse response = checkoutService.create(
+				CUSTOMER_A,
+				request("b3-hold-" + UUID.randomUUID(), 1));
+
+		assertThat(response.checkoutExpiresAt()).isNotNull();
+		assertThat(jdbcTemplate.queryForObject(
+				"select count(*) from product_stock_reservations where variant_id = ? and status = 'active'",
+				Integer.class,
+				VARIANT_ID)).isEqualTo(1);
+		var expiresAt = jdbcTemplate.queryForObject(
+				"select checkout_expires_at from orders where id = ?",
+				java.sql.Timestamp.class,
+				response.orderId());
+		assertThat(expiresAt).isNotNull();
+		assertThat(expiresAt.toInstant()).isAfter(Instant.now());
+	}
+
+	/** displayNo 連續建單唯一遞增。 */
+	@Test
+	void sequentialCreatesAssignUniqueIncrementingDisplayNos() {
+		CheckoutSessionResponse first = checkoutService.create(
+				CUSTOMER_A,
+				request("display-no-1-" + UUID.randomUUID(), 1));
+		CheckoutSessionResponse second = checkoutService.create(
+				CUSTOMER_A,
+				request("display-no-2-" + UUID.randomUUID(), 1));
+
+		assertThat(first.displayNo()).matches("ORD-\\d{4}");
+		assertThat(second.displayNo()).matches("ORD-\\d{4}");
+		assertThat(first.displayNo()).isNotEqualTo(second.displayNo());
+		assertThat(parseDisplaySequence(second.displayNo(), "ORD"))
+				.isGreaterThan(parseDisplaySequence(first.displayNo(), "ORD"));
+
+		assertThat(jdbcTemplate.queryForObject(
+				"select display_no from orders where id = ?",
+				String.class,
+				first.orderId())).isEqualTo(first.displayNo());
+	}
+
 	@Test
 	void createPersistsOrderSnapshotAndReservation() {
 		CheckoutSessionResponse response = checkoutService.create(
@@ -521,6 +572,10 @@ class CheckoutPostgreSqlIntegrationTest {
 				"ecpay-credit",
 				new CheckoutCreateRequest.Shipping("delivery", "測試收件人", "0912345678", "台北市測試路 1 號", null),
 				idempotencyKey);
+	}
+
+	private static int parseDisplaySequence(String displayNo, String prefix) {
+		return Integer.parseInt(displayNo.substring(prefix.length() + 1));
 	}
 
 	// 清除整合測試建立的訂單與庫存資料。
