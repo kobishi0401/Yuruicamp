@@ -202,7 +202,7 @@ async function _runStorefrontCartSoftValidation({ blockCheckout = false } = {}) 
   _setStorefrontCartSessionStatus({
     state: 'loading',
     title: '正在確認可售數量',
-    message: '此步驟不會鎖定庫存，進入結帳頁才開始 15 分鐘保留。',
+    message: '請稍候，我們正在比對商品可售庫存。',
   });
 
   let hydratedCart;
@@ -241,7 +241,7 @@ async function _runStorefrontCartSoftValidation({ blockCheckout = false } = {}) 
   _setStorefrontCartSessionStatus({
     state: 'ready',
     title: '商品數量已確認',
-    message: '進入結帳頁後才會開始 15 分鐘庫存保留與倒數。',
+    message: '可以前往結帳填寫收件資料。',
   });
   return { ok: true };
 }

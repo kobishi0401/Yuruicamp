@@ -288,7 +288,8 @@ class BookingLifecycleIntegrationTest {
 				CAMPGROUND_ID,
 				checkIn.toString(),
 				checkOut.toString(),
-				List.of(new BookingAvailabilityZoneRequest(ZONE_ID, 1))))
+				List.of(new BookingAvailabilityZoneRequest(ZONE_ID, 1)),
+				List.of()))
 				.available();
 	}
 

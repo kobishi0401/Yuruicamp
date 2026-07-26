@@ -62,10 +62,28 @@ assert(!bookingSuccessHtml.includes("'#--'"));
 // ── 庫存 UX ──
 const productListJs = read('storefront/js/pages/product-list.js');
 const productDetailJs = read('storefront/js/pages/product-detail.js');
+const homeJs = read('storefront/js/pages/home.js');
 const cartComponentJs = read('storefront/js/components/cart.js');
+const memberCenterJs = read('storefront/js/components/member-center.js');
+const cartHtml = read('storefront/pages/cart.html');
+const headerPartial = read('components/header.partial');
+const bookingCartHtml = read('booking/pages/booking-cart.html');
+const bookingCheckoutHtml = read('booking/pages/booking-checkout.html');
+const campRentalJs = read('booking/js/camp-rental.js');
 assert.match(productListJs, /剩餘.*件|availableQuantity/);
 assert.match(productDetailJs, /剩餘.*件|availableQuantity/);
+assert.match(homeJs, /剩餘.*件|availableQuantity/);
 assert.match(cartComponentJs, /僅剩.*件/);
+assert.match(memberCenterJs, /formatOrderDisplayId\(order\)/);
+assert.match(memberCenterJs, /formatBookingDisplayId\(booking\)/);
+assert.match(memberCenterJs, /commerceDate/);
+assert(!memberCenterJs.includes('formatOrderDisplayId(order.id)'));
+assert(!cartHtml.includes('15 分鐘庫存保留'));
+assert.match(headerPartial, /購物背包/);
+assert(!bookingCartHtml.includes('SSL 加密保護，安全付款'));
+assert(!bookingCheckoutHtml.includes('SSL 加密保護，安全付款'));
+assert(!bookingCheckoutHtml.includes('預約確認信將寄送至您的信箱'));
+assert.match(campRentalJs, /refreshRentalAvailability|剩餘.*件/);
 
 // ── N3 自動帶入 ──
 assert(checkoutJs.includes('_prefillCheckoutContactFields'));

@@ -53,7 +53,7 @@
           <button
             class="siteCartButton"
             type="button"
-            aria-label="開啟購物車"
+            aria-label="開啟購物背包"
             aria-controls="siteCartDrawer"
             aria-expanded="false"
           >
@@ -128,8 +128,8 @@
       aria-labelledby="siteCartDrawerTitle"
     >
       <div class="siteCartDrawerHeader">
-        <h2 class="siteCartDrawerTitle" id="siteCartDrawerTitle">購物車</h2>
-        <button class="siteCartDrawerClose" type="button" aria-label="關閉購物車">
+        <h2 class="siteCartDrawerTitle" id="siteCartDrawerTitle">購物背包</h2>
+        <button class="siteCartDrawerClose" type="button" aria-label="關閉購物背包">
           <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
       </div>

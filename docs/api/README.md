@@ -22,6 +22,7 @@
 | 共用 | [`common-api-conventions.md`](./common-api-conventions.md)                             | 全部 | Locked v0.1                                                                                     |
 | P0   | [`auth-api-contract.md`](./auth-api-contract.md)                                       | A    | Locked v0.1（已實作）                                                                           |
 | P0   | [`member-shipping-address-api-contract.md`](./member-shipping-address-api-contract.md) | A/I  | Implemented v0.1（會員本人預設配送地址 GET／PUT）                                               |
+| P0   | [`member-profile-api-contract.md`](./member-profile-api-contract.md) | A/I  | Implemented v0.1（會員本人 profile GET／PATCH）                                               |
 | P0   | [`product-api-contract.md`](./product-api-contract.md)                                 | B    | Locked v0.8（商品公開讀、評分、equipment_tags 新品／熱銷標籤已完成）                              |
 | P0   | [`branch-api-contract.md`](./branch-api-contract.md)                                   | B    | Locked v0.1（B-7 已完成）                                                                       |
 | P0   | [`brand-api-contract.md`](./brand-api-contract.md)                                     | B    | Implemented v0.1（首頁合作品牌公開讀取）                                                        |

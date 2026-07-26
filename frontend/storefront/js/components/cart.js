@@ -50,7 +50,7 @@
     return [
       '<div class="siteCartEmptyState">',
       '  <div class="siteCartEmptyIcon" aria-hidden="true"><i class="bi bi-bag-x"></i></div>',
-      '  <h3 class="siteCartEmptyTitle">購物車目前是空的</h3>',
+      '  <h3 class="siteCartEmptyTitle">購物背包目前是空的</h3>',
       '  <p class="siteCartEmptyText">先挑選需要的露營裝備，再一起結帳。</p>',
       '</div>',
     ].join('');

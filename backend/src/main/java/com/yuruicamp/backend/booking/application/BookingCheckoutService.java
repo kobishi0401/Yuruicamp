@@ -392,7 +392,8 @@ public class BookingCheckoutService {
 				request.campgroundId(),
 				request.checkIn().toString(),
 				request.checkOut().toString(),
-				zones);
+				zones,
+				List.of());
 	}
 
 	private LocalDate parseDate(String value, String field) {

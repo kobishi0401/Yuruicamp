@@ -135,11 +135,16 @@
 | `campgroundId`     | string                | 是          |
 | `checkIn`          | string (`YYYY-MM-DD`) | 是          |
 | `checkOut`         | string (`YYYY-MM-DD`) | 是          |
-| `zones`            | array                 | 是          |
+| `zones`            | array                 | 否（與 `rentals` 至少一項） |
 | `zones[].zoneId`   | string                | 是          |
 | `zones[].quantity` | integer               | 是（`> 0`） |
+| `rentals`          | array                 | 否          |
+| `rentals[].rentalListingId` | string       | 是          |
+| `rentals[].quantity` | integer             | 否（預設 1，`> 0`） |
 
-同一個 `zoneId` 不可重複傳入；重複時回 `400 VALIDATION_ERROR`。
+`zones` 與 `rentals` 至少需有一項非空；兩者皆空回 `400 VALIDATION_ERROR`。
+
+同一個 `zoneId` 或 `rentalListingId` 不可重複傳入；重複時回 `400 VALIDATION_ERROR`。
 
 **Response `data`：**
 
@@ -148,15 +153,18 @@
 | `available` | boolean  |
 | `reasons`   | string[] | 不可訂原因（可空）                              |
 | `zones`     | array    | 各區 `zoneId`、`requested`、`availableQuantity` |
+| `rentals`   | array    | 各 listing `rentalListingId`、`requested`、`availableQuantity` |
 
 可用性規則：
 
 - 住宿區間固定採 `[checkIn, checkOut)`，退房日不占用營位。
-- `availableQuantity` 是該 zone 在整段住宿期間「每天剩餘量的最小值」，不可只看入住日。
+- **營位** `availableQuantity` 是該 zone 在整段住宿期間「每天剩餘量的最小值」，不可只看入住日。
+- **租借** `availableQuantity = on_hand_quantity − 重疊 active 保留量`（與 checkout 建單公式一致）。
 - 任一住宿日晚間命中營區公休，整筆結果 `available=false`。
 - 任一 zone 的 `requested > availableQuantity`，整筆結果 `available=false`。
+- 任一 rental 的 `requested > availableQuantity`，整筆結果 `available=false`。
 - 正常完成查詢時固定回 HTTP 200；即使不可訂，也以 `available=false` 與 `reasons` 表示，不用 409。
-- `reasons` 使用穩定代碼，順序固定為 `CAMPGROUND_CLOSED`、`ZONE_UNAVAILABLE`；兩者可能同時出現。
+- `reasons` 使用穩定代碼，順序固定為 `CAMPGROUND_CLOSED`、`ZONE_UNAVAILABLE`、`RENTAL_UNAVAILABLE`；可能同時出現。
 - 日期格式錯誤或 `checkOut <= checkIn` 回 `400 BOOKING_DATE_INVALID`。
 - `checkIn` 早於 `today + advanceDays`、晚於 `today + bookingWindowDays`，或晚數超過 `maxNights`，回 `400 BOOKING_WINDOW_EXCEEDED`。窗口邊界日可預約。
 - 「今天」依 policy 的 `Asia/Taipei` 時區判斷。

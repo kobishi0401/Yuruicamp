@@ -224,6 +224,64 @@ public class BookingPublicRepository {
 				rs.getBoolean("is_closed")), from, toInclusive, campgroundId);
 	}
 
+	// 讀取有效 listing 的實體庫存（不含 FOR UPDATE；計算公式與 Checkout 一致）。
+	public Optional<RentalStockRow> findActiveRentalStock(String campgroundId, String rentalListingId) {
+		return jdbcTemplate.query("""
+				select listing.id, listing.rental_sku_variant_id, mapping.location_id,
+				       stock.on_hand_quantity
+				from rental_listings listing
+				join campground_rental_locations mapping
+				  on mapping.campground_id = listing.campground_id
+				join inventory_locations location
+				  on location.id = mapping.location_id
+				join rental_sku_variants variant
+				  on variant.id = listing.rental_sku_variant_id
+				join rental_skus sku
+				  on sku.id = variant.rental_sku_id
+				join equipment_items item
+				  on item.id = sku.item_id
+				join rental_sku_variant_stocks stock
+				  on stock.location_id = mapping.location_id
+				 and stock.rental_sku_variant_id = variant.id
+				where listing.id = ?
+				  and listing.campground_id = ?
+				  and listing.active = true
+				  and variant.status = 'active'
+				  and sku.status = 'active'
+				  and item.active = true
+				  and location.active = true
+				  and location.inventory_domain = 'rental'
+				  and location.type = 'campground'
+				""", (rs, rowNum) -> new RentalStockRow(
+				rs.getString("id"),
+				rs.getString("rental_sku_variant_id"),
+				rs.getString("location_id"),
+				rs.getInt("on_hand_quantity")),
+				rentalListingId,
+				campgroundId)
+				.stream()
+				.findFirst();
+	}
+
+	// 只扣除與 requested [checkIn, checkOut) 有交集的 active 租借保留。
+	public int sumOverlappingActiveRentalReservations(
+			String locationId,
+			String rentalSkuVariantId,
+			LocalDate checkIn,
+			LocalDate checkOut) {
+		Long reserved = jdbcTemplate.queryForObject("""
+				select coalesce(sum(quantity), 0)
+				from rental_stock_reservations
+				where location_id = ?
+				  and rental_sku_variant_id = ?
+				  and status = 'active'
+				  and check_in < ?
+				  and check_out > ?
+				""", Long.class, locationId, rentalSkuVariantId, checkOut, checkIn);
+
+		return reserved == null ? 0 : Math.toIntExact(reserved);
+	}
+
 	public record CampgroundRow(
 			String id,
 			String name,
@@ -279,5 +337,12 @@ public class BookingPublicRepository {
 			LocalDate stayDate,
 			int availableQuantity,
 			boolean closed) {
+	}
+
+	public record RentalStockRow(
+			String rentalListingId,
+			String rentalSkuVariantId,
+			String locationId,
+			int onHandQuantity) {
 	}
 }

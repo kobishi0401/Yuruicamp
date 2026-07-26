@@ -69,7 +69,21 @@ function _buildProductCard(product, badgeType = '') {
   const ratingText = product.ratingDisplay ?? starRating.toFixed(1);
   const defaultSel = window.getDefaultCardSpecSelection
     ? window.getDefaultCardSpecSelection(product)
-    : { color: '', size: '', specLabel: '' };
+    : { color: '', size: '', specLabel: '', variant: null };
+  const variant = defaultSel.variant || window.getProductVariants?.(product)?.[0];
+  const availableQuantity = Number(variant?.availableQuantity ?? product.availableQuantity);
+  const inStock =
+    variant?.inStock !== false &&
+    product.inStock !== false &&
+    (!Number.isFinite(availableQuantity) || availableQuantity > 0);
+  const stockHtml =
+    Number.isFinite(availableQuantity) && inStock
+      ? `<p class="homeProductStock">剩餘 ${availableQuantity} 件</p>`
+      : !inStock
+        ? '<p class="homeProductStock homeProductStockOut">暫無庫存</p>'
+        : '';
+  const addBtnDisabled = inStock ? '' : ' disabled aria-disabled="true"';
+  const addBtnLabel = inStock ? '加入購物車' : '暫無庫存';
 
   return `
     <article
@@ -93,8 +107,9 @@ function _buildProductCard(product, badgeType = '') {
         <div class="homeProductPrice">
           <span class="homeProductPriceCurrent">NT$ ${priceFormatted}</span>
         </div>
-        <button class="homeProductAddButton" data-product-id="${product.id}">
-          加入購物車
+        ${stockHtml}
+        <button class="homeProductAddButton" data-product-id="${product.id}"${addBtnDisabled}>
+          ${addBtnLabel}
         </button>
       </div>
     </article>
@@ -306,6 +321,15 @@ async function _handleAddToCart(productId, cardEl) {
     const variant = window.findProductVariant
       ? window.findProductVariant(product, specs.color, specs.size)
       : window.getProductVariants(product)[0];
+    const availableQuantity = Number(variant?.availableQuantity);
+    const inStock =
+      variant?.inStock !== false &&
+      product.inStock !== false &&
+      (!Number.isFinite(availableQuantity) || availableQuantity > 0);
+    if (!inStock) {
+      window.showToast?.('此商品暫無庫存', 'warning');
+      return;
+    }
     window.addToCart(window.buildCartLineFromProduct(product, variant), 1);
 
     const badge = document.querySelector('.cartBadge');

@@ -14,10 +14,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.yuruicamp.backend.booking.api.BookingAvailabilityRentalRequest;
 import com.yuruicamp.backend.booking.api.BookingAvailabilityRequest;
 import com.yuruicamp.backend.booking.api.BookingAvailabilityResponse;
 import com.yuruicamp.backend.booking.api.BookingAvailabilityZoneRequest;
 import com.yuruicamp.backend.booking.api.BookingPolicyResponse;
+import com.yuruicamp.backend.booking.api.BookingRentalAvailabilityResponse;
 import com.yuruicamp.backend.booking.api.BookingZoneAvailabilityResponse;
 import com.yuruicamp.backend.booking.api.CampgroundClosureResponse;
 import com.yuruicamp.backend.booking.api.CampgroundResponse;
@@ -29,6 +31,7 @@ import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.Clos
 import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.PolicyRow;
 import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.RentalEquipmentRow;
 import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.ZoneRow;
+import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.RentalStockRow;
 import com.yuruicamp.backend.booking.infrastructure.BookingPublicRepository.ZoneAvailabilityRow;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
@@ -42,6 +45,7 @@ public class BookingPublicService {
 
 	private static final String CAMPGROUND_CLOSED = "CAMPGROUND_CLOSED";
 	private static final String ZONE_UNAVAILABLE = "ZONE_UNAVAILABLE";
+	private static final String RENTAL_UNAVAILABLE = "RENTAL_UNAVAILABLE";
 
 	private final BookingPublicRepository repository;
 
@@ -104,6 +108,16 @@ public class BookingPublicService {
 	// E-2 只讀取整段住宿期間的可用量，不建立 Booking，也不鎖營位。
 	@Transactional(readOnly = true)
 	public BookingAvailabilityResponse checkAvailability(BookingAvailabilityRequest request) {
+		List<BookingAvailabilityZoneRequest> requestedZones =
+				request.zones() == null ? List.of() : request.zones();
+		List<BookingAvailabilityRentalRequest> requestedRentals =
+				request.rentals() == null ? List.of() : request.rentals();
+		if (requestedZones.isEmpty() && requestedRentals.isEmpty()) {
+			throw new BusinessException(
+					ErrorCode.VALIDATION_ERROR,
+					"At least one zone or rental must be requested");
+		}
+
 		LocalDate checkIn = parseDate(request.checkIn(), "checkIn");
 		LocalDate checkOut = parseDate(request.checkOut(), "checkOut");
 		if (!checkOut.isAfter(checkIn)) {
@@ -123,40 +137,74 @@ public class BookingPublicService {
 		Map<String, ZoneRow> activeZones = new LinkedHashMap<>();
 		repository.findActiveZones(request.campgroundId())
 				.forEach(zone -> activeZones.put(zone.id(), zone));
-		validateRequestedZones(request.zones(), activeZones);
+		if (!requestedZones.isEmpty()) {
+			validateRequestedZones(requestedZones, activeZones);
+		}
+		validateRequestedRentals(requestedRentals);
 
-		List<ZoneAvailabilityRow> rows = repository.findZoneAvailability(
-				checkIn,
-				checkOut.minusDays(1),
-				request.campgroundId());
-		Map<String, List<ZoneAvailabilityRow>> rowsByZone = rows.stream()
-				.collect(Collectors.groupingBy(ZoneAvailabilityRow::zoneId));
 		Set<String> reasons = new LinkedHashSet<>();
 		List<BookingZoneAvailabilityResponse> zones = new ArrayList<>();
 
-		for (BookingAvailabilityZoneRequest requested : request.zones()) {
-			List<ZoneAvailabilityRow> zoneRows = rowsByZone.getOrDefault(requested.zoneId(), List.of());
-			int availableQuantity = zoneRows.stream()
-					.mapToInt(ZoneAvailabilityRow::availableQuantity)
-					.min()
-					.orElse(0);
-			boolean closed = zoneRows.stream()
-					.anyMatch(ZoneAvailabilityRow::closed);
+		if (!requestedZones.isEmpty()) {
+			List<ZoneAvailabilityRow> rows = repository.findZoneAvailability(
+					checkIn,
+					checkOut.minusDays(1),
+					request.campgroundId());
+			Map<String, List<ZoneAvailabilityRow>> rowsByZone = rows.stream()
+					.collect(Collectors.groupingBy(ZoneAvailabilityRow::zoneId));
 
-			if (closed) {
-				reasons.add(CAMPGROUND_CLOSED);
-			}
-			if (requested.quantity() > availableQuantity) {
-				reasons.add(ZONE_UNAVAILABLE);
-			}
+			for (BookingAvailabilityZoneRequest requested : requestedZones) {
+				List<ZoneAvailabilityRow> zoneRows = rowsByZone.getOrDefault(requested.zoneId(), List.of());
+				int availableQuantity = zoneRows.stream()
+						.mapToInt(ZoneAvailabilityRow::availableQuantity)
+						.min()
+						.orElse(0);
+				boolean closed = zoneRows.stream()
+						.anyMatch(ZoneAvailabilityRow::closed);
 
-			zones.add(new BookingZoneAvailabilityResponse(
-					requested.zoneId(),
-					requested.quantity(),
+				if (closed) {
+					reasons.add(CAMPGROUND_CLOSED);
+				}
+				if (requested.quantity() > availableQuantity) {
+					reasons.add(ZONE_UNAVAILABLE);
+				}
+
+				zones.add(new BookingZoneAvailabilityResponse(
+						requested.zoneId(),
+						requested.quantity(),
+						availableQuantity));
+			}
+		}
+
+		List<BookingRentalAvailabilityResponse> rentals = new ArrayList<>();
+		for (BookingAvailabilityRentalRequest requested : requestedRentals) {
+			int requestedQuantity = requested.quantity() == null ? 1 : requested.quantity();
+			RentalStockRow stock = repository.findActiveRentalStock(
+							request.campgroundId(),
+							requested.rentalListingId())
+					.orElseThrow(() -> new BusinessException(
+							ErrorCode.NOT_FOUND,
+							"Active rental listing not found: " + requested.rentalListingId()));
+			int reserved = repository.sumOverlappingActiveRentalReservations(
+					stock.locationId(),
+					stock.rentalSkuVariantId(),
+					checkIn,
+					checkOut);
+			int availableQuantity = Math.max(0, stock.onHandQuantity() - reserved);
+			if (requestedQuantity > availableQuantity) {
+				reasons.add(RENTAL_UNAVAILABLE);
+			}
+			rentals.add(new BookingRentalAvailabilityResponse(
+					requested.rentalListingId(),
+					requestedQuantity,
 					availableQuantity));
 		}
 
-		return new BookingAvailabilityResponse(reasons.isEmpty(), List.copyOf(reasons), zones);
+		return new BookingAvailabilityResponse(
+				reasons.isEmpty(),
+				List.copyOf(reasons),
+				zones,
+				rentals);
 	}
 
 	// 日期格式錯誤統一使用 Booking 契約的日期錯誤碼。
@@ -206,6 +254,18 @@ public class BookingPublicService {
 				throw new BusinessException(
 						ErrorCode.NOT_FOUND,
 						"Active zone not found: " + requested.zoneId());
+			}
+		}
+	}
+
+	// 同一 listing 不可重複傳入。
+	private void validateRequestedRentals(List<BookingAvailabilityRentalRequest> requestedRentals) {
+		Set<String> seen = new LinkedHashSet<>();
+		for (BookingAvailabilityRentalRequest requested : requestedRentals) {
+			if (!seen.add(requested.rentalListingId())) {
+				throw new BusinessException(
+						ErrorCode.VALIDATION_ERROR,
+						"Duplicate rentalListingId: " + requested.rentalListingId());
 			}
 		}
 	}
