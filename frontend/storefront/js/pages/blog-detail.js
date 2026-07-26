@@ -207,7 +207,7 @@ function blogDetailRenderError(message) {
     <div class="blogDetailErrorState" role="alert">
       <strong>文章載入失敗</strong>
       <span>${blogDetailEscape(message)}</span>
-      <a class="blogDetailErrorLink" href="blog.html">返回露營生活誌</a>
+      <a class="blogDetailErrorLink" href="blog.html">返回露營專欄</a>
     </div>
   `;
 }
@@ -218,7 +218,7 @@ function blogDetailSetText(id, value) {
 }
 
 function blogDetailRenderArticle(article, allArticles, allProducts) {
-  document.title = `${article.title} - Yuruicamp 露營生活誌`;
+  document.title = `${article.title} - Yuruicamp 露營專欄`;
 
   const heroImg = document.getElementById('articleHeroImg');
   if (heroImg) {

@@ -96,6 +96,9 @@ function loadBackendOrderDetail(order) {
     .catch(function (err) { AdminAPI.handleError(err, '載入訂單詳情失敗'); });
 }
 
+/** 供客戶管理等跨模組 Backend 點 ID 開 Modal / Cross-module lazy-load entry */
+window.loadBackendOrderDetail = loadBackendOrderDetail;
+
 // ─────────────────────────────────────────────
 // 初始化
 // ─────────────────────────────────────────────

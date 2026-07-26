@@ -13,7 +13,8 @@ public record AdminAnalyticsBookingSummaryResponse(
 		BookingKpis kpis,
 		List<TimeSeriesPoint> timeSeries,
 		List<CampgroundRow> byCampground,
-		List<RegionRow> byRegion) {
+		List<RegionRow> byRegion,
+		List<AdminAnalyticsCategoryBreakdownRow> categoryBreakdown) {
 
 	public record BookingKpis(
 			long periodBookingCount,

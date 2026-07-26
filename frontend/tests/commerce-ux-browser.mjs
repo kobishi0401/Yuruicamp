@@ -89,11 +89,38 @@ assert.match(campRentalJs, /refreshRentalAvailability|剩餘.*件/);
 assert(checkoutJs.includes('_prefillCheckoutContactFields'));
 assert(bookingCheckoutJs.includes('prefillBookingContactFields'));
 
+assert(!bookingCartJs.includes('15 分鐘保留'));
+assert(!bookingCartJs.includes('鎖定庫存'));
+
+// ── Blog 露營專欄改名 ──
+const blogHtml = read('storefront/pages/blog.html');
+const blogDetailHtml = read('storefront/pages/blog-detail.html');
+const blogDetailJs = read('storefront/js/pages/blog-detail.js');
+assert(blogHtml.includes('露營專欄'));
+assert(!blogHtml.includes('露營生活誌'));
+assert(blogDetailHtml.includes('露營專欄'));
+assert(!blogDetailHtml.includes('露營生活誌'));
+assert(blogDetailJs.includes('露營專欄'));
+assert(!blogDetailJs.includes('露營生活誌'));
+
 // ── Admin history label ──
 const bookingsAdminJs = read('admin/js/bookings.js');
 const ordersAdminJs = read('admin/js/orders.js');
+const customersAdminJs = read('admin/js/customers.js');
+const bookingCalendarJs = read('admin/js/booking-calendar.js');
 assert.match(bookingsAdminJs, /entry\.label|label/);
 assert.match(bookingsAdminJs, /detail\.contact|contact\./);
 assert.match(ordersAdminJs, /entry\.label|label/);
+
+// ── Admin 客戶詳情 displayNo + Backend detail loader ──
+assert.match(customersAdminJs, /formatOrderId\(order\)/);
+assert.match(customersAdminJs, /formatBookingId\(booking\)/);
+assert.doesNotMatch(customersAdminJs, /formatOrderId\(order\.id\)/);
+assert.doesNotMatch(customersAdminJs, /formatBookingId\(booking\.id\)/);
+assert.match(customersAdminJs, /loadBackendOrderDetail/);
+assert.match(customersAdminJs, /loadBackendBookingDetail/);
+assert.match(bookingCalendarJs, /formatBookingId\(b\)/);
+assert.match(ordersAdminJs, /window\.loadBackendOrderDetail/);
+assert.match(bookingsAdminJs, /window\.loadBackendBookingDetail/);
 
 console.log('Commerce UX browser static QA passed');

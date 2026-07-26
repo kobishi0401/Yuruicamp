@@ -103,6 +103,37 @@ function applyCustomerTagPool(tags) {
   buildCustomerTagsFilterOptions();
 }
 
+/** Backend 模式：預載 orders／bookings 供詳情 panel 篩選（失敗不阻斷列表） */
+function preloadBackendCommerceCaches() {
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.orders && AdminAPI.orders.list,
+    jsonPath: MockDataPaths.orders,
+    emptyValue: [],
+    onSuccess: function (orders) {
+      window.ordersCache = orders;
+      applyCustomerFiltersAndSort();
+    },
+    onError: function () {
+      window.ordersCache = window.ordersCache || [];
+      applyCustomerFiltersAndSort();
+    }
+  });
+
+  loadAdminJsonResource({
+    adminList: AdminAPI && AdminAPI.bookings && AdminAPI.bookings.list,
+    jsonPath: MockDataPaths.campBookings,
+    emptyValue: [],
+    onSuccess: function (bookings) {
+      window.bookingsCache = bookings;
+      applyCustomerFiltersAndSort();
+    },
+    onError: function () {
+      window.bookingsCache = window.bookingsCache || [];
+      applyCustomerFiltersAndSort();
+    }
+  });
+}
+
 /** 載入正式會員列表，Backend 模式不讀取任何 Mock JSON。 */
 function loadBackendCustomers() {
   $('#addCustomerBtn').addClass('d-none');
@@ -122,8 +153,6 @@ function loadBackendCustomers() {
       var poolResult = results[1];
       var prefsResult = results[2];
       window.customersCache = (customerResult.data || []).map(normalizeBackendCustomer);
-      window.ordersCache = [];
-      window.bookingsCache = [];
       if (poolResult && poolResult.data) {
         applyCustomerTagPool(poolResult.data);
       } else {
@@ -131,6 +160,7 @@ function loadBackendCustomers() {
       }
       applyPreferenceOptionsCache(prefsResult && prefsResult.data ? prefsResult.data : []);
       applyCustomerFiltersAndSort();
+      preloadBackendCommerceCaches();
     })
     .catch(function (err) {
       AdminAPI.handleError(err, '載入會員資料失敗');
@@ -463,7 +493,9 @@ function formatPhoneDisplay(phone) {
  */
 function formatDateDisplay(isoDate) {
   if (!isoDate) { return '—'; }
-  return String(isoDate).slice(0, 10);
+  // 只取 YYYY-MM-DD（Calendar Date），去掉 ISO 時間或空白後綴
+  // Display date part only — strip time suffix from ISO datetime strings
+  return String(isoDate).split(/[ T]/)[0];
 }
 
 /** 登入方式代碼 → 中文顯示 / Auth provider code → display label */
@@ -1002,7 +1034,7 @@ function normalizePhoneValue(phone) {
 function normalizeBirthdayValue(val) {
   var s = normalizeEmptyDisplay(String(val || '').trim());
   if (!s) { return ''; }
-  return s.replace(/\//g, '-').slice(0, 10);
+  return s.replace(/\//g, '-').split(/[ T]/)[0];
 }
 
 /** 後台會員手機：09 開頭 10 碼 / Taiwan mobile 09xxxxxxxx */
@@ -2529,7 +2561,12 @@ window.initCustomers = function () {
         window.showAdminToast('找不到訂單 ' + window.formatOrderId(orderId) + ' 的資料');
         return;
       }
-      window.showOrderModal(order);
+      // Backend：lazy load 完整明細（與訂單管理頁一致）／Mock：直接開 Modal
+      if (isCustomerBackendEnabled() && typeof window.loadBackendOrderDetail === 'function') {
+        window.loadBackendOrderDetail(order);
+      } else {
+        window.showOrderModal(order);
+      }
     }
 
     if (window.ordersCache && window.ordersCache.length > 0) {
@@ -2561,11 +2598,11 @@ window.initCustomers = function () {
         window.showAdminToast('找不到預約單 ' + window.formatBookingId(bookingId) + ' 的資料');
         return;
       }
-      if (!booking.selectedRentals || booking.selectedRentals.length === 0) {
-        window.showAdminToast('此預約單沒有租借裝備');
-        return;
+      if (isCustomerBackendEnabled() && typeof window.loadBackendBookingDetail === 'function') {
+        window.loadBackendBookingDetail(booking);
+      } else {
+        window.showBookingModal(booking);
       }
-      window.showBookingModal(booking);
     }
 
     if (window.bookingsCache && window.bookingsCache.length > 0) {
@@ -2924,7 +2961,7 @@ function renderCustomersList(customers) {
             '<i class="fas fa-receipt me-2 text-muted"></i>' +
             '<span class="admin-cell-link customer-order-link" ' +
             'data-order-id="' + order.id + '" ' +
-            'title="點擊查看訂單明細">' + window.formatOrderId(order.id) + '</span></li>';
+            'title="點擊查看訂單明細">' + window.formatOrderId(order) + '</span></li>';
         }).join('')
       : '<li class="list-group-item text-muted small">無購買記錄</li>';
 
@@ -2934,7 +2971,7 @@ function renderCustomersList(customers) {
             '<i class="fas fa-campground me-2 text-muted"></i>' +
             '<span class="admin-cell-link customer-rental-link" ' +
             'data-booking-id="' + booking.id + '" ' +
-            'title="點擊查看租借明細">' + window.formatBookingId(booking.id) + '</span></li>';
+            'title="點擊查看租借明細">' + window.formatBookingId(booking) + '</span></li>';
         }).join('')
       : '<li class="list-group-item text-muted small">無租借紀錄</li>';
 

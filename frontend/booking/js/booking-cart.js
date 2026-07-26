@@ -96,7 +96,7 @@ function updateRentalQuantity(idx, newQty) {
 // ============================================================
 
 function initBookingCartCheckoutLink() {
-  setBookingSessionState('ready', '確認無誤後前往結帳；進入結帳頁才會鎖定庫存並開始 15 分鐘保留。');
+  setBookingSessionState('ready', '確認無誤後可前往結帳填寫聯絡資料。');
 
   $('#bookingCartCheckoutButton').on('click', function (event) {
     if (!runBookingCartSoftValidation({ block: true })) {
@@ -130,7 +130,7 @@ function runBookingCartSoftValidation({ block }) {
     return false;
   }
 
-  setBookingSessionState('ready', '確認無誤後前往結帳；進入結帳頁才會鎖定庫存並開始 15 分鐘保留。');
+  setBookingSessionState('ready', '確認無誤後可前往結帳填寫聯絡資料。');
   return true;
 }
 

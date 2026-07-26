@@ -75,6 +75,7 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 		insertOrder("W406-O-U1", "unshipped", "paid", "none", "2099-06-04", 300);
 
 		jdbc.update("DELETE FROM order_items WHERE order_id LIKE 'W406-%'");
+		seedShopCategoryChain();
 		jdbc.update("""
 				INSERT INTO order_items (id, order_id, product_id, variant_id, sku_snapshot, product_name_snapshot,
 				 specification_snapshot, brand_name_snapshot, image_url_snapshot, unit_price_snapshot, quantity)
@@ -82,6 +83,7 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 				       (9406002, 'W406-O-S2', 'P001', 'V001', 'SKU', 'W406 Tent', 'spec', 'Brand', '/img.jpg', 500.00, 1)
 				""");
 
+		seedBookingRentalCategoryChain();
 		jdbc.update("""
 				INSERT INTO bookings (id, customer_id, campground_id, campground_name_snapshot, region_snapshot,
 				 check_in, check_out, guest_count, weekday_count, holiday_count, zone_total, rental_total,
@@ -92,6 +94,14 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 				 400, 0, 0, 400, 'ecpay-credit', 'refunded', now(), 'cancelled', '2099-06-02 10:00:00+00', now()),
 				       ('W406-B-N1', 'W406-CUST', 'C003', 'Camp B', '東部', '2099-06-09', '2099-06-10', 2, 1, 0,
 				 600, 0, 0, 600, 'ecpay-credit', 'unpaid', null, 'pending', '2099-06-03 10:00:00+00', now())
+				""");
+		jdbc.update("""
+				INSERT INTO booking_selected_rentals (id, booking_id, rental_listing_id, rental_sku_variant_id,
+				 sku_snapshot, name_snapshot, specification_snapshot, price_weekday_snapshot, price_holiday_snapshot,
+				 discount_snapshot, quantity)
+				VALUES (9406101, 'W406-B-P1', 'W406-RL', 'W406-RSV', 'W406-SKU', 'W406 Chair', 'spec',
+				 100.00, 120.00, 0.00, 2)
+				ON CONFLICT DO NOTHING
 				""");
 	}
 
@@ -115,7 +125,10 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 				.andExpect(jsonPath("$.data.kpis.refundCount").value(1))
 				.andExpect(jsonPath("$.data.kpis.soldQuantity").value(2))
 				.andExpect(jsonPath("$.data.kpis.revenueTotal").value(1500))
-				.andExpect(jsonPath("$.data.topProducts.length()").value(1));
+				.andExpect(jsonPath("$.data.topProducts.length()").value(1))
+				.andExpect(jsonPath("$.data.categoryBreakdown.length()").value(1))
+				.andExpect(jsonPath("$.data.categoryBreakdown[0].label").value("W406 帳篷"))
+				.andExpect(jsonPath("$.data.categoryBreakdown[0].value").value("1500.00"));
 	}
 
 	@Test
@@ -132,7 +145,10 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 				.andExpect(jsonPath("$.data.kpis.pendingCount").value((int) pendingBookings))
 				.andExpect(jsonPath("$.data.kpis.cancelledCount").value(1))
 				.andExpect(jsonPath("$.data.kpis.revenueTotal").value(1000))
-				.andExpect(jsonPath("$.data.kpis.rentalAmount").value(200));
+				.andExpect(jsonPath("$.data.kpis.rentalAmount").value(200))
+				.andExpect(jsonPath("$.data.categoryBreakdown.length()").value(1))
+				.andExpect(jsonPath("$.data.categoryBreakdown[0].label").value("W406 桌椅"))
+				.andExpect(jsonPath("$.data.categoryBreakdown[0].value").value("2"));
 	}
 
 	@Test
@@ -172,12 +188,66 @@ class AdminAnalyticsPostgreSqlIntegrationTest {
 	}
 
 	private void cleanup() {
+		jdbc.update("DELETE FROM booking_selected_rentals WHERE booking_id LIKE 'W406-%'");
 		jdbc.update("DELETE FROM order_items WHERE order_id LIKE 'W406-%'");
 		jdbc.update("DELETE FROM orders WHERE id LIKE 'W406-%'");
 		jdbc.update("DELETE FROM bookings WHERE id LIKE 'W406-%'");
+		jdbc.update("DELETE FROM rental_listings WHERE id LIKE 'W406-%'");
+		jdbc.update("DELETE FROM rental_sku_variants WHERE id LIKE 'W406-%'");
+		jdbc.update("DELETE FROM rental_skus WHERE id LIKE 'W406-%'");
+		jdbc.update("DELETE FROM products WHERE id = 'P001' AND item_id = 'EI-W406'");
+		jdbc.update("DELETE FROM equipment_items WHERE id = 'EI-W406'");
+		jdbc.update("DELETE FROM product_categories WHERE id IN (940601, 940602)");
 		jdbc.update("DELETE FROM admin_user_permissions WHERE admin_user_id IN ('W406-ANALYTICS', 'W406-NOPERM')");
 		jdbc.update("DELETE FROM admin_users WHERE id IN ('W406-ANALYTICS', 'W406-NOPERM')");
 		jdbc.query("SELECT soft_delete_customer('W406-CUST')", resultSet -> {
 		});
+	}
+
+	private void seedShopCategoryChain() {
+		jdbc.update("""
+				INSERT INTO product_categories (id, code, name, sort_order)
+				VALUES (940601, 'w406-tent', 'W406 帳篷', 1)
+				ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+				""");
+		jdbc.update("""
+				INSERT INTO equipment_items (id, category_id, name, description, active)
+				VALUES ('EI-W406', 940601, 'W406 Tent Item', 'desc', true)
+				ON CONFLICT (id) DO UPDATE SET category_id = EXCLUDED.category_id
+				""");
+		jdbc.update("""
+				INSERT INTO products (id, item_id, status)
+				VALUES ('P001', 'EI-W406', 'active')
+				ON CONFLICT (id) DO UPDATE SET item_id = EXCLUDED.item_id
+				""");
+	}
+
+	private void seedBookingRentalCategoryChain() {
+		jdbc.update("""
+				INSERT INTO product_categories (id, code, name, sort_order)
+				VALUES (940602, 'w406-chair', 'W406 桌椅', 2)
+				ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+				""");
+		jdbc.update("""
+				INSERT INTO equipment_items (id, category_id, name, description, active)
+				VALUES ('EI-W406-R', 940602, 'W406 Chair Item', 'desc', true)
+				ON CONFLICT (id) DO UPDATE SET category_id = EXCLUDED.category_id
+				""");
+		jdbc.update("""
+				INSERT INTO rental_skus (id, item_id, status)
+				VALUES ('W406-RS', 'EI-W406-R', 'active')
+				ON CONFLICT (id) DO UPDATE SET item_id = EXCLUDED.item_id
+				""");
+		jdbc.update("""
+				INSERT INTO rental_sku_variants (id, rental_sku_id, sku, specification, status)
+				VALUES ('W406-RSV', 'W406-RS', 'W406-SKU', 'spec', 'active')
+				ON CONFLICT (id) DO UPDATE SET rental_sku_id = EXCLUDED.rental_sku_id
+				""");
+		jdbc.update("""
+				INSERT INTO rental_listings (id, campground_id, rental_sku_variant_id,
+				 price_per_day_weekday, price_per_day_holiday, discount, active)
+				VALUES ('W406-RL', 'C002', 'W406-RSV', 100.00, 120.00, 0.00, true)
+				ON CONFLICT (id) DO NOTHING
+				""");
 	}
 }

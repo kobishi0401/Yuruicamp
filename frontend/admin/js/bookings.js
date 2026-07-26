@@ -123,6 +123,9 @@ function loadBackendBookingDetail(booking) {
     .catch(function (err) { AdminAPI.handleError(err, '載入預約詳情失敗'); });
 }
 
+/** 供客戶管理等跨模組 Backend 點 ID 開 Modal / Cross-module lazy-load entry */
+window.loadBackendBookingDetail = loadBackendBookingDetail;
+
 // ─────────────────────────────────────────────
 // 初始化
 // ─────────────────────────────────────────────

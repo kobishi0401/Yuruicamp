@@ -12,7 +12,8 @@ public record AdminAnalyticsShopSummaryResponse(
 		String granularity,
 		ShopKpis kpis,
 		List<TimeSeriesPoint> timeSeries,
-		List<TopProductRow> topProducts) {
+		List<TopProductRow> topProducts,
+		List<AdminAnalyticsCategoryBreakdownRow> categoryBreakdown) {
 
 	public record ShopKpis(
 			long orderCount,

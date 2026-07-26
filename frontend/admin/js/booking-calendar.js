@@ -997,7 +997,7 @@ function renderDayDetail(dateISO) {
     var zoneType = zoneLine ? zoneLine.zoneType : '—';
     var customer = bcState.customersById[b.customerId];
     var bookingNo = typeof formatBookingId === 'function'
-      ? formatBookingId(b.id) : ('BK-' + String(b.id).padStart(4, '0'));
+      ? formatBookingId(b) : ('BK-' + String(b.id).padStart(4, '0'));
 
     return (
       '<tr>' +
