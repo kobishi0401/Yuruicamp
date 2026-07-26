@@ -137,7 +137,7 @@
     }
 
     if (global.AppConfig && global.AppConfig.ENVIRONMENT === 'development') {
-      $('#devLoginPanel').removeClass('d-none');
+      $('#devLoginHoverZone').removeClass('d-none');
     }
 
     try {

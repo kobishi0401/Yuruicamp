@@ -326,7 +326,7 @@ function renderReviewCards(reviews) {
         '<div class="review-card-stars">' + renderStars(rating) + '</div>' +
         '</div>' +
         '<div class="small text-muted mb-2">' +
-        escapeHtml(r.createdAt) + ' · ' + escapeHtml(r.productName) +
+        escapeHtml(formatAdminDateTimeDisplay(r.createdAt)) + ' · ' + escapeHtml(r.productName) +
         '</div>' +
         '<div class="review-buyer-comment">' +
         '<div class="small text-muted mb-1">買家評論</div>' +

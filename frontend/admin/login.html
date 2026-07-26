@@ -37,6 +37,36 @@
     .login-provider-btn {
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
+
+    /* 本機 Dev Token：預設只顯示低調提示，hover 才展開完整面板 */
+    .dev-login-hover-zone {
+      margin-top: 0.75rem;
+    }
+
+    .dev-login-hover-trigger {
+      font-size: 0.7rem;
+      color: rgba(108, 117, 125, 0.55);
+      text-align: center;
+      letter-spacing: 0.02em;
+      user-select: none;
+      margin-bottom: 0;
+    }
+
+    .dev-login-panel {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+    }
+
+    .dev-login-hover-zone:hover .dev-login-panel,
+    .dev-login-hover-zone:focus-within .dev-login-panel {
+      max-height: 12rem;
+      opacity: 1;
+      margin-top: 0.5rem;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
@@ -68,19 +98,25 @@
         Firebase 初始化中…
       </div>
 
-      <!-- 本機開發：Dev Token（僅 development + 後端 FIREBASE_ENABLED=false） -->
-      <div id="devLoginPanel" class="d-none">
-        <hr class="border-secondary opacity-25">
-        <p class="small text-muted mb-2">
-          <i class="fas fa-flask me-1"></i>
-          本機開發：後端若關閉真 Firebase（<code>FIREBASE_ENABLED=false</code>），
-          可用 Seed 管理員 Dev Token 驗收。
+      <!-- 本機開發：hover 才顯示 Dev Token（僅 development） -->
+      <div id="devLoginHoverZone"
+           class="dev-login-hover-zone d-none"
+           aria-label="開發者登入選項">
+        <p class="dev-login-hover-trigger">
+          <i class="fas fa-flask me-1"></i>開發者選項
         </p>
-        <button type="button"
-                class="btn btn-outline-light login-provider-btn w-100 py-2"
-                id="devTokenLoginBtn">
-          <i class="fas fa-key me-2"></i>本機 Dev Token 登入
-        </button>
+        <div id="devLoginPanel" class="dev-login-panel">
+          <hr class="border-secondary opacity-25 mb-2">
+          <p class="small text-muted mb-2">
+            本機開發：後端若關閉真 Firebase（<code>FIREBASE_ENABLED=false</code>），
+            可用 Seed 管理員 Dev Token 驗收。
+          </p>
+          <button type="button"
+                  class="btn btn-outline-light login-provider-btn w-100 py-2"
+                  id="devTokenLoginBtn">
+            <i class="fas fa-key me-2"></i>本機 Dev Token 登入
+          </button>
+        </div>
       </div>
 
       <div class="text-center mt-4" id="mockLoginHint">
