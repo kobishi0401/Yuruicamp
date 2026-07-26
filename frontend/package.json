@@ -42,6 +42,7 @@
     "test:admin-inventory": "node tests/admin-inventory-movements-facade.mjs",
     "test:admin-g4": "node tests/admin-g4-facade.mjs",
     "test:admin-g6": "node tests/admin-g6-runtime.mjs",
+    "test:admin-permissions": "node tests/admin-permissions-ui.mjs",
     "test:admin-customer-tags": "node tests/admin-customer-tags-facade.mjs",
     "test:admin-customer-preferences": "node tests/admin-customer-preferences-facade.mjs",
     "test:admin-min-stocks": "node tests/admin-min-stocks-facade.mjs",

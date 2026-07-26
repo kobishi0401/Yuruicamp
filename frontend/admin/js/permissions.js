@@ -68,6 +68,7 @@ function initEmployeeStore() {
     {
       id: '01',
       displayName: '王老闆',
+      email: 'boss@demo.test',
       isSuperAdmin: true,
       isActive: true,
       createdAt: seedDate,
@@ -76,6 +77,7 @@ function initEmployeeStore() {
     {
       id: '02',
       displayName: '測試員工',
+      email: 'staff@demo.test',
       isSuperAdmin: false,
       isActive: true,
       createdAt: seedDate,
@@ -311,8 +313,8 @@ function renderEmployeeTable() {
     }
 
     return '<tr data-employee-id="' + emp.id + '">' +
-      '<td class="fw-semibold">' + emp.id + '</td>' +
-      '<td>' + escapeHtml(emp.displayName) + '</td>' +
+      '<td class="fw-semibold">' + escapeHtml(emp.displayName) + '</td>' +
+      '<td>' + escapeHtml(formatEmployeeEmailCell(emp.email)) + '</td>' +
       '<td>' + roleLabel + '</td>' +
       '<td>' + statusBadge + '</td>' +
       '<td>' +
@@ -370,9 +372,8 @@ function renderBackendEmployeeRows() {
       'data-employee-id="' + employee.id + '">' + (employee.active ? '停用' : '啟用') + '</button>';
 
     return '<tr data-employee-id="' + employee.id + '">' +
-      '<td class="fw-semibold">' + escapeHtml(employee.id) + '</td>' +
-      '<td><div>' + escapeHtml(employee.name) + '</div><small class="text-muted">' +
-        escapeHtml(employee.email) + '</small></td>' +
+      '<td class="fw-semibold">' + escapeHtml(employee.name) + '</td>' +
+      '<td>' + escapeHtml(formatEmployeeEmailCell(employee.email)) + '</td>' +
       '<td>' + roleLabel + '</td>' +
       '<td>' + statusBadge + '</td>' +
       '<td><button type="button" class="btn btn-sm btn-outline-primary btn-edit-employee" ' +
@@ -394,10 +395,11 @@ function openEmployeeModal(employeeId) {
   var emp = isEdit ? findEmployeeById(employeeId) : null;
 
   $('#employeeModalLabel').text(isEdit ? '編輯員工' : '新增員工');
-  $('#empIdDisplay').val(isEdit ? emp.id : getNextEmployeeId(fetchEmployees()));
   $('#empDisplayName').val(isEdit ? emp.displayName : '');
+  $('#empEmail').val(isEdit ? (emp.email || '') : '').prop('readonly', false);
   $('#empIsSuperAdmin').prop('checked', isEdit ? emp.isSuperAdmin : false);
   $('#employeeModal').data('edit-id', isEdit ? emp.id : '');
+  setEmployeeCreatedAtDisplay(isEdit, isEdit ? emp.createdAt : null);
 
   renderPermissionMatrix(isEdit ? emp.permissions : getDefaultPermissions(false), isEdit ? emp.isSuperAdmin : false);
 
@@ -423,11 +425,11 @@ function openBackendEmployeeModal(employeeId) {
 function fillBackendEmployeeModal(employee) {
   var isEdit = !!employee;
   $('#employeeModalLabel').text(isEdit ? '編輯管理員' : '新增管理員');
-  $('#empIdDisplay').val(isEdit ? employee.id : '由後端建立');
   $('#empDisplayName').val(isEdit ? employee.name : '');
   $('#empEmail').val(isEdit ? employee.email : '').prop('readonly', isEdit);
   $('#empRole').val(isEdit ? employee.role : 'operator');
   $('#employeeModal').data('edit-id', isEdit ? employee.id : '');
+  setEmployeeCreatedAtDisplay(isEdit, isEdit ? employee.createdAt : null);
 
   var permissions = getBackendPermissionMatrix(employee);
   renderPermissionMatrix(permissions, false);
@@ -511,15 +513,27 @@ function saveEmployeeFromModal() {
   }
 
   var displayName = $('#empDisplayName').val().trim();
+  var email = $('#empEmail').val().trim();
+  var editId = $('#employeeModal').data('edit-id');
+  var isEdit = !!editId;
   if (!displayName) {
     window.showAdminToast('請輸入顯示名稱', 'error');
     $('#empDisplayName').addClass('is-invalid');
     return;
   }
+  if (!isEdit && (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    window.showAdminToast('輸入有效的登入 Email', 'error');
+    $('#empEmail').addClass('is-invalid');
+    return;
+  }
+  if (isEdit && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    window.showAdminToast('輸入有效的登入 Email', 'error');
+    $('#empEmail').addClass('is-invalid');
+    return;
+  }
   $('#empDisplayName').removeClass('is-invalid');
+  $('#empEmail').removeClass('is-invalid');
 
-  var editId = $('#employeeModal').data('edit-id');
-  var isEdit = !!editId;
   var isSuperAdmin = $('#empIsSuperAdmin').is(':checked');
   var permissions = readPermissionsFromModal(isSuperAdmin);
   var employees = fetchEmployees();
@@ -534,6 +548,7 @@ function saveEmployeeFromModal() {
 
     var updated = Object.assign({}, employees[idx], {
       displayName: displayName,
+      email: email,
       isSuperAdmin: isSuperAdmin,
       permissions: permissions,
     });
@@ -571,6 +586,7 @@ function saveEmployeeFromModal() {
   var newEmp = {
     id: getNextEmployeeId(employees),
     displayName: displayName,
+    email: email,
     isSuperAdmin: isSuperAdmin,
     isActive: true,
     createdAt: new Date().toISOString().slice(0, 10),
@@ -688,6 +704,40 @@ function resetEmployeeModal() {
   $('#empDisplayName').removeClass('is-invalid');
   $('#empEmail').removeClass('is-invalid').prop('readonly', false);
   $('#employeeModal').removeData('edit-id');
+  setEmployeeCreatedAtDisplay(false, null);
+}
+
+/** 編輯 Modal 顯示建立日期；新增時隱藏。 */
+function setEmployeeCreatedAtDisplay(isEdit, createdAt) {
+  if (isEdit) {
+    $('#empCreatedAtGroup').removeClass('d-none');
+    $('#empCreatedAtDisplay').val(formatAdminUserCreatedDate(createdAt));
+    return;
+  }
+  $('#empCreatedAtGroup').addClass('d-none');
+  $('#empCreatedAtDisplay').val('');
+}
+
+/** 管理員建立時間（僅日期 YYYY-MM-DD）。 */
+function formatAdminUserCreatedDate(value) {
+  if (!value) {
+    return '—';
+  }
+  var raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+  var date = new Date(raw);
+  if (isNaN(date.getTime())) {
+    return '—';
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+/** 列表 Email 欄缺值時顯示 —。 */
+function formatEmployeeEmailCell(email) {
+  var trimmed = String(email || '').trim();
+  return trimmed || '—';
 }
 
 function getRoleLabel(role) {

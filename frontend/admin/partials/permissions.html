@@ -20,8 +20,8 @@
       <table class="table table-hover mb-0 admin-data-table">
         <thead class="table-light">
           <tr>
-            <th>員工編號</th>
-            <th>姓名／Email</th>
+            <th>姓名</th>
+            <th>Email</th>
             <th>身份</th>
             <th>狀態</th>
             <th>操作</th>
@@ -48,10 +48,10 @@
       </div>
       <div class="modal-body">
         <form id="employeeForm" novalidate>
-          <!-- 員工編號（自動產生，不可改） -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold" for="empIdDisplay">員工編號</label>
-            <input type="text" class="form-control" id="empIdDisplay" readonly>
+          <!-- 建立日期（僅編輯時顯示，唯讀） -->
+          <div class="mb-3 d-none" id="empCreatedAtGroup">
+            <label class="form-label fw-semibold" for="empCreatedAtDisplay">建立日期</label>
+            <input type="text" class="form-control" id="empCreatedAtDisplay" readonly>
           </div>
 
           <!-- 姓名與登入 Email -->
