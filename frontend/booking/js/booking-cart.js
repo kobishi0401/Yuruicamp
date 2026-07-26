@@ -200,10 +200,27 @@ function prepareBookingCheckoutSession(replaceExisting) {
       var message = getBookingSessionErrorMessage(error);
       setBookingSessionState('error', message);
       showToast(message, 'error');
+      maybeOpenLoginModalForCart();
     });
 
   return bookingSessionQueue;
 }
+
+/**
+ * modal.js 是由 layout.js 在頁面載入後才動態注入，晚於 booking-cart.js 的
+ * $(document).ready；直接呼叫 window.openModal 常會撲空。改用 booking-header.js
+ * 載入完成後呼叫的 window.onBookingHeaderReady 補開，兩種先後順序都能正確開啟。
+ */
+function maybeOpenLoginModalForCart() {
+  if (!bookingSessionNeedsAuthRetry) return;
+  if (typeof window.openModal === 'function') {
+    window.openModal('loginModal');
+  }
+}
+
+window.onBookingHeaderReady = function () {
+  maybeOpenLoginModalForCart();
+};
 
 function setBookingSessionState(state, message) {
   var isReady = state === 'ready';
