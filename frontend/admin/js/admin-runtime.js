@@ -28,7 +28,7 @@
     customers: { ready: true, level: 'partial', note: '查詢、基本更新、停權、標籤池／指派與預設地址可用；新增會員尚未提供端點' },
     discounts: { ready: true, level: 'full', note: '優惠券正式 CRUD 可用' },
     reviews: { ready: true, level: 'partial', note: '列表／詳情／硬刪可用；不做回覆與軟隱藏' },
-    'booking-calendar': { ready: true, level: 'partial', note: '公休＋營區／營位＋特殊節日曆可用；月份容量由 Booking API 呈現' },
+    'booking-calendar': { ready: true, level: 'partial', note: '公休＋營區／營位＋特殊節日曆＋月曆可用性 API 可用' },
     bookings: { ready: true, level: 'full', note: '查詢、履約、內部備註、已付款取消／退款可用' },
     permissions: { ready: true, level: 'full', note: '管理員與有效權限正式可用' },
   };
@@ -68,6 +68,8 @@
     'booking-calendar.zones': true,
     /** W4-03：特殊節日曆 calendar_dates（預約排程頁 Modal） */
     'booking-calendar.calendarDates': true,
+    /** Admin UX 03：月曆可用性（Backend 模式 renderCalendar） */
+    'booking-calendar.availability': true,
     /** W4-06：分析報表伺服器端彙總（不再拉 orders／bookings 全列表做 KPI） */
     'analytics.summary': true,
   };

@@ -236,6 +236,16 @@ function isCalendarDatesReady() {
     && AdminAPI.calendarDates.listRange;
 }
 
+/** Admin UX 03：月曆可用性 API 是否就緒（Backend 模式 renderCalendar） */
+function isAvailabilityBackendReady() {
+  return isClosureBackendMode()
+    && typeof AdminRuntime !== 'undefined'
+    && AdminRuntime.isFeatureReady
+    && AdminRuntime.isFeatureReady('booking-calendar.availability')
+    && AdminAPI.campgrounds
+    && AdminAPI.campgrounds.getAvailability;
+}
+
 /** 依 readiness 顯示「特殊節日曆」按鈕 */
 function syncCalendarDatesButton() {
   $('#bcBtnCalendarDates').toggleClass('d-none', !isCalendarDatesReady());
@@ -654,6 +664,10 @@ function reloadCalendarCampgroundsAndZones() {
     bcState.campgrounds = camps || [];
     populateCampgroundSelect();
     populateZoneSelect();
+    if (isAvailabilityBackendReady()) {
+      renderCalendar();
+      return;
+    }
     if (bcState.ctx) {
       return window.BookingAPI.loadAvailabilityContext().then(function (ctx) {
         bcState.ctx = ctx;
@@ -708,6 +722,15 @@ function loadBookingCalendarData() {
       var customers = results[4] || [];
       bcState.customersById = {};
       customers.forEach(function (c) { bcState.customersById[c.id] = c; });
+
+      if (isAvailabilityBackendReady()) {
+        return Promise.all([
+          loadBackendBookingsForCalendar(),
+          window.BookingAPI.getPolicy().then(function (policy) {
+            bcState.policy = policy;
+          }),
+        ]);
+      }
 
       if (!bcState.ctx) {
         return null;
@@ -875,20 +898,134 @@ function getAvailabilityForView(range) {
   );
 }
 
+/** 將 Admin availability API 單日列轉成月曆 render 使用的 shape */
+function mapAdminAvailabilityDay(day) {
+  if (!day) return day;
+  return {
+    date: day.date,
+    remaining: Number(day.remaining) || 0,
+    booked: Number(day.booked) || 0,
+    blocked: Number(day.blocked) || 0,
+    capacity: Number(day.capacity) || 0,
+    status: day.status || 'out_of_window',
+    closureReason: day.closureReason || '',
+    isHoliday: day.isHoliday === true,
+    holidayName: day.holidayName || '',
+  };
+}
+
+/** Backend 模式：向 Admin API 載入當月可用性 */
+function loadMonthAvailability(range) {
+  var camp = getCurrentCamp();
+  if (!camp || !isAvailabilityBackendReady()) {
+    return Promise.resolve(null);
+  }
+  var query = { from: range.from, to: range.to };
+  if (bcState.zoneId && bcState.zoneId !== BC_ALL_ZONES) {
+    query.zoneId = bcState.zoneId;
+  }
+  return AdminAPI.campgrounds.getAvailability(camp.campgroundId, query)
+    .then(function (response) {
+      var data = (response && response.data) || {};
+      return {
+        capacity: Number(data.capacity) || 0,
+        days: (data.days || []).map(mapAdminAvailabilityDay),
+      };
+    });
+}
+
+/** Backend 模式：載入預約列表供「點日明細」使用（對齊 bookings.js normalize） */
+function loadBackendBookingsForCalendar() {
+  if (!AdminAPI.bookings || !AdminAPI.bookings.list) {
+    window.bookingsCache = [];
+    return Promise.resolve([]);
+  }
+  return AdminAPI.bookings.list({ page: 0, size: 200, sort: 'createdAt,desc' })
+    .then(function (response) {
+      var rows = (response && response.data) || [];
+      window.bookingsCache = rows.map(normalizeCalendarBackendBooking);
+      return window.bookingsCache;
+    })
+    .catch(function (err) {
+      console.warn('[booking-calendar] 預約列表載入失敗:', err);
+      window.bookingsCache = [];
+      return [];
+    });
+}
+
+/** 精簡版後端預約 → 月曆明細 ViewModel */
+function normalizeCalendarBackendBooking(booking) {
+  var detail = booking || {};
+  var nights = detail.checkIn && detail.checkOut
+    ? Math.max(0, Math.round((new Date(detail.checkOut) - new Date(detail.checkIn)) / 86400000))
+    : 0;
+  return {
+    id: detail.id,
+    customerId: detail.customerId,
+    status: detail.status,
+    bookingInfo: {
+      campgroundId: detail.campgroundId,
+      campgroundName: detail.campgroundName,
+      region: detail.region,
+      checkIn: detail.checkIn,
+      checkOut: detail.checkOut,
+      guestCount: detail.guestCount,
+      totalDays: nights,
+    },
+    selectedZones: (detail.zones || []).map(function (zone) {
+      return {
+        zoneId: zone.zoneId || zone.id,
+        zoneType: zone.type || zone.zoneType,
+        quantity: zone.quantity,
+      };
+    }),
+  };
+}
+
 function renderCalendar() {
-  var AV = window.BookingAvailability;
-  if (!AV || !bcState.ctx || !bcState.zoneId) {
-    var message = isClosureBackendMode()
-      ? '正式模式的月曆可用量仍由後端查詢；公休規則可在下方管理。'
-      : '請選擇營區與營位類型。';
-    $('#bcCalendarGrid').html('<p class="text-muted text-center py-3">' + message + '</p>');
+  if (!bcState.zoneId) {
+    $('#bcCalendarGrid').html('<p class="text-muted text-center py-3">請選擇營區與營位類型。</p>');
     return;
   }
 
+  var AV = window.BookingAvailability;
   var range = getMonthRange(bcState.viewYear, bcState.viewMonth);
   $('#bcMonthLabel').text(bcState.viewYear + ' 年 ' + (bcState.viewMonth + 1) + ' 月');
 
-  var availability = getAvailabilityForView(range);
+  if (isAvailabilityBackendReady()) {
+    loadMonthAvailability(range)
+      .then(function (availability) {
+        if (!availability) {
+          $('#bcCalendarGrid').html(
+            '<p class="text-muted text-center py-3">無法載入月曆可用性。</p>'
+          );
+          return;
+        }
+        paintCalendarGrid(range, availability);
+      })
+      .catch(function (err) {
+        console.error('[booking-calendar] 可用性載入失敗:', err);
+        if (window.AdminAPI && AdminAPI.handleError) {
+          AdminAPI.handleError(err, '月曆可用性載入失敗');
+        }
+        $('#bcCalendarGrid').html(
+          '<p class="text-danger text-center py-3">月曆可用性載入失敗，請稍後再試。</p>'
+        );
+      });
+    return;
+  }
+
+  if (!AV || !bcState.ctx) {
+    $('#bcCalendarGrid').html('<p class="text-muted text-center py-3">請選擇營區與營位類型。</p>');
+    return;
+  }
+
+  paintCalendarGrid(range, getAvailabilityForView(range));
+}
+
+/** 共用：依 availability.days 繪製月曆格子（Mock／Backend 皆走此函式） */
+function paintCalendarGrid(range, availability) {
+  var AV = window.BookingAvailability;
   var dayMap = {};
   (availability.days || []).forEach(function (d) { dayMap[d.date] = d; });
 
@@ -903,13 +1040,16 @@ function renderCalendar() {
   }
 
   for (var day = 1; day <= range.daysInMonth; day += 1) {
-    var dateISO = AV.formatISODate(new Date(bcState.viewYear, bcState.viewMonth, day));
+    var dateISO = AV
+      ? AV.formatISODate(new Date(bcState.viewYear, bcState.viewMonth, day))
+      : formatCalendarIsoDate(new Date(bcState.viewYear, bcState.viewMonth, day));
     var info = dayMap[dateISO] || {
       remaining: 0, capacity: availability.capacity, booked: 0, blocked: 0, status: 'out_of_window',
     };
 
     var interactive = info.status !== 'out_of_window';
-    var holidayRow = bcState.calendarHolidayMap[dateISO];
+    var holidayRow = bcState.calendarHolidayMap[dateISO]
+      || (info.isHoliday ? { holidayName: info.holidayName || '特殊節日' } : null);
     var title = info.status === 'closed'
       ? (info.closureReason || '公休')
       : ('已訂 ' + info.booked + '／停售 ' + info.blocked);
@@ -940,15 +1080,33 @@ function renderCalendar() {
   if (bcState.selectedDate) renderDayDetail(bcState.selectedDate);
 }
 
+/** Backend 無 BookingAvailability 時的日期格式化後援 */
+function formatCalendarIsoDate(date) {
+  var y = date.getFullYear();
+  var m = String(date.getMonth() + 1).padStart(2, '0');
+  var d = String(date.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+
 function renderDayDetail(dateISO) {
   var AV = window.BookingAvailability;
   var camp = getCurrentCamp();
-  if (!AV || !bcState.ctx || !bcState.zoneId || !camp) return;
+  if (!bcState.zoneId || !camp) return;
 
-  var isClosed = AV.isCampgroundClosed(camp.campgroundId, dateISO, bcState.closures);
   var zoneLabel = bcState.zoneId === BC_ALL_ZONES
     ? '全部營位類型'
-    : ((bcState.ctx.zonesById[bcState.zoneId] || {}).type || bcState.zoneId);
+    : (function () {
+      if (bcState.ctx && bcState.ctx.zonesById && bcState.ctx.zonesById[bcState.zoneId]) {
+        return bcState.ctx.zonesById[bcState.zoneId].type || bcState.zoneId;
+      }
+      var match = (camp.zones || []).find(function (z) { return z.zoneId === bcState.zoneId; });
+      return match ? match.type : bcState.zoneId;
+    })();
+
+  var isClosed = AV
+    ? AV.isCampgroundClosed(camp.campgroundId, dateISO, bcState.closures)
+    : false;
+  var holidayRow = bcState.calendarHolidayMap[dateISO];
 
   $('#bcDayDetailTitle').text(dateISO + '　' + zoneLabel + '　明細');
   $('#bcDayDetail').removeClass('d-none');
@@ -959,10 +1117,17 @@ function renderDayDetail(dateISO) {
   if (isClosed) {
     $closeBtn.addClass('d-none');
     $('#bcDayDetailBody').empty();
-    $('#bcDayDetailClosed').removeClass('d-none').text(
-      '此日為公休：' + (AV.getClosureReason(camp.campgroundId, dateISO, bcState.closures) || '公休')
-    );
+    var closureText = AV
+      ? (AV.getClosureReason(camp.campgroundId, dateISO, bcState.closures) || '公休')
+      : '公休';
+    $('#bcDayDetailClosed').removeClass('d-none').text('此日為公休：' + closureText);
     return;
+  }
+
+  if (holidayRow) {
+    $('#bcDayDetailClosed').removeClass('d-none').text(
+      '特殊節日：' + (holidayRow.holidayName || '（未命名）')
+    );
   }
 
   if (window.canEdit && window.canEdit('booking-calendar')) {
@@ -974,13 +1139,24 @@ function renderDayDetail(dateISO) {
     $closeBtn.addClass('d-none');
   }
 
-  var bookings = AV.getBookingsForCampgroundNight(
-    camp.campgroundId,
-    dateISO,
-    bcState.ctx.bookings,
-    bcState.ctx.policy,
-    bcState.zoneId
-  );
+  var bookings = [];
+  if (AV && bcState.ctx && bcState.ctx.bookings) {
+    bookings = AV.getBookingsForCampgroundNight(
+      camp.campgroundId,
+      dateISO,
+      bcState.ctx.bookings,
+      bcState.ctx.policy,
+      bcState.zoneId
+    );
+  } else if (isAvailabilityBackendReady() && AV && bcState.policy) {
+    bookings = AV.getBookingsForCampgroundNight(
+      camp.campgroundId,
+      dateISO,
+      window.bookingsCache || [],
+      bcState.policy,
+      bcState.zoneId
+    );
+  }
 
   if (!bookings.length) {
     $('#bcDayDetailBody').empty();

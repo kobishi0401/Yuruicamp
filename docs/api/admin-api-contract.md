@@ -716,8 +716,42 @@ Request（可省略 body）：
 | `POST` | `/api/admin/campgrounds` | `booking-calendar.edit` | 建立（客戶端提供 slug `id`） |
 | `PATCH` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 部分更新；傳 `active` 即啟停 |
 | `DELETE` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 無引用才可硬刪；有引用 → `409`，改 `active=false` |
+| `GET` | `/api/admin/campgrounds/{id}/availability` | `booking-calendar.view` | 區間可用性（月曆）；見 §11.0 |
 
-### 欄位策略（與公開 Booking 對齊「策略甲」）
+### 11.0 Campground availability（預約排程月曆｜Admin UX 03）
+
+供後台「預約排程面板」月曆格子；資料來源 `get_zone_availability` + `calendar_dates` + 公休原因。
+
+| Query | 必填 | 說明 |
+|-------|------|------|
+| `from` | 是 | `YYYY-MM-DD` 含端點 |
+| `to` | 是 | `YYYY-MM-DD` 含端點；區間最長 **366** 天 |
+| `zoneId` | 否 | 省略＝**全部 active 營位加總**（回應 `zoneId: "__ALL__"`） |
+
+Response `data`：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `campgroundId` | string | 路徑營區 |
+| `zoneId` | string | `__ALL__` 或單一 zone slug |
+| `from`／`to` | date | 請求區間 |
+| `capacity` | int | scope 內 `totalSites` 加總 |
+| `days[]` | array | 區間內**每一天**一列 |
+
+`days[]` 單日：
+
+| 欄位 | 說明 |
+|------|------|
+| `date` | `YYYY-MM-DD` |
+| `isClosed` | 公休（`get_zone_availability.is_closed`） |
+| `closureReason` | 公休原因；非公休可 null |
+| `isHoliday`／`holidayName` | 來自 `calendar_dates` |
+| `capacity`／`remaining`／`booked`／`blocked` | 加總或單 zone |
+| `status` | `available`｜`low`｜`full`｜`closed`｜`out_of_window` |
+
+`status` 依 booking policy（`advanceDays`／`bookingWindowDays`／`lowAvailabilityThreshold`）推導，對齊月曆圖例。
+
+未知營區 → `404`；未知或非 active 的 `zoneId` → `404`。
 
 | 欄位 | Admin | 公開 `GET /api/booking/campgrounds` |
 |------|-------|--------------------------------------|
@@ -979,3 +1013,4 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | 0.22 | 2026-07-25 | W4-03：`/api/admin/calendar-dates` 特殊節日曆；PUT 標記／DELETE 取消；Booking `holidayCount` 連動 |
 | 0.23 | 2026-07-25 | W4-06：`/api/admin/analytics/shop-summary`、`booking-summary`；口徑／366 天／`analytics.view` |
 | 0.24 | 2026-07-26 | Analytics summary 擴充 `categoryBreakdown[]`（商城營收／租借件數；DB 分類 FK） |
+| 0.25 | 2026-07-27 | Admin UX 03：`GET /api/admin/campgrounds/{id}/availability`；月曆 Backend 可用性；RBAC `booking-calendar.view` |
