@@ -2,69 +2,44 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Spec ready（待實作） |
+| **狀態** | **已完成**（2026-07-26） |
 | **Spec** | [`.scratch/commerce-ux-display-checkout/spec.md`](../../../.scratch/commerce-ux-display-checkout/spec.md) |
 | **ADR** | [`0001-display-no-separate-from-uuid.md`](../../adr/0001-display-no-separate-from-uuid.md)、[`0002-checkout-stock-lock-at-entry.md`](../../adr/0002-checkout-stock-lock-at-entry.md) |
+| **驗收** | `frontend/tests/commerce-ux-browser.mjs`；PostgreSQL IT（displayNo、contact 快照、Analytics breakdown） |
 | **日期** | 2026-07-26 |
 
 ---
 
 ## 1. 一句話
 
-對外顯示 **`ORD-0001`／`BK-0042`**；對內與金流仍用 **UUID**。商城 **checkout 進頁才鎖庫存**；ECPay **按一次**跳綠界。商品 **列表＋詳情** 顯示剩餘數量。
+對外顯示 **`ORD-0001`／`BK-0042`**；對內與金流仍用 **UUID**。商城 **checkout 進頁才鎖庫存**；ECPay **按一次**跳綠界。商品 **列表＋詳情＋首頁** 顯示剩餘數量。
 
 ---
 
-## 2. 與現況差異（實作時必改）
+## 2. 已落地行為（摘要）
 
-| 區域 | 現況 | 目標 |
-|------|------|------|
-| cart.js | 進頁 `createSession` | 僅 soft 驗量 |
-| checkout.js | ECPay 兩段按鈕 | M2 一次跳轉 |
-| booking-cart.js | 進頁 `createBooking` | 僅 soft 驗量 |
-| booking-checkout.js | ECPay 無 contact body | O2 帶 contact |
-| booking-success.html | 讀 `bookingNum` | 讀 `bookingId` + displayNo |
-| formatters | UUID → 原樣顯示 | 讀 API `displayNo` |
-| Admin booking API | 無 lineTotal／contact | 補齊 |
+| 區域 | 行為 |
+|------|------|
+| `cart.js` | 僅 soft 驗量；不 `createSession` |
+| `checkout.js` | 進頁 hard lock；M2「結帳並前往付款」一次跳 ECPay |
+| `booking-cart.js` | 僅 soft 驗量；不 `createBooking` |
+| `booking-checkout.js` | 進頁 hard lock；O2 ECPay 帶 contact body |
+| Admin bookings | lineTotal、contact 快照、中文 status timeline |
+| Seed／Schema | `display_no` 欄位與 sequence；舊資料依 `created_at` 回填 |
 
----
-
-## 3. 實作批次建議
-
-### 批次 A — Hotfix（無 migration）
-
-- 成功頁 `bookingId` query
-- Admin API `lineTotal`、history 中文 label
-- Admin Modal 綁定修正
-
-### 批次 B — displayNo
-
-- DB migration + sequence + 回填
-- 建單發號；API 增 `displayNo`
-- 前後台 formatter
-
-### 批次 C — B3 + M2
-
-- 商城／租借鎖庫存時點
-- ECPay 單次提交、按鈕文案 V2
-
-### 批次 D — 庫存 UX + 會員帶入
-
-- 列表／詳情「剩餘 N 件」
-- 加購 D1+D2
-- N3 自動帶入 + O2 contact
+詳細 ticket 清單見 [`.scratch/commerce-ux-display-checkout/README.md`](../../../.scratch/commerce-ux-display-checkout/README.md)。
 
 ---
 
-## 4. 驗收速查
+## 3. 相關延伸（同批完成）
 
-見 spec **Testing Decisions** 與 `.scratch/.../spec.md` User Stories 1–20。
+- [`.scratch/storefront-member-rental-ux/spec.md`](../../../.scratch/storefront-member-rental-ux/spec.md) — 會員中心 displayNo、Profile API、租借 availability
+- [`.scratch/admin-storefront-polish/spec.md`](../../../.scratch/admin-storefront-polish/spec.md) — Analytics 甜甜圈、客戶預載、Blog 改名
+- [`.scratch/admin-customer-display-no/spec.md`](../../../.scratch/admin-customer-display-no/spec.md) — 客戶詳情 ORD/BK 顯示與 Modal
 
 ---
 
-## 5. 相關契約
+## 4. 仍待（不在本 spec）
 
-- [`checkout-api-contract.md`](../../api/checkout-api-contract.md)
-- [`booking-api-contract.md`](../../api/booking-api-contract.md)
-- [`admin-api-contract.md`](../../api/admin-api-contract.md)
-- [`checkout/README.md`](../checkout/README.md)
+- 真實綠界沙箱（`stub=false`）— 見 [`../payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md)
+- Booking Coupon Schema — 見 [`../coupon/README.md`](../coupon/README.md)

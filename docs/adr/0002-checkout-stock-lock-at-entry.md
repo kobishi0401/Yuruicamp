@@ -2,13 +2,13 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Accepted |
+| **狀態** | Accepted（**Implemented** 2026-07-26） |
 | **日期** | 2026-07-26 |
 | **決策者** | Product / Grilling |
 
 ## 背景
 
-Checkout API 契約定義：購物車不鎖庫存，`POST /checkout/sessions` 建立 unpaid 訂單與 15 分鐘保留。前端 cart 頁目前進頁即建 Session，與契約及使用者期望（先選購、進結帳才計時）不一致。
+Checkout API 契約定義：購物車不鎖庫存，`POST /checkout/sessions` 建立 unpaid 訂單與 15 分鐘保留。**2026-07-26 已實作**：cart／booking-cart 僅 soft 驗量；checkout／booking-checkout 進頁才 hard lock。
 
 ## 決策
 

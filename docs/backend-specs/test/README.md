@@ -6,6 +6,7 @@
 | 自動 Gate | Maven 一般測試 + 專用 PostgreSQL 完整整合測試 |
 | 人工 Gate | Swagger／HTTP、RBAC、資料庫狀態交叉核對 |
 | 重要原則 | 測試資料庫必須可丟棄；不可在正式或共用資料庫做寫入驗證 |
+| **更新日期** | 2026-07-26 |
 
 ## 文件入口
 
@@ -17,8 +18,9 @@
 - [會員配送地址 API 驗證](./member-shipping-address-api-validation.md)
 - [Checkout 優惠券冪等、消耗與取消失效 Swagger 驗證](./checkout-coupon-idempotency-swagger-validation.md)
 - [Admin API 驗證](./admin-api-validation.md)
-- 前端瀏覽器驗證見 [`docs/frontend-specs/test/README.md`](../../frontend-specs/test/README.md)。
+- 前端瀏覽器驗證見 [`docs/frontend-specs/test/README.md`](../../frontend-specs/test/README.md)（若存在）。
 - Catalog 商品標籤端到端 Swagger 驗證見 [`catalog-product-tags-swagger-validation.md`](./catalog-product-tags-swagger-validation.md)。
+- Commerce UX 靜態驗收：`frontend/tests/commerce-ux-browser.mjs`。
 
 ## 1. 基本啟動
 
@@ -84,17 +86,31 @@ $env:DB_PASSWORD = '<測試資料庫密碼>'
 
 ## 5. 目前未完成邊界
 
-- Payment 線 D：COD 建單確認與 claim 消耗已實作；ECPay Gateway、付款表單、Notify 驗簽／通知紀錄與 Return 尚未實作。
-- `GET /api/me/orders` 與會員訂單詳情 Controller 已完成；驗證流程見 [`member-order-api-validation.md`](./member-order-api-validation.md)。
-- Booking Coupon 關聯尚未完成。
-- Articles、Reviews、calendar_dates API 尚未完成。
-- 正式上線仍需 Flyway、部署、Secret Manager、備份／還原及 production profile 驗證。
+### 已完成（勿再列為缺口）
 
-## 6. 最近一次實測基線（2026-07-22）
+- **Payment 線 D（stub）**：ECPay Gateway、launch、Notify 驗簽／冪等、Return 導頁、COD `confirm-cod`、預約禁 COD — 2026-07-25 IT＋I-8 瀏覽器手動 ✅。
+- **會員訂單**：`GET /api/me/orders`、詳情、`displayNo` — 見 [`member-order-api-validation.md`](./member-order-api-validation.md)。
+- **會員 Profile**：`GET/PATCH /api/me/profile`（phone／birthday）。
+- **評價**：會員 `GET/POST /api/me/reviews`、公開 `GET /api/products/{id}/reviews`。
+- **Admin 假日曆**：`calendar_dates` Admin CRUD（ADM-W4-03）；Booking 計價已讀 DB。
+- **Analytics**：W4-06 summary API + `categoryBreakdown`（admin-storefront-polish 波次 B）。
+
+### 仍待完成
+
+| 項目 | 說明 |
+| --- | --- |
+| **真實綠界沙箱** | `stub=false` + 公網 HTTPS Notify；見 [`../payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md) |
+| **Booking Coupon** | 缺 Booking 關聯 Schema；Checkout 仍拒絕非 null `couponClaimId` |
+| **文章 API（H-2）** | ⏭️ 延後；Blog 仍讀 `articles.json` |
+| **公開 calendar_dates 讀取** | Admin 維護已完成；獨立公開端點未開 |
+| **線 J 部署** | Flyway、Secret Manager、Cloud Storage、production profile |
+| **W4-04／05** | 文章 Admin CRUD、圖片上傳 GCP — 延後 |
+
+## 6. 歷史實測基線（2026-07-22，僅供對照）
 
 | Gate | 結果 |
 | --- | --- |
 | 一般 `mvnw test` | 115 項：33 項實跑通過、82 項 PostgreSQL 測試跳過，build 成功 |
 | `RUN_BACKEND_IT=true` 完整測試 | 115 項全執行，1 failure、2 errors，build 失敗 |
 
-完整測試失敗集中在 G-4 重複券碼案例取得 `401` 而非預期 `409`，以及 Admin RBAC fixture 的 FK／重複主鍵污染。這表示目前完整後端 Gate 尚未通過；需以全新專用資料庫重跑並修正測試隔離或程式問題後，才能更新為全綠。
+> **2026-07-26 備註**：上表為早期基線；其後已新增 Payment、Admin post-G6、displayNo、Analytics 等 IT。宣稱全綠前請以**全新可重建測試庫**重跑 `RUN_BACKEND_IT=true` 完整 suite，勿沿用 2026-07-22 結論。

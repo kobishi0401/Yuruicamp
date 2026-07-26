@@ -8,9 +8,9 @@
 
 ## 概覽
 
-買家結帳流程頁面，包含買家資訊、物流、付款、折扣碼、購物車摘要與訂單確認功能。此頁只使用前一頁 `storefront/pages/cart.html` 已建立的 Draft Checkout Session。
+買家結帳流程頁面，包含買家資訊、物流、付款、折扣碼、購物 cart 摘要與訂單確認功能。**B3（ADR 0002）**：本頁登入後才 `POST /api/checkout/sessions` 建立 Draft 並 hard lock 15 分鐘；`cart.html` 僅 soft 驗量。
 
-`cart.html` 建立 Session 並鎖庫後，此頁以 `PATCH /api/checkout/sessions/{orderId}` 補齊配送、付款資料與 `couponClaimId`。頁面只以後端 `CheckoutSession.pricing` 顯示成交金額。
+Session 建立後，此頁以 `PATCH /api/checkout/sessions/{orderId}` 補齊配送、付款資料與 `couponClaimId`。ECPay 在 `ready_to_pay` 後按「結帳並前往付款」一次跳轉（M2）。頁面只以後端 `CheckoutSession.pricing` 顯示成交金額。
 
 買家資訊、物流選擇與付款方式三個 `checkoutPanel` 進入頁面時預設全部展開；面板仍可由標題按鈕個別收合，`isOpen`、`aria-expanded` 與內容 `hidden` 狀態必須同步。
 

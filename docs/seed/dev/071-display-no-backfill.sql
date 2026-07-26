@@ -1,5 +1,6 @@
 -- 種子資料載入後回填 display_no（邏輯同 docs/patches/092-commerce-ux-display-no.sql）
--- Backfill display numbers after seed INSERTs that omit display_no.
+-- Backfill display numbers after 060／070／090 INSERTs that omit display_no.
+-- 必須在 seed 交易最末執行（含 W1 fixtures），再恢復 NOT NULL。
 
 WITH numbered AS (
     SELECT id, row_number() OVER (ORDER BY created_at ASC, id ASC) AS rn

@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **Triage** | `ready-for-agent` |
+| **Triage** | `done` (2026-07-26) |
 | **波次** | W4｜P3（K11） |
 | **契約目標** | Admin API **v0.23** |
 | **Checklist** | [`ADM-W4-06-analytics-api.md`](./ADM-W4-06-analytics-api.md) |

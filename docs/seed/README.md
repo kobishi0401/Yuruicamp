@@ -45,10 +45,12 @@ docs/seed/
     ├── 030-catalog.sql    # 商品與租借 SKU／variant
     ├── 040-inventory.sql  # 商城／租借庫位、listing 與庫存
     ├── 050-coupons.sql    # 優惠券主檔（claim 尚未建立）
+    ├── 059-display-no-seed-prep.sql  # 暫時放寬 display_no NOT NULL（060／070／090 省略此欄）
     ├── 060-orders.sql     # 222 筆展示訂單、435 筆明細與歷程
     ├── 070-bookings.sql   # 90 筆展示預訂、zone／租借快照與歷程
     ├── 080-reviews.sql    # 已購評價（綁 order_items；含照片）
-    └── 090-w1-manual-fixtures.sql  # W1 手動驗收固定單（W1-ORD-*／W1-BK-*／W1-REV-DEL／min-stock）
+    ├── 090-w1-manual-fixtures.sql  # W1 手動驗收固定單（W1-ORD-*／W1-BK-*／W1-REV-DEL／min-stock）
+    └── 071-display-no-backfill.sql  # 回填 ORD-/BK- 顯示編號並恢復 NOT NULL（seed 最末）
 ```
 
 ### 後台 Google 白名單（本機）

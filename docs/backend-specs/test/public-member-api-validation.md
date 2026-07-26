@@ -111,8 +111,10 @@ GET /api/booking/bookings/{bookingId}
 ## 7. 已知缺口
 
 - `/api/me/orders` 與 `/api/me/orders/{id}` 已完成；會員訂單驗收改依 [`member-order-api-validation.md`](./member-order-api-validation.md) 執行。
-- ECPay、付款確認與 Booking confirmed 不在目前 API 可驗證範圍。
-- Articles／Reviews 公開 API 尚未實作。
+- **Payment stub**（launch／Notify／COD）已完成；**真實綠界沙箱**（`stub=false`）待驗收 — 見 [`../payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md)。
+- **Booking Coupon** 關聯 Schema 尚未決定；Booking Checkout 仍拒絕非 null `couponClaimId`。
+- **文章 API** 延後；Blog 仍讀靜態 JSON。
+- **公開 calendar_dates 讀取** 未開；Admin 維護與 Booking 計價已用 DB。
 
 ## 8. 通過標準
 

@@ -2,6 +2,8 @@
 
 Spring Boot **4.1.0** / Java **25** / PostgreSQL 16。
 
+> **組員本機啟動（DB + 後端 + 前端 + Firebase）**：精簡步驟見 [`docs/local-dev-setup.md`](../docs/local-dev-setup.md)。
+
 ## 認證定案（重要）
 
 - 前端使用 **Firebase Auth** 登入後取得 **ID Token**。
@@ -118,7 +120,7 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 | **E-4 Booking 租借保留**            | ✅ 營區庫位解析、跨日 active 保留、後端租借計價與並發防超租；見 [`E-4 文件`](../docs/backend-specs/booking/e4-booking-rental-reservation.md) 與 [`公開／會員 API 驗證`](../docs/backend-specs/test/public-member-api-validation.md)            |
 | **E-5 會員預約讀取**                | ✅ 本人列表、分頁、詳情與 Checkout 快照；他人與不存在統一 404；見 [`E-5 文件`](../docs/backend-specs/booking/e5-booking-member-read.md) 與 [`公開／會員 API 驗證`](../docs/backend-specs/test/public-member-api-validation.md)                 |
 | **E-6 Booking 取消與逾時**          | ✅ 主動取消、每分鐘逾時掃描、營位恢復、租借保留釋放與鎖定競爭；見 [`E-6 文件`](../docs/backend-specs/booking/e6-booking-cancellation-expiration.md) 與 [`公開／會員 API 驗證`](../docs/backend-specs/test/public-member-api-validation.md)       |
-| **E-7 Booking 前端接線**            | ✅ Booking facade、ECPay launch、本人列表／詳情／取消及 15 分鐘倒數；Notify 入帳由線 D 負責；見 [`E-7 文件`](../docs/backend-specs/booking/e7-booking-frontend-integration.md) |
+| **E-7 Booking 前端接線**            | ✅ B3：cart soft／checkout hard lock；ECPay + contact O2；Notify 由線 D（stub ✅）；見 [`E-7 文件`](../docs/backend-specs/booking/e7-booking-frontend-integration.md) |
 | API 契約索引（P0+P1）               | [`docs/api/README.md`](../docs/api/README.md)                                                                                                                                                                                                            |
 | 商品契約（已實作）                  | [`docs/api/product-api-contract.md`](../docs/api/product-api-contract.md)                                                                                                                                                                                |
 | 代辦清單 A～J                       | [`plans/backend-implementation-checklist.md`](../plans/backend-implementation-checklist.md)                                                                                                                                                              |
@@ -129,7 +131,7 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 | **G-3 Admin Inventory**             | ✅ 異動 draft／明細／過帳／作廢等當日完成；**v0.17 通用 post 改稽核＋列級 `lineNature`（ADM-W2-08 已驗收）**；conversion store→rental 仍改庫存；見 [`G-3 文件`](../docs/backend-specs/inventory/g3-admin-inventory-movements.md) |
 | **G-4 Admin Coupons／Closures**     | ✅ 優惠券與營區公休 CRUD、安全刪除、建立者紀錄、RBAC、前端 backend-first 與 PostgreSQL 整合驗收完成；見 [`Coupon`](../docs/backend-specs/coupon/g4-admin-coupons.md)／[`Closures`](../docs/backend-specs/booking/g4-admin-campground-closures.md) |
 | **G-6 Admin Runtime**               | ✅ Firebase Google／dev Session、有效權限初始化、401 Token 刷新、readiness gate 與全站 Backend 切換完成；見 [`G-6 文件`](../docs/backend-specs/admin/g6-admin-runtime.md)                                                                                |
-| 結帳／ECPay／Admin CRUD             | 🔄 線 C／D stub／G post-G6 已完成；下一步真實綠界沙箱；Booking Coupon 待 F-2 |
+| 結帳／ECPay／Admin CRUD             | ✅ 線 C／D stub／G post-G6／Commerce UX polish；下一步：真實綠界沙箱、Booking Coupon Schema |
 
 ### Schema 整合驗證
 
