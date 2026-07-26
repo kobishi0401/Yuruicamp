@@ -112,6 +112,12 @@
     return value ? String(value).slice(0, 10) : '--';
   }
 
+  /** 商城／預約列表日期：統一 YYYY-MM-DD（對齊後台訂單列表） */
+  function commerceDate(value) {
+    if (!value) return '--';
+    return String(value).split(/[ T]/)[0] || '--';
+  }
+
   // 依 Firebase 或會員資料判斷目前登入管道，沒有資料時保持欄位可編輯。
   function currentAuthProvider() {
     var firebaseUser = window.YuruiFirebase?.getAuth?.()?.currentUser;
@@ -162,15 +168,15 @@
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   function orderDisplayId(order) {
     if (!order) return '--';
-    if (window.formatOrderDisplayId) return window.formatOrderDisplayId(order.id);
-    return String(order.id);
+    if (window.formatOrderDisplayId) return window.formatOrderDisplayId(order);
+    return String(order.id || order);
   }
 
   /** 露營預約編號 BK-0001 */
   function bookingDisplayId(booking) {
     if (!booking) return '--';
-    if (window.formatBookingDisplayId) return window.formatBookingDisplayId(booking.id);
-    return String(booking.id);
+    if (window.formatBookingDisplayId) return window.formatBookingDisplayId(booking);
+    return String(booking.id || booking);
   }
 
   function bookingTitle(booking) {
@@ -582,7 +588,7 @@
           '<p class="memberOrderMeta">' +
           html(orderDisplayId(o)) +
           ' ｜ ' +
-          html(o.createdAt || '--') +
+          html(commerceDate(o.createdAt || o.placedAt)) +
           ' ｜ ' +
           ((o.items || []).length || 0) +
           ' 件商品</p>' +
@@ -817,7 +823,7 @@
               '<article class="memberActivityItem">' +
               title +
               '<div class="memberActivityDate">' +
-              html(i.date || '--') +
+              html(commerceDate(i.date)) +
               '</div>' +
               '</article>'
             );
@@ -854,7 +860,10 @@
     var itemTitleLabel = type === 'rental' ? '預約明細' : '商品明細';
     var subtotalLabel = type === 'rental' ? '預約費用' : '商品小計';
     var shippingFee = Number(order.shippingFee || 0);
-    var orderDate = type === 'rental' ? order.submittedAt || '--' : order.createdAt || '--';
+    var orderDate =
+      type === 'rental'
+        ? commerceDate(order.submittedAt || order.createdAt)
+        : commerceDate(order.createdAt || order.placedAt);
     var orderTotal = type === 'rental' ? bookingAmount(order) : order.total;
     var orderSubtotal =
       type === 'rental'
@@ -1405,6 +1414,23 @@
       state.user = loginUser();
     }
 
+    // 正式模式從 GET /api/me/profile 讀取 DB 主檔（phone／birthday）；Mock 仍走 localStorage overlay。
+    if (state.user && window.API.memberProfile && window.API.memberProfile.get) {
+      try {
+        var dbProfile = await window.API.memberProfile.get();
+        if (dbProfile) {
+          state.user.name = dbProfile.name || state.user.name;
+          state.user.email = dbProfile.email || state.user.email;
+          state.user.phone = dbProfile.phone || state.user.phone;
+          state.user.birthday = dbProfile.birthday || state.user.birthday;
+          state.user.authProvider = dbProfile.authProvider || state.user.authProvider;
+          state.user.registeredAt = dbProfile.registeredAt || state.user.registeredAt;
+        }
+      } catch (error) {
+        console.warn('Member profile API load skipped', error);
+      }
+    }
+
     // 正式模式從會員本人 API 載入預設地址；沒有地址時維持空表單。
     if (state.user && window.API.shippingAddresses?.getDefault) {
       try {
@@ -1684,12 +1710,30 @@
         }
         if (
           window.API &&
+          window.API.memberProfile &&
+          window.API.memberProfile.update &&
+          state.user &&
+          state.user.id
+        ) {
+          // 正式模式寫入 customers 主檔；preferences 仍走 localStorage，不在 profile PATCH 範圍。
+          window.API.memberProfile
+            .update({
+              name: s.name,
+              phone: s.phone,
+              birthday: s.birthday || null,
+            })
+            .catch(function (err) {
+              console.warn('Sync member profile failed', err);
+              toast('會員資料同步失敗，請稍後再試', 'error');
+            });
+        } else if (
+          window.API &&
           window.API.customers &&
           window.API.customers.update &&
           state.user &&
           state.user.id
         ) {
-          // Google 信箱不送入會員資料更新，其他登入管道才允許修改。
+          // Mock 模式沿用 localStorage overlay。
           var profileUpdates = {
             name: s.name,
             phone: s.phone,

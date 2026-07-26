@@ -2,8 +2,8 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後） |
-| **日期** | 2026-07-25 |
+| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後；Post-G6 UX polish ✅） |
+| **日期** | 2026-07-26 |
 | **前提** | 線 G-1～G-6 已完成；見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) |
 | **契約現況** | [`docs/api/admin-api-contract.md`](../docs/api/admin-api-contract.md) v0.23 |
 | **Schema** | [`docs/latest_schema.sql`](../docs/latest_schema.sql) |
@@ -489,7 +489,7 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 ### ADM-W4-06　Analytics 專用彙總 API（K11）
 
 > 實作 Checklist：[`admin-post-g6/w4/ADM-W4-06-analytics-api.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api.md)  
-> **Spec（ready-for-agent）：** [`ADM-W4-06-analytics-api-spec.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api-spec.md)
+> **Spec（已完成 2026-07-26）：** [`ADM-W4-06-analytics-api-spec.md`](./admin-post-g6/w4/ADM-W4-06-analytics-api-spec.md)；追加 `categoryBreakdown` 見 [`.scratch/admin-storefront-polish/spec.md`](../.scratch/admin-storefront-polish/spec.md)
 
 | 欄位 | 內容 |
 |------|------|
@@ -576,3 +576,4 @@ W4 P2～P3  主檔與內容基建（營區營位／假日／文章／上傳／�
 | 2026-07-25 | **W3 Gate ✅**：對齊 Payment 契約 v0.2 §6／§7；線 D D-1～D-6 勾完；解鎖 W3-01～03（綠界退款 HTTP 仍屬 W3-02） |
 | 2026-07-25 | **W3 波次完成**：O1／O3／B1；Admin v0.19、Payment v0.3 stub 全額退款 port；下一步 W4 |
 | 2026-07-25 | **W4-06 完成＋手動驗收**：Analytics summary API；Admin v0.23；**W4 波次收斂**（04／05 延後） |
+| 2026-07-26 | **Post-G6 UX polish ✅**：Commerce UX（displayNo、B3、M2）、storefront-member-rental-ux、admin-storefront-polish、admin-customer-display-no；文件與 `.scratch` issues 同步勾完 |

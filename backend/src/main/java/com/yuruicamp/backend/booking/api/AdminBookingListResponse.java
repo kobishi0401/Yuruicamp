@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 public record AdminBookingListResponse(
 		String id,
+		String displayNo,
 		String customerId,
 		String customerName,
 		String campgroundId,

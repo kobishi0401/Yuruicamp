@@ -35,6 +35,7 @@ import com.yuruicamp.backend.customer.domain.Customer;
 import com.yuruicamp.backend.customer.infrastructure.CustomerRepository;
 import com.yuruicamp.backend.coupon.application.CouponService;
 import com.yuruicamp.backend.coupon.domain.CouponClaimStatus;
+import com.yuruicamp.backend.commerce.application.DisplayNoService;
 import com.yuruicamp.backend.inventory.domain.InventoryStock;
 import com.yuruicamp.backend.inventory.domain.ProductStockReservation;
 import com.yuruicamp.backend.inventory.infrastructure.InventoryStockRepository;
@@ -63,13 +64,14 @@ public class CheckoutService {
 	private final EquipmentImageRepository images;
 	private final CouponService couponService;
 	private final BranchRepository branches;
+	private final DisplayNoService displayNoService;
 
 	// 準備 Checkout 流程需要使用的資料庫元件。
 	public CheckoutService(CustomerRepository customers, CheckoutProductRepository products,
 			InventoryStockRepository stocks, ProductStockReservationRepository reservations,
 			OrderRepository orders, OrderStatusHistoryRepository histories,
 			EquipmentImageRepository images, CouponService couponService,
-			BranchRepository branches) {
+			BranchRepository branches, DisplayNoService displayNoService) {
 		this.customers = customers;
 		this.products = products;
 		this.stocks = stocks;
@@ -79,6 +81,7 @@ public class CheckoutService {
 		this.images = images;
 		this.couponService = couponService;
 		this.branches = branches;
+		this.displayNoService = displayNoService;
 	}
 
 	// 建立待付款訂單，並保留商品庫存 15 分鐘。
@@ -109,7 +112,7 @@ public class CheckoutService {
 		String recipient = firstNonBlank(shipping == null ? null : shipping.recipientName(), customer.getName(), PENDING);
 		String phone = firstNonBlank(shipping == null ? null : shipping.phone(), customer.getPhone(), PENDING);
 		Order order = new Order();
-		order.initialize(newOrderId(), customerId, idempotencyKey, requestHash,
+		order.initialize(newOrderId(), displayNoService.nextOrderDisplayNo(), customerId, idempotencyKey, requestHash,
 				firstNonBlank(customer.getName(), PENDING), firstNonBlank(customer.getEmail(), PENDING),
 				recipient, shippingSnapshot.address(), phone, shippingSnapshot.method(),
 				shippingSnapshot.pickupBranchId(), paymentMethod, now, expires);
@@ -442,7 +445,7 @@ public class CheckoutService {
 		boolean codConfirmed = order.getPaymentMethod() == PaymentMethod.cod
 				&& order.getCheckoutExpiresAt() == null
 				&& order.getStatus() != OrderStatus.cancelled;
-		return new CheckoutSessionResponse(order.getId(), order.getPaymentStatus().name(),
+		return new CheckoutSessionResponse(order.getId(), order.getDisplayNo(), order.getPaymentStatus().name(),
 				order.getPaymentMethod().name().replace('_', '-'), order.getStatus().name(),
 				order.getCheckoutExpiresAt() == null ? null : order.getCheckoutExpiresAt().toString(),
 				pricing, items, shipping, couponService.appliedClaimId(order.getId()),

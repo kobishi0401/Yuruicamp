@@ -137,7 +137,7 @@ public class BookingCheckoutRepository {
 	// 會員與冪等鍵唯一，可用來回放先前已建立的 Booking Checkout。
 	public Optional<BookingRow> findByIdempotencyKey(String customerId, String idempotencyKey) {
 		return jdbcTemplate.query("""
-				select id, customer_id, checkout_request_hash, campground_id,
+				select id, display_no, customer_id, checkout_request_hash, campground_id,
 				       campground_name_snapshot, region_snapshot, check_in, check_out,
 				       guest_count, weekday_count, holiday_count, zone_total,
 				       rental_total, applied_discount, final_amount,
@@ -167,18 +167,19 @@ public class BookingCheckoutRepository {
 	public void insertBooking(BookingInsert row) {
 		jdbcTemplate.update("""
 				insert into bookings (
-				    id, customer_id, checkout_idempotency_key, checkout_request_hash,
+				    id, display_no, customer_id, checkout_idempotency_key, checkout_request_hash,
 				    campground_id, campground_name_snapshot, region_snapshot,
 				    check_in, check_out, guest_count, weekday_count, holiday_count,
 				    zone_total, rental_total, applied_discount, final_amount,
 				    payment_method, payment_status, checkout_expires_at,
 				    status, created_at, updated_at
 				)
-				values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?,
+				values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?,
 				        ?::payment_method, 'unpaid'::payment_status, ?,
 				        'pending'::booking_status, ?, ?)
 				""",
 				row.id(),
+				row.displayNo(),
 				row.customerId(),
 				row.idempotencyKey(),
 				row.requestHash(),
@@ -321,7 +322,7 @@ public class BookingCheckoutRepository {
 
 	public Optional<BookingRow> findById(String bookingId) {
 		return jdbcTemplate.query("""
-				select id, customer_id, checkout_request_hash, campground_id,
+				select id, display_no, customer_id, checkout_request_hash, campground_id,
 				       campground_name_snapshot, region_snapshot, check_in, check_out,
 				       guest_count, weekday_count, holiday_count, zone_total,
 				       rental_total, applied_discount, final_amount,
@@ -337,6 +338,7 @@ public class BookingCheckoutRepository {
 	private BookingRow toBookingRow(java.sql.ResultSet rs) throws java.sql.SQLException {
 		return new BookingRow(
 				rs.getString("id"),
+				rs.getString("display_no"),
 				rs.getString("customer_id"),
 				rs.getString("checkout_request_hash"),
 				rs.getString("campground_id"),
@@ -355,6 +357,22 @@ public class BookingCheckoutRepository {
 				rs.getString("payment_status"),
 				rs.getString("status"),
 				rs.getObject("checkout_expires_at", OffsetDateTime.class).toInstant());
+	}
+
+	public void updateContactSnapshot(
+			String bookingId,
+			String name,
+			String phone,
+			String email,
+			Instant updatedAt) {
+		jdbcTemplate.update("""
+				update bookings
+				set contact_name_snapshot = ?,
+				    contact_phone_snapshot = ?,
+				    contact_email_snapshot = ?,
+				    updated_at = ?
+				where id = ?
+				""", name.trim(), phone.trim(), email.trim(), utc(updatedAt), bookingId);
 	}
 
 	private OffsetDateTime utc(Instant value) {
@@ -386,6 +404,7 @@ public class BookingCheckoutRepository {
 
 	public record BookingInsert(
 			String id,
+			String displayNo,
 			String customerId,
 			String idempotencyKey,
 			String requestHash,
@@ -427,6 +446,7 @@ public class BookingCheckoutRepository {
 
 	public record BookingRow(
 			String id,
+			String displayNo,
 			String customerId,
 			String requestHash,
 			String campgroundId,

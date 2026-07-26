@@ -3,7 +3,7 @@
 | 欄位             | 內容                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
 | **狀態**         | Active                                                                                |
-| **日期**         | 2026-07-20                                                                            |
+| **日期**         | 2026-07-26                                                                            |
 | **對齊**         | [`java-backend-architecture-proposal.md`](./java-backend-architecture-proposal.md) §8 |
 | **API 契約索引** | [`docs/api/README.md`](../docs/api/README.md)（P0+P1 已寫死，欄位策略甲）             |
 | **商品契約**     | [`docs/api/product-api-contract.md`](../docs/api/product-api-contract.md)             |
@@ -19,14 +19,14 @@
 | Schema   | DB 欄位／ENUM／保留逾時                      | ✅                                                  |
 | **契約** | P0+P1 API Contracts（甲）                    | ✅ 見 [`docs/api/README.md`](../docs/api/README.md) |
 | **A**    | 骨架（Security／Session／Envelope／OpenAPI） | ✅                                                  |
-| **B**    | Catalog 公開讀（商品）                       | 🔄 B-4 已驗收；B-5b、B-7 已實作，待完整驗收           |
-| **C**    | Checkout + 庫存保留 + 15 分排程              | ✅ C-1～C-8 已驗收；C-4 優惠券套用另待 F-2          |
-| **D**    | Payment（ECPay + COD）                       | ⬜（契約已鎖）                                      |
-| **E**    | Booking（營位 + 租借）                       | ✅ E-0～E-7 已完成；Payment Confirmation 延後至線 D |
-| **F**    | Coupon 三種規則                              | ⬜（契約已鎖）                                      |
+| **B**    | Catalog 公開讀（商品）                       | ✅ B-1～B-7 已實作（B-5b 可售庫存、B-7 公開門市）     |
+| **C**    | Checkout + 庫存保留 + 15 分排程              | ✅ C-1～C-8 已驗收（C-4 商城優惠券套用已完成）        |
+| **D**    | Payment（ECPay + COD）                       | ✅ D-1～D-6 stub 驗收完成（2026-07-25）             |
+| **E**    | Booking（營位 + 租借）                       | ✅ E-0～E-7 已完成；Notify 入帳由線 D 負責           |
+| **F**    | Coupon 三種規則                              | 🔄 商城 F-2 ✅；Booking 套券待 Schema（仍拒非 null）  |
 | **G**    | Admin 細 RBAC + 後台 CRUD                    | ✅ G-1～G-6 正式接線與整合驗收完成                  |
-| **H**    | calendar／文章／評價                         | ⬜（可延後；契約未寫）                              |
-| **I**    | 共用 REST 基礎 + 商城 Checkout 前端接線      | 🔄 I-1～I-6 已完成；I-8 非付款驗收已完成，I-7 與付款驗收待線 D |
+| **H**    | calendar／文章／評價                         | 🔄 H-3 評價 ✅；H-1 Admin 假日曆 ✅（公開讀 ⬜）；H-2 文章 ⏭️ |
+| **I**    | 共用 REST 基礎 + 商城 Checkout 前端接線      | ✅ I-1～I-8 已完成（2026-07-25 瀏覽器手動驗收）     |
 | **J**    | GCP／Flyway／ADR 收尾                        | ⬜                                                  |
 
 ---
@@ -70,9 +70,9 @@
 | B-3  | 分頁 `page`／`size`／`sort`           | ✅ PostgreSQL／Controller 整合驗收通過（Product API Contract v0.2）               |
 | B-4  | 篩選 category／brand／價格            | ✅ PostgreSQL 實際端點驗收通過；無篩選、品牌、價格與錯誤區間皆符合契約            |
 | B-5a | 基本商品規格 `variants[]`             | ✅ 已隨 B-1／B-2 落地；只回 active variant，包含 SKU／顏色／尺寸／規格／價格      |
-| B-5b | 規格層級可售庫存（View／Read Model）  | 🔄 Product API Contract v0.3 與程式已完成；待 PostgreSQL 驗收                     |
+| B-5b | 規格層級可售庫存（View／Read Model）  | ✅ Product API v0.3；`availableQuantity`／`inStock` 已落地並供前台顯示 |
 | B-6  | Security：`GET /api/products/**` 公開 | ✅                                                                                |
-| B-7  | （作業）`GET /api/branches` 同套路    | 🔄 已實作公開 Envelope、固定排序與 Swagger；待實際端點驗收                        |
+| B-7  | （作業）`GET /api/branches` 同套路    | ✅ 公開 Envelope、固定排序；見 [`branch-api-contract.md`](../docs/api/branch-api-contract.md) |
 
 **驗收**
 
@@ -81,7 +81,7 @@
 - [x] Swagger Tag：`Catalog`
 - [x] Mock／後端皆對齊 [`product-api-contract.md`](../docs/api/product-api-contract.md)（Mock 以 `_toProductContract` 正規化）
 - [x] 基本 `variants[]` 隨列表／詳情回傳，只包含 active variant，價格為兩位小數字串
-- [ ] 規格層級可售庫存：讀模型與 API 欄位已完成，待 PostgreSQL 驗證後勾選
+- [x] 規格層級可售庫存：讀模型與 API 欄位已完成；前台列表／詳情／首頁顯示「剩餘 N 件」
 - [x] B-3：非空分頁、跨頁無重複／遺漏、`id`／`name` 雙向 PostgreSQL 排序、參數錯誤 Envelope、超頁 meta 與實際 Controller 驗收
 
 > B-3 驗收細節與執行指令見 [`b3-product-pagination-validation.md`](../docs/backend-specs/catalog/b3-product-pagination-validation.md)。
@@ -95,7 +95,7 @@
 - [x] C-2 `POST /api/checkout/sessions`（D1.A 待付款 + 保留帳；會員層冪等、Payload 指紋與空值保障已驗收）
 - [x] Checkout Read `GET /api/checkout/sessions/{orderId}`（本人限制、完整 Session 快照、Bearer 與 PostgreSQL 驗收完成）
 - [x] C-3 交易內悲觀鎖／防超賣（PostgreSQL 雙執行緒競爭最後一件庫存，只有一筆成功）
-- [x] C-4 `PATCH .../sessions/{orderId}`（收件資料、付款方式、本人限制、期限檢查與悲觀鎖已完成；**優惠券功能尚未完成，等待 F-2**）
+- [x] C-4 `PATCH .../sessions/{orderId}`（收件資料、付款方式、本人限制、期限檢查與悲觀鎖已完成；**商城優惠券套用已完成**）
 - [x] C-5 `POST .../cancel`（PostgreSQL 驗證保留帳由 `active` 改為 `released`）
 - [x] C-6 `@Scheduled` 15 分鐘逾時釋放（每分鐘掃描；訂單鎖定、取消、保留帳 `expired` 與歷程同交易完成）
 - [x] C-7 金額後端重算（偽造 `unitPrice`／`total` 不會覆蓋資料庫價格）
@@ -139,7 +139,7 @@
 ## 線 F — Coupon（P1）
 
 - [x] F-1 可領列表／我的券
-- [ ] F-2 結帳三種券規則（商城 C-4 套用／切換／清除已完成；Booking 缺少 Coupon 關聯 Schema，仍維持拒絕非 null）
+- [ ] F-2 結帳三種券規則（**商城** C-4 套用／切換／清除 ✅；**Booking** 缺少 Coupon 關聯 Schema，仍維持拒絕非 null）
 - [x] F-3 與 DB Trigger 不打架（Service 管資格與折扣；Trigger 僅原子配置名額）
 - [x] F-4 測試：名額、重複領券、售罄、資格、後端折扣快照與取消規則通過 PostgreSQL 驗證
 
@@ -163,7 +163,7 @@
 - [x] G-5 管理員建立／列表／詳情／更新與個別權限覆寫 API（PostgreSQL 整合驗收通過）
 - [x] G-6 正式 Admin Runtime（Firebase Session、有效權限、Token 刷新、readiness gate 與全站 Backend 切換）
 
-> G-6 由 `AppConfig.ADMIN.USE_BACKEND` 與 `AdminRuntime` 統一啟動，不再依賴 DevTools 手動 configure。Dashboard 每次載入重新建立 Admin Session 與有效權限；Reviews、標籤池、seller note、租借商品寫入等缺少正式端點的功能由 readiness gate 停用。流程見 [`admin/g6-admin-runtime.md`](../docs/backend-specs/admin/g6-admin-runtime.md)，前端驗收見 [`admin-validation.md`](../docs/frontend-specs/test/admin-validation.md)。
+> G-6 由 `AppConfig.ADMIN.USE_BACKEND` 與 `AdminRuntime` 統一啟動，不再依賴 DevTools 手動 configure。Dashboard 每次載入重新建立 Admin Session 與有效權限。**G-6 之後 W1～W4 擴充（含 Reviews、標籤池、seller note、租借寫入、Analytics 等）已完成**；見 [`admin-post-g6/README.md`](./admin-post-g6/README.md)。Post-G6 UX polish（displayNo、B3、Analytics 甜甜圈等）見 [`.scratch/`](../.scratch/) 各 spec（2026-07-26 ✅）。
 
 > G 線最終整合於 2026-07-22 同批執行六個 PostgreSQL 類別，共 14 tests、0 failure、0 error、0 skipped；未納入現行契約的 Reviews、標籤池、seller note 與租借商品寫入屬後續擴充，不以假端點冒充 G-6 完成。
 
@@ -183,9 +183,10 @@
 
 ## 線 H — 可延後（P2）
 
-- [ ] H-1 `calendar_dates` API
-- [ ] H-2 文章 API
-- [ ] H-3 評價 API
+- [x] H-1 Admin `calendar_dates` CRUD（ADM-W4-03 ✅；Booking 計價已讀假日表）
+- [ ] H-1b 公開 `calendar_dates` 讀取 API（若前台需獨立端點再開）
+- [ ] H-2 文章 API（⏭️ 延後；內容仍用 `articles.json`）
+- [x] H-3 評價 API（會員 `GET/POST /api/me/reviews`、公開 `GET /api/products/{id}/reviews` ✅）
 
 ---
 
@@ -205,10 +206,11 @@
   - [x] I-5c 移除信用卡欄位與驗證，ECPay 僅顯示下一步提示
   - [x] I-5d Backend 模式停用前端優惠券交易與折扣，等待線 F
 - [x] I-6 CheckoutSession／錯誤／倒數 UI（Draft PATCH、Ready 15 分倒數、Expired／Cancelled 清理與錯誤操作已完成）
-- [ ] I-7 COD 或 ECPay 接線（依賴線 D）
-- [ ] I-8 商城 Checkout 前端整合驗收與文件
+- [x] I-7 COD 與 ECPay 接線（`checkout.js`：`confirmCod`／`createEcpayForm`＋`_submitEcpayForm`；`booking-checkout.js`：`launchEcpayPayment`；2026-07-25 PostgreSQL IT 26 項通過＋live `simulate-paid`；真實綠界 HTTP 與瀏覽器手動見 I-8／部署前）
+- [x] I-8 商城 Checkout 前端整合驗收與文件（2026-07-25 Firebase 登入：商城 ECPay stub→`paid`、COD `confirm-cod`→`completed`+`unpaid`、預約 ECPay→`paid`+`pending`；成功頁以 `GET` session／booking 確認）
 
-> **2026-07-22 線 D 前置驗收**：已完成建立、冪等、防超賣、PATCH、優惠券、GET、取消、逾時，以及 Checkout 狀態頁的 `unpaid`／倒數／取消／逾時／錯誤呈現。I-8 暫不勾選；COD、ECPay、Notify 冪等、付款成功、優惠券 `consumed` 與庫存／租借 fulfilled 必須在線 D 完成後再驗收。
+> **2026-07-25 I-7 驗收**：`EcpayLaunchReturnPostgreSqlIntegrationTest`（launch／stub aio-checkout→paid／Return 不標 paid／COD confirm）、`PaymentNotifyPostgreSqlIntegrationTest`（Notify 冪等／商城 fulfilled／預約 paid+pending）、`CheckoutPostgreSqlIntegrationTest`、`BookingCheckoutIntegrationTest`；live 後端 `POST /api/payments/ecpay/stub/simulate-paid` 通過。  
+> **2026-07-25 I-8 驗收**：瀏覽器手動（Firebase Google 登入）— 商城 ECPay、商城 COD、預約 ECPay 三條路徑通過；下一步見 [`post-firebase-roadmap-checklist.md`](./post-firebase-roadmap-checklist.md) §5 真實綠界沙箱。
 
 > **責任邊界**：I-1 是全域模式基線；I-2a～I-2b 是全前端共用 API 基礎；I-3a～I-8 只負責商城 Checkout。E-7 負責 Booking 前端接線，必須重用 I-2a／I-2b，不可另建 Token、REST、Envelope 或錯誤處理流程。
 

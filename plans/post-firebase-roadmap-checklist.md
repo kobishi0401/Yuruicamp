@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | 生效中（2026-07-22） |
+| **狀態** | 生效中（2026-07-26） |
 | **Firebase 主線** | **已完成**（見下方「已完成」） |
 | **定位** | 登入／Auth 之後的業務債與加固；**不是**再重做 Firebase 接線 |
 | **相關** | [`docs/frontend-specs/firebase-merge-into-main-notes.md`](../docs/frontend-specs/firebase-merge-into-main-notes.md) |
@@ -49,9 +49,9 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 
 | ID | 項目 | 狀態 | 說明 |
 |----|------|------|------|
-| **BK-1** | 記錄失敗的 HTTP／`error.code`／`message` | 待做 | Network：`POST /api/booking/checkout/sessions` |
-| **BK-2** | 確認 payload 對齊 seed | 待做 | 營區／營位／租借要用 seed（如 `C002`、`C002-Z-A`、`RL-DEV-C002-001`）；勿用舊 mock ID |
-| **BK-3** | 對照後端錯誤碼修資料或前端組裝 | 待做 | 例：`ZONE_UNAVAILABLE`、`RENTAL_STOCK_INSUFFICIENT`、`BOOKING_DATE_INVALID`、`VALIDATION_ERROR` |
+| **BK-1** | 記錄失敗的 HTTP／`error.code`／`message` | **可略** | 2026-07-25 手動建單已通；遇問題再記 Network |
+| **BK-2** | 確認 payload 對齊 seed | **可略** | 營區／營位／租借要用 seed（如 `C002`、`C002-Z-A`、`RL-DEV-C002-001`） |
+| **BK-3** | 對照後端錯誤碼修資料或前端組裝 | **可略** | 例：`ZONE_UNAVAILABLE`、`RENTAL_STOCK_INSUFFICIENT` |
 
 手動驗收入口：[`docs/frontend-specs/test/commerce-booking-validation.md`](../docs/frontend-specs/test/commerce-booking-validation.md)
 
@@ -70,7 +70,7 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 | ID | 項目 | 狀態 | 說明 |
 |----|------|------|------|
 | **CK-4** | 優惠券套用（後端 F-2） | **已完成** | Backend UI 以券碼取得會員 claim，PATCH `couponClaimId`，成交金額只採後端 `pricing`；支援空 PATCH 移除 |
-| **CK-5** | 付款後續（ECPay／confirm-cod 等） | 延後 | 契約上建立 session ≠ 付完款；見 checkout 規格「後續工作」 |
+| **CK-5** | 付款後續（ECPay／confirm-cod 等） | **已完成** | 2026-07-25 stub 全流程 IT：`launch`→`stub/aio-checkout`→Notify→`paid`；COD `confirm-cod`；預約 Notify 後 `paid`＋`pending`；IT 類別見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) I-7 備註；瀏覽器 Firebase 手動可選補驗 |
 
 ---
 
@@ -94,7 +94,7 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 | ID | 項目 | 狀態 | 說明 |
 |----|------|------|------|
 | **ENG-1** | 階段 1／3／4 變更 commit／PR | 待做 | 需負責人明確下指令再 commit／開 PR（勿自動推） |
-| **ENG-2** | 本 checklist 維持更新 | 進行中 | Firebase 主線勾完成；BK／CK 當業務債追蹤 |
+| **ENG-2** | 本 checklist 維持更新 | **已完成**（2026-07-26） | Commerce UX／polish spec 已勾完成 |
 | **ENG-3** | 協作者入口 | 已連結 | merge notes §6 指到本文件 |
 
 ---
@@ -107,7 +107,12 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 4. ~~**FA-2**（401 加固）~~ → **已完成**  
 5. **ENG-1**（commit／PR）  
 6. ~~**CK-4**（商城正式優惠券 UI）~~ → **已完成**
-7. 之後再排 CK-5、FA-1、FA-3
+7. ~~**CK-5**（ECPay stub 付款閉環）~~ → **已完成**（2026-07-25 IT）  
+8. ~~**I-8** 瀏覽器手動（Firebase 登入＋商城 COD／ECPay＋預約 ECPay）~~ → **已完成**（2026-07-25）  
+9. ~~**Commerce UX**（displayNo、B3 鎖庫、M2 一次 ECPay、庫存 UI）~~ → **已完成**（2026-07-26；見 [`.scratch/commerce-ux-display-checkout/spec.md`](../.scratch/commerce-ux-display-checkout/spec.md)、[`storefront-member-rental-ux`](../.scratch/storefront-member-rental-ux/spec.md)、[`admin-storefront-polish`](../.scratch/admin-storefront-polish/spec.md)）  
+10. **真實綠界沙箱**（`stub=false`＋公網 Notify URL）← **下一步 B** — 見 [`docs/backend-specs/payment/ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)  
+11. **ENG-1**（commit／PR）  
+12. **FA-1**、**FA-3**（可平行）
 
 ---
 
@@ -122,3 +127,11 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 5. 是否已重新登入且 `GET /api/me` 成功  
 
 有以上資訊即可對症，無需先改 Firebase。
+
+---
+
+## 7. 變更紀錄
+
+| 日期 | 說明 |
+|------|------|
+| 2026-07-26 | Commerce UX／storefront polish／member-rental-ux 標 **已完成**；BK 診斷改「可略」；ENG-2 勾完；下一步 B 仍為真實綠界沙箱 |

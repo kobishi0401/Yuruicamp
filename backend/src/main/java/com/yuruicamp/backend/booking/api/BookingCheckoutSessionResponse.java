@@ -5,6 +5,7 @@ import java.util.List;
 // 回傳已建立或由冪等鍵回放的 Booking Checkout。
 public record BookingCheckoutSessionResponse(
 		String bookingId,
+		String displayNo,
 		String status,
 		String paymentStatus,
 		String paymentMethod,

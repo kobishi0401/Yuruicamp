@@ -103,7 +103,7 @@ class AdminOrderServiceTest {
 
 	private static AdminOrderReadRepository.DetailRow detail(String status) {
 		return new AdminOrderReadRepository.DetailRow(
-				"O1", "C1", "Customer", "active", "Buyer", "buyer@example.test",
+				"O1", "ORD-0001", "C1", "Customer", "active", "Buyer", "buyer@example.test",
 				"Recipient", "0900", "Address", java.math.BigDecimal.ZERO,
 				java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
 				"ecpay-credit", "paid", "none", status, null, Instant.EPOCH, Instant.EPOCH, Instant.EPOCH);

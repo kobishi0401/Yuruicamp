@@ -3,7 +3,8 @@
 | 欄位         | 內容                                                                                                          |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | **狀態**     | Locked（E-1～E-7 已實作；Booking Prepare／Reservation 完成，Payment Confirmation 延後至線 D）                 |
-| **日期**     | 2026-07-23                                                                                                    |
+| **日期**     | 2026-07-26                                                                                                    |
+| **Commerce UX** | `displayNo`、booking-checkout 進頁鎖位、ecpay contact 快照 → [`../backend-specs/commerce/display-numbers-and-checkout-ux.md`](../backend-specs/commerce/display-numbers-and-checkout-ux.md) |
 | **版本**     | 1.0                                                                                                           |
 | **共用**     | [`common-api-conventions.md`](./common-api-conventions.md)                                                    |
 | **相關**     | [`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md)  |
@@ -134,11 +135,16 @@
 | `campgroundId`     | string                | 是          |
 | `checkIn`          | string (`YYYY-MM-DD`) | 是          |
 | `checkOut`         | string (`YYYY-MM-DD`) | 是          |
-| `zones`            | array                 | 是          |
+| `zones`            | array                 | 否（與 `rentals` 至少一項） |
 | `zones[].zoneId`   | string                | 是          |
 | `zones[].quantity` | integer               | 是（`> 0`） |
+| `rentals`          | array                 | 否          |
+| `rentals[].rentalListingId` | string       | 是          |
+| `rentals[].quantity` | integer             | 否（預設 1，`> 0`） |
 
-同一個 `zoneId` 不可重複傳入；重複時回 `400 VALIDATION_ERROR`。
+`zones` 與 `rentals` 至少需有一項非空；兩者皆空回 `400 VALIDATION_ERROR`。
+
+同一個 `zoneId` 或 `rentalListingId` 不可重複傳入；重複時回 `400 VALIDATION_ERROR`。
 
 **Response `data`：**
 
@@ -147,15 +153,18 @@
 | `available` | boolean  |
 | `reasons`   | string[] | 不可訂原因（可空）                              |
 | `zones`     | array    | 各區 `zoneId`、`requested`、`availableQuantity` |
+| `rentals`   | array    | 各 listing `rentalListingId`、`requested`、`availableQuantity` |
 
 可用性規則：
 
 - 住宿區間固定採 `[checkIn, checkOut)`，退房日不占用營位。
-- `availableQuantity` 是該 zone 在整段住宿期間「每天剩餘量的最小值」，不可只看入住日。
+- **營位** `availableQuantity` 是該 zone 在整段住宿期間「每天剩餘量的最小值」，不可只看入住日。
+- **租借** `availableQuantity = on_hand_quantity − 重疊 active 保留量`（與 checkout 建單公式一致）。
 - 任一住宿日晚間命中營區公休，整筆結果 `available=false`。
 - 任一 zone 的 `requested > availableQuantity`，整筆結果 `available=false`。
+- 任一 rental 的 `requested > availableQuantity`，整筆結果 `available=false`。
 - 正常完成查詢時固定回 HTTP 200；即使不可訂，也以 `available=false` 與 `reasons` 表示，不用 409。
-- `reasons` 使用穩定代碼，順序固定為 `CAMPGROUND_CLOSED`、`ZONE_UNAVAILABLE`；兩者可能同時出現。
+- `reasons` 使用穩定代碼，順序固定為 `CAMPGROUND_CLOSED`、`ZONE_UNAVAILABLE`、`RENTAL_UNAVAILABLE`；可能同時出現。
 - 日期格式錯誤或 `checkOut <= checkIn` 回 `400 BOOKING_DATE_INVALID`。
 - `checkIn` 早於 `today + advanceDays`、晚於 `today + bookingWindowDays`，或晚數超過 `maxNights`，回 `400 BOOKING_WINDOW_EXCEEDED`。窗口邊界日可預約。
 - 「今天」依 policy 的 `Asia/Taipei` 時區判斷。
@@ -210,7 +219,8 @@
 
 | JSON                           | 型別    | DB／說明                                                                             |
 | ------------------------------ | ------- | ------------------------------------------------------------------------------------ |
-| `bookingId`                    | string  | `bookings.id`                                                                        |
+| `bookingId`                    | string  | `bookings.id`（內部主鍵）                                                            |
+| `displayNo`                    | string  | `bookings.display_no`；例 `BK-0042`（**planned**，Commerce UX spec）                  |
 | `status`                       | string  | `pending`（進結帳）                                                                  |
 | `paymentStatus`                | string  | `unpaid`                                                                             |
 | `paymentMethod`                | string  | 非 `cod`                                                                             |
@@ -353,13 +363,29 @@ rental_sku_variant_stocks.on_hand_quantity
 | 項目                                         | 原因                                                 |
 | -------------------------------------------- | ---------------------------------------------------- |
 | COD                                          | DB／產品禁止                                         |
-| `/booking/checkout/sessions/{id}/ecpay`      | 延後至線 D；線 E 不產生綠界表單                      |
+| `/booking/checkout/sessions/{id}/ecpay`      | **已實作**（線 D）；Commerce UX 將增 contact Request body |
 | 優惠券套用                                   | 延後至線 F；目前 `couponClaimId` 只能省略或為 `null` |
 | 付款後 `confirmed`                           | 付款真相必須由線 D 的 ECPay Notify webhook 寫入      |
 | 舊 Mock 胖欄位（隨意 picsum 欄）             | 不當契約真相                                         |
 | 前端直接 `POST /booking/bookings` 當建單真相 | 改走 checkout sessions                               |
 
-線 E 的完成定義是 Booking Prepare／Reservation：前端可查詢、建立 `pending + unpaid`、讀取本人預約、主動取消並等待逾時釋放。ECPay 表單、Notify 驗簽、`paid`、`confirmed` 與付款後導頁屬線 D，前端不得先模擬成功。
+線 E 的完成定義是 Booking Prepare／Reservation：前端可查詢、建立 `pending + unpaid`、讀取本人預約、主動取消並等待逾時釋放。ECPay 表單、Notify 驗簽、`paid` 與付款後導頁屬線 D；`confirmed` 仍由後台確認。
+
+### 7.1 ECPay Launch + 聯絡快照（Commerce UX，planned）
+
+`POST /api/booking/checkout/sessions/{bookingId}/ecpay`
+
+Request body（新增）：
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| `contact.name` | string | 是 | 寫入 `bookings.contact_name_snapshot` |
+| `contact.phone` | string | 是 | 寫入 `contact_phone_snapshot` |
+| `contact.email` | string | 是 | 寫入 `contact_email_snapshot` |
+
+同一 transaction 驗證可付 → 寫快照 → 回傳 Payment Launch（與 [`payment-api-contract.md`](./payment-api-contract.md) 一致）。
+
+**前端 B3**：`POST /booking/checkout/sessions` 改在 **booking-checkout 進頁**呼叫，不在 booking-cart 進頁。
 
 ---
 
@@ -367,6 +393,7 @@ rental_sku_variant_stocks.on_hand_quantity
 
 | 版本 | 日期       | 說明                                                                                                                   |
 | ---- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1.1  | 2026-07-26 | Commerce UX：`displayNo`、ecpay contact 快照、booking-checkout 進頁鎖位（spec）                                        |
 | 1.0  | 2026-07-23 | 公開營區列表與詳情補回 `environmentTags`、`facilityTags`，供前台環境特徵與設施篩選使用                                 |
 | 0.9  | 2026-07-21 | E-7 前端接線完成；統一 facade 路徑、Bearer／Envelope／meta、後端可用性與價格、Booking ID、倒數及 Payment Deferred 邊界 |
 | 0.8  | 2026-07-21 | E-6 主動取消與 15 分鐘逾時釋放已實作；鎖定狀態競爭、租借 released 與歷程冪等                                           |

@@ -28,9 +28,8 @@
 - 後端已實作：建立、讀取、更新、COD 確認、取消。
 - `getSession()` 可供重新整理、跨頁導向與付款返回後恢復最新 Session，不延長 Checkout 期限。
 - `confirmCod()` 成功回傳 `checkoutStep=completed` 與 `checkoutExpiresAt=null`；付款狀態仍是 `unpaid`。
-- 等待 Payment 線 D：建立 ECPay 表單、Notify 驗簽與付款落帳。
-- Mock 支援 COD 成立狀態；ECPay 仍明確回 `PAYMENT_NOT_IMPLEMENTED`。
-- `cart.html` 使用 `API.checkout.createSession()` 建立 Draft；`checkout.html` 只更新既有 Session，不再呼叫 Legacy `orders.create()`。
+- Payment 線 D（stub）已完成：ECPay launch、Notify、COD；真實沙箱見 [`ecpay-sandbox-validation.md`](../../backend-specs/payment/ecpay-sandbox-validation.md)。
+- **B3**：`cart.html` **不**呼叫 `createSession`（僅 soft 驗量）；`checkout.html` 進頁登入後才 `createSession` hard lock。不再呼叫 Legacy `orders.create()`。
 
 ## 建立 Request
 

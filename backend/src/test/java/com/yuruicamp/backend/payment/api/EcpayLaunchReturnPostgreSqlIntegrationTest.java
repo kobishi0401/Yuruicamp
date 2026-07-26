@@ -100,6 +100,22 @@ class EcpayLaunchReturnPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void returnPostAllowsEcpayStageOrigin() throws Exception {
+		// 真沙箱：綠界 stage 以 form POST 導回，Origin 為 payment-stage.ecpay.com.tw。
+		mockMvc.perform(post("/api/payments/ecpay/return")
+						.header("Origin", "https://payment-stage.ecpay.com.tw")
+						.contentType(MediaType.APPLICATION_FORM_URLENCODED)
+						.param("RtnCode", "1")
+						.param("CustomField1", "order:" + ORDER_ID)
+						.param("MerchantTradeNo", "YSTUB"))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", org.hamcrest.Matchers.containsString(
+						"orderId=" + ORDER_ID)));
+
+		assertThat(paymentStatus()).isEqualTo("unpaid");
+	}
+
+	@Test
 	void stubAioCheckoutMarksPaidThenRedirects() throws Exception {
 		MvcResult launch = mockMvc.perform(post("/api/checkout/sessions/{orderId}/ecpay", ORDER_ID)
 						.header("Authorization", bearer()))

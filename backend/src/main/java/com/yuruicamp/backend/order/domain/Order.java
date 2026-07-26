@@ -28,6 +28,9 @@ public class Order {
 	@Column(length = 32)
 	private String id;
 
+	@Column(name = "display_no", nullable = false, length = 16)
+	private String displayNo;
+
 	@Column(name = "customer_id", nullable = false, length = 32)
 	private String customerId;
 
@@ -107,6 +110,10 @@ public class Order {
 
 	public String getId() {
 		return id;
+	}
+
+	public String getDisplayNo() {
+		return displayNo;
 	}
 
 	public String getCustomerId() {
@@ -200,6 +207,7 @@ public class Order {
 	// 建立待付款訂單，並保存冪等鍵與請求指紋。
 	public void initialize(
 			String id,
+			String displayNo,
 			String customerId,
 			String checkoutIdempotencyKey,
 			String checkoutRequestHash,
@@ -214,6 +222,7 @@ public class Order {
 			Instant now,
 			Instant expiresAt) {
 		this.id = id;
+		this.displayNo = displayNo;
 		this.customerId = customerId;
 		this.checkoutIdempotencyKey = checkoutIdempotencyKey;
 		this.checkoutRequestHash = checkoutRequestHash;

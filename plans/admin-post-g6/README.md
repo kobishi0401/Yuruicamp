@@ -2,8 +2,8 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後） |
-| **日期** | 2026-07-25 |
+| **狀態** | Active（W1～W4 ✅；W4-04／05 ⏭️ 延後；Post-G6 UX polish ✅ 2026-07-26） |
+| **日期** | 2026-07-26 |
 | **總覽（需求／波次／依賴）** | [`../admin-post-g6-task-list.md`](../admin-post-g6-task-list.md) |
 | **契約** | [`../../docs/api/admin-api-contract.md`](../../docs/api/admin-api-contract.md) |
 | **Schema 變更流程** | [`../backend-schema-change-checklist.md`](../backend-schema-change-checklist.md) |
@@ -113,3 +113,4 @@
 | 2026-07-25 | **W4-03 完成**：`calendar_dates` Admin CRUD；Admin v0.22；預約排程「特殊節日曆」Modal；下一步 W4-04 文章 |
 | 2026-07-25 | **W4-06 完成**：`shop-summary`／`booking-summary`；Admin v0.23；前端改打 summary API |
 | 2026-07-25 | **W4 波次收斂**：手動驗收通過；04／05 延後；post-G6 主線 W1～W4 ✅ |
+| 2026-07-26 | **Post-G6 UX polish ✅**：displayNo、B3/M2、Analytics `categoryBreakdown`、會員 Profile、storefront/admin polish — 見 [`.scratch/`](../../.scratch/) 各 spec |

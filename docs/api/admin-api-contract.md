@@ -1,10 +1,10 @@
-# Admin API Contract（v0.23）
+# Admin API Contract（v0.24）
 
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Locked（G-1～G-6 已實作；W1～W3；W4-01～03；W4-06 Analytics） |
-| **日期** | 2026-07-25 |
-| **版本** | 0.23 |
+| **日期** | 2026-07-26 |
+| **版本** | 0.24 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **Base** | `/api/admin` |
 | **認證** | Bearer Firebase ID Token + `admin_users` 白名單 + `active=true` |
@@ -304,8 +304,8 @@ Request：
 
 | 方法 | 路徑 | 權限 | 說明 |
 |------|------|------|------|
-| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序 |
-| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、狀態歷程與 `internalNote` |
+| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
+| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、中文狀態歷程、`internalNote` |
 | `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped` |
 | `POST` | `/api/admin/orders/{id}/complete` | `orders.edit` | `shipped` → `completed`；COD 同交易標記 paid |
 | `POST` | `/api/admin/orders/{id}/cancel` | `orders.edit` | 未出貨取消 O1（W3-01）；已付款線上單同交易退款 O3 |
@@ -365,8 +365,8 @@ Request：
 
 | 方法 | 路徑 | 權限 | 說明 |
 |------|------|------|------|
-| `GET` | `/api/admin/bookings` | `bookings.view` | 分頁、篩選與排序 |
-| `GET` | `/api/admin/bookings/{id}` | `bookings.view` | 營位、租借快照、狀態歷程與 `internalNote` |
+| `GET` | `/api/admin/bookings` | `bookings.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
+| `GET` | `/api/admin/bookings/{id}` | `bookings.view` | 營位、租借快照（含 **`lineTotal`**）、**`contact` 快照**、中文 **history**、`internalNote` |
 | `POST` | `/api/admin/bookings/{id}/confirm` | `bookings.edit` | 已付款 `pending` → `confirmed` |
 | `POST` | `/api/admin/bookings/{id}/complete` | `bookings.edit` | 已退房 `confirmed` → `completed` |
 | `POST` | `/api/admin/bookings/{id}/cancel` | `bookings.edit` | 已付款取消 B1（W3-03）；同交易退款 |
@@ -873,8 +873,10 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | `kpis` | object | 見下表 |
 | `timeSeries` | array | `{ bucket, revenue }` |
 | Shop | `topProducts[]` | `{ productId, name, revenue, quantity }` Top10 |
+| Shop | `categoryBreakdown[]` | `{ label, value }` 已出貨訂單依商品分類加總營收（`value` 為 BigDecimal 字串） |
 | Booking | `byCampground[]` | `{ campgroundId, campgroundName, region, revenue }` |
 | Booking | `byRegion[]` | `{ region, revenue }` |
+| Booking | `categoryBreakdown[]` | `{ label, value }` 已付款預約依裝備分類加總租借件數（`value` 為整數字串） |
 
 上期比較：v1 前端以等長上期再呼叫一次 summary。
 
@@ -888,6 +890,7 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | `refundRatePercent` | 整數百分比；分母 0 → 0 |
 | `soldQuantity` | 期間 `shipped`／`completed` 的 line quantity 加總 |
 | 折線／Top10 | 期間 `shipped`／`completed` 的 `total`／line 金額 |
+| `categoryBreakdown`（Shop） | 期間 **`shipped` only**；分類來自 `products`→`equipment_items`→`product_categories`；`value = Σ(unit_price_snapshot × quantity)` |
 | `returned` | v1 不計入主退款 KPI |
 
 #### Booking 口徑（DB 期間欄=`created_at`）
@@ -900,6 +903,7 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | `completedCount` | 期間 `completed` |
 | `revenueTotal`／折線 | 期間且目前 `payment_status=paid` 的 `final_amount` |
 | `rentalAmount`／`rentalRatioPercent` | 同上 `rental_total` |
+| `categoryBreakdown`（Booking） | 期間 **`payment_status=paid`**；分類來自 rental SKU→equipment_item→category；`value = Σ(quantity)` 租借件數 |
 
 ---
 
@@ -974,3 +978,4 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | 0.21 | 2026-07-25 | W4-02：`/api/admin/campgrounds/{id}/zones` CRUD／啟停；降 `totalSites` 低於占用峰值 → 409；對齊 check-availability |
 | 0.22 | 2026-07-25 | W4-03：`/api/admin/calendar-dates` 特殊節日曆；PUT 標記／DELETE 取消；Booking `holidayCount` 連動 |
 | 0.23 | 2026-07-25 | W4-06：`/api/admin/analytics/shop-summary`、`booking-summary`；口徑／366 天／`analytics.view` |
+| 0.24 | 2026-07-26 | Analytics summary 擴充 `categoryBreakdown[]`（商城營收／租借件數；DB 分類 FK） |

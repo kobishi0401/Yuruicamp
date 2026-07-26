@@ -687,6 +687,7 @@ function loadShopSummaryAndRender() {
       renderShopKpisFromSummary(current.kpis || {});
       renderShopLineChartFromSummary(current, previous);
       renderShopTopProductsFromSummary(current, previous);
+      renderShopDonutFromBreakdown(current.categoryBreakdown);
     })
     .catch(function (err) {
       var msg = (err && err.message) ? err.message : '無法載入商城報表。';
@@ -718,6 +719,7 @@ function loadBookingSummaryAndRender() {
       renderBookingLineChartFromSummary(current, previous);
       renderCampgroundBarFromSummary(current.byCampground || []);
       renderRegionBarFromSummary(current.byRegion || []);
+      renderRentalDonutFromBreakdown(current.categoryBreakdown);
     })
     .catch(function (err) {
       var msg = (err && err.message) ? err.message : '無法載入預約報表。';
@@ -1105,7 +1107,6 @@ function renderRegionBarFromSummary(rows) {
 function refreshShopSection() {
   if (isAnalyticsSummaryMode()) {
     loadShopSummaryAndRender();
-    renderShopDonut(); // v1 仍前端；無 orders 列表時可能為空
     return;
   }
   renderShopKpis();
@@ -1215,6 +1216,9 @@ function updateShopLineTotal() {
  * 用商品名稱比對 products.json 取得 category，再加總金額
  */
 function renderShopDonut() {
+  if (isAnalyticsSummaryMode()) {
+    return;
+  }
   var orders   = window.analyticsOrdersCache   || [];
   var products = window.analyticsProductsCache || [];
   var s = shopState.startDate;
@@ -1243,7 +1247,19 @@ function renderShopDonut() {
 
   var catLabels = Object.keys(categoryRevenue);
   var catData   = catLabels.map(function (c) { return categoryRevenue[c]; });
+  renderShopDonutChart(catLabels, catData);
+}
 
+/** Summary API：categoryBreakdown → 商城甜甜圈 */
+function renderShopDonutFromBreakdown(breakdown) {
+  var rows = breakdown || [];
+  var catLabels = rows.map(function (r) { return r.label; });
+  var catData = rows.map(function (r) { return analyticsApiNum(r.value); });
+  renderShopDonutChart(catLabels, catData);
+}
+
+/** 商城類別甜甜圈 Chart.js 繪製（Mock 聚合與 Summary API 共用） */
+function renderShopDonutChart(catLabels, catData) {
   if (catLabels.length === 0) {
     showChartEmpty('shopDonutEmpty', 'shopCategoryDonutChart');
     if (_shopDonutChart) { _shopDonutChart.destroy(); _shopDonutChart = null; }
@@ -1405,7 +1421,6 @@ function escapeAnalyticsHtml(text) {
 function refreshBookingSection() {
   if (isAnalyticsSummaryMode()) {
     loadBookingSummaryAndRender();
-    renderRentalDonut(); // v1 仍 Mock rental-skus；無 bookings 列表時可能為空
     return;
   }
   renderBookingKpis();
@@ -1530,6 +1545,9 @@ function updateBookingLineTotal() {
  * 用 selectedRentals[].name 對照 rental-skus.json 取得 category，統計使用次數
  */
 function renderRentalDonut() {
+  if (isAnalyticsSummaryMode()) {
+    return;
+  }
   var bookings = window.analyticsBookingsCache || [];
   var rentals  = window.analyticsRentalCache   || [];
   var s = bookingState.startDate;
@@ -1556,7 +1574,19 @@ function renderRentalDonut() {
 
   var catLabels = Object.keys(categoryCount);
   var catData   = catLabels.map(function (c) { return categoryCount[c]; });
+  renderRentalDonutChart(catLabels, catData);
+}
 
+/** Summary API：categoryBreakdown → 租借甜甜圈 */
+function renderRentalDonutFromBreakdown(breakdown) {
+  var rows = breakdown || [];
+  var catLabels = rows.map(function (r) { return r.label; });
+  var catData = rows.map(function (r) { return analyticsApiNum(r.value); });
+  renderRentalDonutChart(catLabels, catData);
+}
+
+/** 租借類別甜甜圈 Chart.js 繪製（Mock 聚合與 Summary API 共用） */
+function renderRentalDonutChart(catLabels, catData) {
   if (catLabels.length === 0) {
     showChartEmpty('rentalDonutEmpty', 'rentalCategoryDonutChart');
     if (_rentalDonut) { _rentalDonut.destroy(); _rentalDonut = null; }

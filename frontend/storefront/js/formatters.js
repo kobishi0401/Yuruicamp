@@ -106,19 +106,41 @@ window.deepClone = (value) => {
 
 // ── 假資料整合：訂單 / 會員 / 商品工具 ──
 
-/** 訂單數字 id → 顯示用 ORD-0001（與後台 id-utils 一致） */
-window.formatOrderDisplayId = (id) => {
-  const num = Number(id);
-  if (!Number.isFinite(num) || num < 1) return String(id || '');
-  return 'ORD-' + String(num).padStart(4, '0');
+/**
+ * 解析顯示編號：優先 API displayNo，已格式化則原樣回傳，否則零補序號。
+ * Resolve display code: prefer API displayNo; pass through ORD-/BK-; else pad numeric id.
+ * @param {number|string|{id?:*,displayNo?:string,orderId?:*,bookingId?:*}} idOrEntity
+ * @param {string} [displayNoOverride] - Optional explicit displayNo (second argument)
+ * @param {'ORD'|'BK'} prefix
+ * @returns {string}
+ */
+window._resolveCommerceDisplayNo = (idOrEntity, displayNoOverride, prefix) => {
+  if (displayNoOverride) return String(displayNoOverride).trim();
+  if (idOrEntity == null || idOrEntity === '') return '';
+
+  let rawId = idOrEntity;
+  if (typeof idOrEntity === 'object') {
+    if (idOrEntity.displayNo) return String(idOrEntity.displayNo).trim();
+    rawId = idOrEntity.id ?? idOrEntity.orderId ?? idOrEntity.bookingId ?? '';
+  }
+
+  const str = String(rawId).trim();
+  if (!str) return '';
+  // 已是 ORD-0001 / BK-0042 等人類可讀格式 → 直接顯示 / Already formatted → pass through
+  if (/^(ORD|BK)-/i.test(str)) return str.toUpperCase().replace(/^ord-/i, 'ORD-').replace(/^bk-/i, 'BK-');
+
+  const num = Number(str);
+  if (!Number.isFinite(num) || num < 1) return str;
+  return `${prefix}-${String(num).padStart(4, '0')}`;
 };
 
-/** 預約數字 id → 顯示用 BK-0001（與後台 id-utils 一致） */
-window.formatBookingDisplayId = (id) => {
-  const num = Number(id);
-  if (!Number.isFinite(num) || num < 1) return String(id || '');
-  return 'BK-' + String(num).padStart(4, '0');
-};
+/** 訂單顯示編號 ORD-0001（支援 entity.displayNo 或第二參數） */
+window.formatOrderDisplayId = (idOrEntity, displayNo) =>
+  window._resolveCommerceDisplayNo(idOrEntity, displayNo, 'ORD');
+
+/** 預約顯示編號 BK-0001（支援 entity.displayNo 或第二參數） */
+window.formatBookingDisplayId = (idOrEntity, displayNo) =>
+  window._resolveCommerceDisplayNo(idOrEntity, displayNo, 'BK');
 
 /** 寬鬆比對 id（避免 1 !== "1"） */
 window.sameId = (a, b) => String(a) === String(b);
@@ -220,6 +242,7 @@ window.findProductVariant = (product, color, size) => {
 window.buildCartLineFromProduct = (product, variant, extra) => {
   const v = variant || window.getProductVariants(product)[0];
   const specLabel = window.buildVariantLabel(v);
+  const availableQuantity = Number(v.availableQuantity);
   const base = {
     id: product.id,
     productId: product.id,
@@ -232,6 +255,9 @@ window.buildCartLineFromProduct = (product, variant, extra) => {
     price: product.price,
     image: product.image,
     brand: product.brand,
+    // 供 cart soft 驗量使用 / For client-side stock hints on cart page
+    availableQuantity: Number.isFinite(availableQuantity) ? availableQuantity : null,
+    inStock: v.inStock !== false && (Number.isFinite(availableQuantity) ? availableQuantity > 0 : true),
   };
   return Object.assign(base, extra || {});
 };

@@ -369,9 +369,8 @@
     },
 
     getAvailability: function (params) {
-      var zones = Array.isArray(params.zones)
-        ? params.zones
-        : [{ zoneId: params.zoneId, quantity: params.quantity || 1 }];
+      var zones = Array.isArray(params.zones) ? params.zones : [];
+      var rentals = Array.isArray(params.rentals) ? params.rentals : [];
 
       if (!useMockApi()) {
         return restRequest('/booking/check-availability', {
@@ -382,6 +381,7 @@
             checkIn: params.checkIn || params.from,
             checkOut: params.checkOut || params.to,
             zones: zones,
+            rentals: rentals,
           },
         });
       }
@@ -392,7 +392,7 @@
       }
 
       return loadAvailabilityContext().then(function (context) {
-        var results = zones.map(function (zone) {
+        var zoneResults = zones.map(function (zone) {
           var availableQuantity = availability.getMinRemainingInRange(
             zone.zoneId,
             params.checkIn || params.from,
@@ -406,28 +406,51 @@
             availableQuantity: availableQuantity,
           };
         });
-        var closed = availability.hasClosedNightInRange(
-          params.campgroundId,
-          params.checkIn || params.from,
-          params.checkOut || params.to,
-          context
-        );
-        var unavailable = results.some(function (zone) {
+        var rentalResults = rentals.map(function (rental) {
+          var listingId = rental.rentalListingId;
+          var requested = rental.quantity || 1;
+          var stockFromMock = params.rentalStockById && params.rentalStockById[listingId];
+          var availableQuantity =
+            stockFromMock != null && Number.isFinite(Number(stockFromMock))
+              ? Number(stockFromMock)
+              : requested;
+          return {
+            rentalListingId: listingId,
+            requested: requested,
+            availableQuantity: availableQuantity,
+          };
+        });
+        var closed =
+          zones.length > 0 &&
+          availability.hasClosedNightInRange(
+            params.campgroundId,
+            params.checkIn || params.from,
+            params.checkOut || params.to,
+            context
+          );
+        var zoneUnavailable = zoneResults.some(function (zone) {
           return zone.requested > zone.availableQuantity;
+        });
+        var rentalUnavailable = rentalResults.some(function (rental) {
+          return rental.requested > rental.availableQuantity;
         });
         var reasons = [];
 
         if (closed) {
           reasons.push('CAMPGROUND_CLOSED');
         }
-        if (unavailable) {
+        if (zoneUnavailable) {
           reasons.push('ZONE_UNAVAILABLE');
+        }
+        if (rentalUnavailable) {
+          reasons.push('RENTAL_UNAVAILABLE');
         }
 
         return {
           available: reasons.length === 0,
           reasons: reasons,
-          zones: results,
+          zones: zoneResults,
+          rentals: rentalResults,
         };
       });
     },
@@ -541,8 +564,9 @@
       return createMockBooking(request, mockCart);
     },
 
-    // 取得後端簽好的 ECPay 表單；前端不得自行產生付款簽章。
-    createEcpayForm: function (bookingId) {
+    // 取得後端簽好的 ECPay 表單；同一請求寫入 contact 快照（O2）。
+    // Fetch signed ECPay form; same request persists contact snapshot (O2).
+    createEcpayForm: function (bookingId, contact) {
       if (useMockApi()) {
         return Promise.reject(new Error('ECPay form is unavailable in Mock mode'));
       }
@@ -552,6 +576,7 @@
         {
           method: 'POST',
           auth: 'required',
+          body: { contact: contact || {} },
         }
       );
     },

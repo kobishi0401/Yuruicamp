@@ -24,7 +24,7 @@ Service 負責會員資格、最低消費、折扣計算及訂單歸屬。既有
 
 `CouponService.invalidateAppliedClaim` 同樣鎖定 claim。會員取消使用 `revoked`，排程逾時使用 `expired`；已是終止狀態時不覆寫第一次失效時間。兩者都不回到 `claimed`，也不減少優惠券的 `claimed_quantity`。
 
-目前 COD 已在 `confirm-cod` 交易內接線。ECPay Gateway／Notify 尚未實作；未來只有在 Notify 驗簽且付款成功後才能呼叫同一消耗方法，Return URL 不得改變 claim。
+商城 COD 與 ECPay Notify 皆已接線：`confirm-cod` 與 `PaymentNotifyService` 會在同一交易呼叫 `consumeAppliedClaim`；Return URL 不得改變 claim。
 
 目前 Schema 只有 `order_coupons`，沒有 Booking 對應的 Coupon 關聯表。為避免只改金額卻沒有 claim 歸屬與折扣快照，Booking 仍拒絕非 `null couponClaimId`；完整 F-2 需先完成 Schema 決策。
 

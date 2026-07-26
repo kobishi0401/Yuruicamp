@@ -52,6 +52,17 @@ public class WebConfig implements WebMvcConfigurer {
 		config.setMaxAge(3600L);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+		// 綠界 OrderResultURL／Notify 由 payment*.ecpay.com.tw 或綠界伺服器 POST；
+		// 與 Vite 前端 Origin 不同，需單獨規則，否則瀏覽器導回會 403 Invalid CORS request。
+		CorsConfiguration ecpayCors = new CorsConfiguration();
+		ecpayCors.setAllowedOriginPatterns(List.of("*"));
+		ecpayCors.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+		ecpayCors.setAllowedHeaders(List.of("*"));
+		ecpayCors.setAllowCredentials(false);
+		ecpayCors.setMaxAge(3600L);
+		source.registerCorsConfiguration("/api/payments/ecpay/**", ecpayCors);
+
 		source.registerCorsConfiguration("/**", config);
 		return source;
 	}

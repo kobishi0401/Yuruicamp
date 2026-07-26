@@ -4,6 +4,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import com.yuruicamp.backend.commerce.application.DisplayNoService;
 import com.yuruicamp.backend.config.YuruicampProperties;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +16,11 @@ import org.springframework.stereotype.Service;
 public class EcpayReturnService {
 
 	private final YuruicampProperties.Ecpay ecpay;
+	private final DisplayNoService displayNoService;
 
-	public EcpayReturnService(YuruicampProperties properties) {
+	public EcpayReturnService(YuruicampProperties properties, DisplayNoService displayNoService) {
 		this.ecpay = properties.getEcpay();
+		this.displayNoService = displayNoService;
 	}
 
 	/**
@@ -53,10 +56,18 @@ public class EcpayReturnService {
 				.append(idParam)
 				.append("=")
 				.append(encode(entityId));
+		resolveDisplayNo(isBooking, entityId).ifPresent(displayNo ->
+				url.append("&displayNo=").append(encode(displayNo)));
 		if (!success) {
 			url.append("&paymentResult=failed");
 		}
 		return url.toString();
+	}
+
+	private java.util.Optional<String> resolveDisplayNo(boolean isBooking, String entityId) {
+		return isBooking
+				? displayNoService.findBookingDisplayNo(entityId)
+				: displayNoService.findOrderDisplayNo(entityId);
 	}
 
 	private static String value(Map<String, String> params, String key) {

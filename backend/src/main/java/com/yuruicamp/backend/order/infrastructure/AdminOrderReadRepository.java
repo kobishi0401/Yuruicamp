@@ -47,7 +47,7 @@ public class AdminOrderReadRepository {
 		StringBuilder where = new StringBuilder(" where 1=1 ");
 		MapSqlParameterSource parameters = new MapSqlParameterSource();
 		if (!query.isBlank()) {
-			where.append(" and (lower(o.id) like :query or lower(o.customer_id) like :query or lower(o.buyer_name_snapshot) like :query or lower(o.recipient_name_snapshot) like :query or lower(o.buyer_email_snapshot) like :query or lower(o.shipping_phone_snapshot) like :query) ");
+			where.append(" and (lower(o.id) like :query or lower(o.display_no) like :query or lower(o.customer_id) like :query or lower(o.buyer_name_snapshot) like :query or lower(o.recipient_name_snapshot) like :query or lower(o.buyer_email_snapshot) like :query or lower(o.shipping_phone_snapshot) like :query) ");
 			parameters.addValue("query", "%" + query.toLowerCase() + "%");
 		}
 		appendList(where, parameters, "o.status::text", "statuses", statuses);
@@ -78,7 +78,7 @@ public class AdminOrderReadRepository {
 		}
 
 		return jdbc.query("""
-				select o.id, o.customer_id, c.name customer_name, o.recipient_name_snapshot,
+				select o.id, o.display_no, o.customer_id, c.name customer_name, o.recipient_name_snapshot,
 				       o.total, o.payment_method::text, o.payment_status::text,
 				       o.refund_status::text, o.status::text, o.placed_at, o.paid_at,
 				       o.updated_at, count(i.id) item_count
@@ -88,7 +88,8 @@ public class AdminOrderReadRepository {
 				where o.id in (:ids)
 				group by o.id, c.name
 				""", new MapSqlParameterSource("ids", ids), (rs, rowNum) -> new AdminOrderListResponse(
-				rs.getString("id"), rs.getString("customer_id"), rs.getString("customer_name"),
+				rs.getString("id"), rs.getString("display_no"), rs.getString("customer_id"),
+				rs.getString("customer_name"),
 				rs.getString("recipient_name_snapshot"), money(rs.getBigDecimal("total")),
 				rs.getString("payment_method"), rs.getString("payment_status"),
 				rs.getString("refund_status"), rs.getString("status"), rs.getLong("item_count"),
@@ -100,7 +101,8 @@ public class AdminOrderReadRepository {
 				select o.*, c.name customer_name, c.status::text customer_status
 				from orders o join customers c on c.id = o.customer_id where o.id = :id
 				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new DetailRow(
-				rs.getString("id"), rs.getString("customer_id"), rs.getString("customer_name"),
+				rs.getString("id"), rs.getString("display_no"), rs.getString("customer_id"),
+				rs.getString("customer_name"),
 				rs.getString("customer_status"), rs.getString("buyer_name_snapshot"),
 				rs.getString("buyer_email_snapshot"), rs.getString("recipient_name_snapshot"),
 				rs.getString("shipping_phone_snapshot"), rs.getString("shipping_address_snapshot"),
@@ -126,12 +128,12 @@ public class AdminOrderReadRepository {
 				rs.getInt("quantity"), money(rs.getBigDecimal("line_total"))));
 	}
 
-	public List<AdminOrderDetailResponse.HistorySummary> findHistory(String id) {
+	public List<HistoryEntry> findHistoryEntries(String id) {
 		return jdbc.query("""
 				select h.status::text, h.occurred_at, h.actor_id, a.name actor_name, h.note
 				from order_status_history h left join admin_users a on a.id = h.actor_id
 				where h.order_id = :id order by h.occurred_at, h.id
-				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new AdminOrderDetailResponse.HistorySummary(
+				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new HistoryEntry(
 				rs.getString("status"), instant(rs, "occurred_at"), rs.getString("actor_id"),
 				rs.getString("actor_name"), rs.getString("note")));
 	}
@@ -165,11 +167,15 @@ public class AdminOrderReadRepository {
 	}
 
 	public record DetailRow(
-			String id, String customerId, String customerName, String customerStatus,
+			String id, String displayNo, String customerId, String customerName, String customerStatus,
 			String buyerName, String buyerEmail, String recipientName, String shippingPhone,
 			String shippingAddress, BigDecimal subtotal, BigDecimal shippingFee,
 			BigDecimal discount, BigDecimal total, String paymentMethod, String paymentStatus,
 			String refundStatus, String status, String internalNote,
 			Instant placedAt, Instant paidAt, Instant updatedAt) {
+	}
+
+	public record HistoryEntry(
+			String status, Instant occurredAt, String actorId, String actorName, String note) {
 	}
 }

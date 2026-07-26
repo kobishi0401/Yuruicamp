@@ -72,7 +72,9 @@ public class BookingCheckoutController {
 	@Operation(summary = "D-2：取得綠界（或本機 stub）AIO 表單欄位；不標記 paid")
 	public ApiResponse<EcpayLaunchResponse> ecpay(
 			@AuthenticationPrincipal CustomerPrincipal principal,
-			@PathVariable String bookingId) {
-		return ApiResponse.ok(ecpayLaunchService.launchForBooking(principal.customerId(), bookingId));
+			@PathVariable String bookingId,
+			@Valid @RequestBody BookingEcpayLaunchRequest request) {
+		return ApiResponse.ok(ecpayLaunchService.launchForBooking(
+				principal.customerId(), bookingId, request));
 	}
 }

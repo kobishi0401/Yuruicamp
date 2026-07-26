@@ -48,28 +48,43 @@
   }
 
   /**
-   * 格式化顯示編號：prefix + 零補位
-   * Format display code e.g. ORD-0001
+   * 格式化顯示編號：優先 API displayNo；已含前綴則原樣；否則 prefix + 零補位
+   * Format display code — prefer displayNo from entity; pass through prefixed ids
    * @param {string} prefix
-   * @param {number|string|null|undefined} id
+   * @param {number|string|{id?:*,displayNo?:string}|null|undefined} idOrEntity
+   * @param {string} [displayNoOverride]
    * @returns {string}
    */
-  function formatDisplayId(prefix, id) {
-    var num = parseNumericId(id);
+  function formatDisplayId(prefix, idOrEntity, displayNoOverride) {
+    if (displayNoOverride) {
+      return String(displayNoOverride).trim();
+    }
+    if (idOrEntity && typeof idOrEntity === 'object') {
+      if (idOrEntity.displayNo) {
+        return String(idOrEntity.displayNo).trim();
+      }
+      idOrEntity = idOrEntity.id;
+    }
+    var str = idOrEntity === null || idOrEntity === undefined ? '' : String(idOrEntity).trim();
+    if (!str) return '';
+    if (new RegExp('^' + prefix + '-', 'i').test(str)) {
+      return prefix + '-' + str.slice(str.indexOf('-') + 1);
+    }
+    var num = parseNumericId(idOrEntity);
     if (num === null) {
-      return String(id || '');
+      return str;
     }
     return prefix + '-' + String(num).padStart(DISPLAY_PAD, '0');
   }
 
   /** 訂單顯示編號 / Order display code */
-  function formatOrderId(id) {
-    return formatDisplayId(ID_PREFIX.order, id);
+  function formatOrderId(idOrEntity, displayNo) {
+    return formatDisplayId(ID_PREFIX.order, idOrEntity, displayNo);
   }
 
   /** 預約顯示編號 / Booking display code */
-  function formatBookingId(id) {
-    return formatDisplayId(ID_PREFIX.booking, id);
+  function formatBookingId(idOrEntity, displayNo) {
+    return formatDisplayId(ID_PREFIX.booking, idOrEntity, displayNo);
   }
 
   /**

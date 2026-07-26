@@ -65,66 +65,72 @@
     <script>
       (function initBookingSuccessPage() {
         const bookingNumberDisplay = document.getElementById('bookingNumberDisplay');
-        const bookingNum = readBookingNumber();
+        const displayText = resolveBookingDisplayText();
         if (bookingNumberDisplay) {
-          const normalized = String(bookingNum || '--').replace(/^#/, '');
-          bookingNumberDisplay.textContent = normalized === '--' ? '#--' : '#' + normalized;
+          bookingNumberDisplay.textContent = displayText || '—';
           bookingNumberDisplay.classList.remove('isLoading');
         }
       })();
 
-      /** 將 booking id 轉成顯示用編號 / Format booking id for display */
-      function toBookingDisplayNum(id) {
-        if (id == null || id === '') return '';
-        var formatted = window.formatBookingDisplayId ? window.formatBookingDisplayId(id) : '';
-        return formatted || String(id);
-      }
-
-      /** 從 URL 或 storage 讀取預約編號 / Read booking number from URL or storage */
-      function readBookingNumber() {
-        var params = new URLSearchParams(window.location.search);
-        var queryBookingNum = params.get('bookingNum');
-        // 排除空字串，避免 ?bookingNum= 被當成有效值
-        // Reject empty query value so ?bookingNum= is not treated as valid
-        if (queryBookingNum && queryBookingNum.trim()) {
-          return queryBookingNum.trim();
+      /** 組合顯示用預約編號（無 #）/ Build booking display code without hash */
+      function resolveBookingDisplayText() {
+        var fromQuery = readBookingIdFromQuery();
+        if (fromQuery) {
+          return formatBookingDisplay(fromQuery.id, fromQuery.displayNo);
         }
 
-        // 備援 1：sessionStorage（同分頁跳轉最可靠）
-        // Fallback 1: sessionStorage from same-tab redirect
         try {
           var sessionBooking = JSON.parse(sessionStorage.getItem('lastCheckoutBooking') || 'null');
-          if (sessionBooking && sessionBooking.id != null) {
-            return toBookingDisplayNum(sessionBooking.id);
+          if (sessionBooking) {
+            return formatBookingDisplay(
+              sessionBooking.id || sessionBooking.bookingId,
+              sessionBooking.displayNo
+            );
           }
         } catch (error) {
           console.warn('[booking-success] 讀取 sessionStorage 失敗', error);
         }
 
-        // 備援 2：localStorage 結帳頁寫入的最後一筆預約
-        // Fallback 2: last booking saved at checkout
         try {
           var lastBooking = JSON.parse(localStorage.getItem('lastCheckoutBooking') || 'null');
-          if (lastBooking && lastBooking.id != null) {
-            return toBookingDisplayNum(lastBooking.id);
+          if (lastBooking) {
+            return formatBookingDisplay(lastBooking.id || lastBooking.bookingId, lastBooking.displayNo);
           }
         } catch (error) {
           console.warn('[booking-success] 讀取 lastCheckoutBooking 失敗', error);
         }
 
-        // 備援 3：BookingAPI 寫入 mockBookings 的最後一筆
-        // Fallback 3: latest entry from mockBookings
-        try {
-          var mockBookings = JSON.parse(localStorage.getItem('mockBookings') || '[]');
-          var latest = mockBookings[mockBookings.length - 1];
-          if (latest && latest.id != null) {
-            return toBookingDisplayNum(latest.id);
-          }
-        } catch (error) {
-          console.warn('[booking-success] 讀取 mockBookings 失敗', error);
-        }
-
         return '';
+      }
+
+      function formatBookingDisplay(id, displayNo) {
+        if (window.formatBookingDisplayId) {
+          return window.formatBookingDisplayId({ id: id, displayNo: displayNo }, displayNo);
+        }
+        var normalized = String(displayNo || id || '').replace(/^#/, '').trim();
+        return normalized;
+      }
+
+      /** bookingId 優先，其次 bookingNum；displayNo query 可直接顯示 / Prefer bookingId, then bookingNum and displayNo */
+      function readBookingIdFromQuery() {
+        var params = new URLSearchParams(window.location.search);
+        var bookingId = params.get('bookingId');
+        var bookingNum = params.get('bookingNum');
+        var displayNoParam = params.get('displayNo');
+        var raw = (bookingId && bookingId.trim()) || (bookingNum && bookingNum.trim()) || '';
+        if (!raw && displayNoParam && displayNoParam.trim()) {
+          return { id: null, displayNo: displayNoParam.trim().replace(/^#/, '') };
+        }
+        if (!raw) return null;
+        raw = raw.replace(/^#/, '').trim();
+        // 若 query 已是 BK-0001 則直接顯示 / If query is already display code
+        if (/^BK-/i.test(raw)) {
+          return { id: raw, displayNo: raw.toUpperCase().replace(/^bk-/i, 'BK-') };
+        }
+        var displayNo = displayNoParam && displayNoParam.trim()
+          ? displayNoParam.trim().replace(/^#/, '')
+          : null;
+        return { id: raw, displayNo: displayNo };
       }
     </script>
   </body>

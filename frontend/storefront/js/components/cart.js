@@ -50,7 +50,7 @@
     return [
       '<div class="siteCartEmptyState">',
       '  <div class="siteCartEmptyIcon" aria-hidden="true"><i class="bi bi-bag-x"></i></div>',
-      '  <h3 class="siteCartEmptyTitle">購物車目前是空的</h3>',
+      '  <h3 class="siteCartEmptyTitle">購物背包目前是空的</h3>',
       '  <p class="siteCartEmptyText">先挑選需要的露營裝備，再一起結帳。</p>',
       '</div>',
     ].join('');
@@ -216,8 +216,32 @@
     var variantId = product.variantId || '';
     var existingItem = findCartItem(product.id, variantId);
 
-    if (existingItem) existingItem.quantity += amount;
-    else window.AppState.cart.push(Object.assign({}, product, { quantity: amount }));
+    // Soft 庫存：超量時 clamp 並提示 / Clamp quantity when exceeding available stock
+    var available = Number(product.availableQuantity);
+    var inStock = product.inStock !== false && (!Number.isFinite(available) || available > 0);
+    if (!inStock) {
+      window.showToast && window.showToast('此商品目前無法購買', 'warning');
+      return;
+    }
+
+    var currentQty = existingItem ? Number(existingItem.quantity) || 0 : 0;
+    var requestedTotal = currentQty + amount;
+    if (Number.isFinite(available) && requestedTotal > available) {
+      amount = Math.max(0, available - currentQty);
+      if (amount <= 0) {
+        window.showToast && window.showToast('僅剩 ' + available + ' 件', 'warning');
+        return;
+      }
+      window.showToast && window.showToast('僅剩 ' + available + ' 件', 'warning');
+    }
+
+    if (existingItem) {
+      existingItem.quantity += amount;
+      if (Number.isFinite(available)) existingItem.availableQuantity = available;
+      existingItem.inStock = inStock;
+    } else {
+      window.AppState.cart.push(Object.assign({}, product, { quantity: amount, inStock: inStock }));
+    }
 
     window.saveAppState();
     window.updateCartBadge();
@@ -246,6 +270,11 @@
       return;
     }
     if (quantity <= window.AppConfig.CART.MAX_QUANTITY) {
+      var available = Number(item.availableQuantity);
+      if (Number.isFinite(available) && quantity > available) {
+        quantity = available;
+        window.showToast && window.showToast('僅剩 ' + available + ' 件', 'warning');
+      }
       item.quantity = quantity;
       window.saveAppState();
       window.updateCartBadge();

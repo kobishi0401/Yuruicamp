@@ -99,7 +99,12 @@ function loadRentals(campId) {
   window.BookingAPI.getEquipment(campId)
     .then(function (filtered) {
       allRentals = filtered;
-
+      return refreshRentalAvailability(filtered, bookingCart.bookingInfo).then(function (withStock) {
+        allRentals = withStock;
+        return withStock;
+      });
+    })
+    .then(function (filtered) {
       // 渲染推薦橫幅 / Render recommendation banner
       renderRecommendationBanner(filtered, bookingCart.bookingInfo);
 
@@ -171,6 +176,54 @@ function renderRecommendationBanner(rentals, bookingInfo) {
     .show();
 }
 
+/**
+ * 依 bookingCart 日期查詢各 listing 可租量，與 checkout 使用同一套重疊保留公式。
+ * Fetch rental availability for selected stay dates.
+ */
+function refreshRentalAvailability(items, info) {
+  if (!items.length || !info || !window.BookingAPI || !window.BookingAPI.getAvailability) {
+    return Promise.resolve(items);
+  }
+
+  var rentals = items.map(function (item) {
+    return {
+      rentalListingId: item.rentalListingId || item.equipmentId,
+      quantity: 1,
+    };
+  });
+  var stockById = {};
+  items.forEach(function (item) {
+    var id = item.rentalListingId || item.equipmentId;
+    if (item.stock != null) stockById[id] = Number(item.stock);
+  });
+
+  return window.BookingAPI.getAvailability({
+    campgroundId: info.campgroundId,
+    checkIn: info.checkIn,
+    checkOut: info.checkOut,
+    zones: [],
+    rentals: rentals,
+    rentalStockById: stockById,
+  })
+    .then(function (result) {
+      var byListing = {};
+      (result.rentals || []).forEach(function (row) {
+        byListing[row.rentalListingId] = row.availableQuantity;
+      });
+      return items.map(function (item) {
+        var id = item.rentalListingId || item.equipmentId;
+        if (Object.prototype.hasOwnProperty.call(byListing, id)) {
+          return Object.assign({}, item, { stock: byListing[id] });
+        }
+        return item;
+      });
+    })
+    .catch(function (err) {
+      console.warn('[camp-rental] 租借可用量查詢失敗，維持 Mock 庫存或無庫存提示', err);
+      return items;
+    });
+}
+
 // ============================================================
 // 渲染裝備卡片
 // ============================================================
@@ -223,11 +276,17 @@ function renderRentalItems(rentals) {
       ? `<p class="rentalItemCardSpec rentalItemCardSpecBooking">${item.specLabel}</p>`
       : '';
 
-    // Backend 公開契約不曝露租借數量，實際庫存會在建立 Checkout 時鎖定確認。
+    // 顯示剩餘可租量；Backend 由 check-availability 填入 stock，Mock 沿用 JSON stock。
     const hasVisibleStock = item.stock != null && Number.isFinite(Number(item.stock));
+    const stockCount = hasVisibleStock ? Number(item.stock) : null;
+    const inStock = stockCount == null ? true : stockCount > 0;
     const stockHTML = hasVisibleStock
-      ? `<i class="bi bi-box-seam"></i> 庫存：${item.stock} 件`
+      ? inStock
+        ? `<i class="bi bi-box-seam"></i> 剩餘 <strong>${stockCount}</strong> 件`
+        : '<i class="bi bi-x-circle"></i> 暫無可租庫存'
       : '<i class="bi bi-shield-check"></i> 結帳時確認可租數量';
+    const addDisabled = hasVisibleStock && !inStock ? ' disabled aria-disabled="true"' : '';
+    const addLabel = hasVisibleStock && !inStock ? '暫無庫存' : '加入租借';
 
     // 租借卡片使用 base + Booking variant 雙 class；base 表示功能語意，variant 承接 booking 頁面視覺。
     const imageSrc = item.imageUrl || '';
@@ -254,8 +313,8 @@ function renderRentalItems(rentals) {
           </p>
         </div>
         <div class="rentalItemCardActions rentalItemCardActionsBooking">
-          <button class="btn btnOutline rentalAddButton rentalAddButtonBooking" data-id="${item.equipmentId}">
-            <i class="bi bi-plus-circle"></i> 加入租借
+          <button class="btn btnOutline rentalAddButton rentalAddButtonBooking" data-id="${item.equipmentId}"${addDisabled}>
+            <i class="bi bi-plus-circle"></i> ${addLabel}
           </button>
         </div>
       </div>
@@ -265,6 +324,7 @@ function renderRentalItems(rentals) {
 
   // 綁定加入租借事件：使用 rentalAddButtonBooking 作為互動 hook，避免回到縮寫式 btn 命名。
   $grid.on('click', '.rentalAddButtonBooking', function () {
+    if (this.disabled || this.getAttribute('aria-disabled') === 'true') return;
     const id = $(this).data('id');
     addRentalItem(id);
 

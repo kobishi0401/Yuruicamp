@@ -43,7 +43,7 @@ public class AdminBookingReadRepository {
 		StringBuilder where = new StringBuilder(" where 1=1 ");
 		MapSqlParameterSource parameters = new MapSqlParameterSource();
 		if (!query.isBlank()) {
-			where.append(" and (lower(b.id) like :query or lower(b.customer_id) like :query or lower(c.name) like :query or lower(b.campground_name_snapshot) like :query) ");
+			where.append(" and (lower(b.id) like :query or lower(b.display_no) like :query or lower(b.customer_id) like :query or lower(c.name) like :query or lower(b.campground_name_snapshot) like :query) ");
 			parameters.addValue("query", "%" + query.toLowerCase() + "%");
 		}
 		appendList(where, parameters, "b.status::text", "statuses", statuses);
@@ -85,14 +85,15 @@ public class AdminBookingReadRepository {
 		}
 
 		return jdbc.query("""
-				select b.id, b.customer_id, c.name customer_name, b.campground_id,
+				select b.id, b.display_no, b.customer_id, c.name customer_name, b.campground_id,
 				       b.campground_name_snapshot, b.region_snapshot, b.check_in, b.check_out,
 				       b.guest_count, b.final_amount, b.payment_status::text, b.status::text,
 				       b.created_at, b.updated_at,
 				       exists(select 1 from booking_selected_rentals r where r.booking_id = b.id) has_rental
 				from bookings b join customers c on c.id = b.customer_id where b.id in (:ids)
 				""", new MapSqlParameterSource("ids", ids), (rs, rowNum) -> new AdminBookingListResponse(
-				rs.getString("id"), rs.getString("customer_id"), rs.getString("customer_name"),
+				rs.getString("id"), rs.getString("display_no"), rs.getString("customer_id"),
+				rs.getString("customer_name"),
 				rs.getString("campground_id"), rs.getString("campground_name_snapshot"),
 				rs.getString("region_snapshot"), rs.getObject("check_in", LocalDate.class),
 				rs.getObject("check_out", LocalDate.class), rs.getInt("guest_count"),
@@ -106,7 +107,8 @@ public class AdminBookingReadRepository {
 				select b.*, c.name customer_name, c.status::text customer_status
 				from bookings b join customers c on c.id = b.customer_id where b.id = :id
 				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new DetailRow(
-				rs.getString("id"), rs.getString("customer_id"), rs.getString("customer_name"),
+				rs.getString("id"), rs.getString("display_no"), rs.getString("customer_id"),
+				rs.getString("customer_name"),
 				rs.getString("customer_status"), rs.getString("campground_id"),
 				rs.getString("campground_name_snapshot"), rs.getString("region_snapshot"),
 				rs.getObject("check_in", LocalDate.class), rs.getObject("check_out", LocalDate.class),
@@ -116,38 +118,43 @@ public class AdminBookingReadRepository {
 				rs.getString("payment_method"), rs.getString("payment_status"),
 				nullableInstant(rs, "paid_at"), rs.getString("status"),
 				rs.getString("internal_note"),
+				rs.getString("contact_name_snapshot"), rs.getString("contact_phone_snapshot"),
+				rs.getString("contact_email_snapshot"),
 				instant(rs, "created_at"), instant(rs, "updated_at")))
 				.stream()
 				.findFirst();
 	}
 
-	public List<AdminBookingDetailResponse.ZoneSummary> findZones(String id) {
+	public List<ZoneLineRow> findZoneLines(String id) {
 		return jdbc.query("""
 				select zone_id, zone_type_snapshot, price_weekday_snapshot, price_holiday_snapshot, quantity
 				from booking_selected_zones where booking_id = :id order by zone_id
-				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new AdminBookingDetailResponse.ZoneSummary(
+				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new ZoneLineRow(
 				rs.getString("zone_id"), rs.getString("zone_type_snapshot"),
-				money(rs.getBigDecimal("price_weekday_snapshot")),
-				money(rs.getBigDecimal("price_holiday_snapshot")), rs.getInt("quantity")));
+				rs.getBigDecimal("price_weekday_snapshot"),
+				rs.getBigDecimal("price_holiday_snapshot"), rs.getInt("quantity")));
 	}
 
-	public List<AdminBookingDetailResponse.RentalSummary> findRentals(String id) {
+	public List<RentalLineRow> findRentalLines(String id) {
 		return jdbc.query("""
-				select * from booking_selected_rentals where booking_id = :id order by rental_listing_id
-				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new AdminBookingDetailResponse.RentalSummary(
+				select rental_listing_id, rental_sku_variant_id, sku_snapshot, name_snapshot,
+				       specification_snapshot, price_weekday_snapshot, price_holiday_snapshot,
+				       discount_snapshot, quantity
+				from booking_selected_rentals where booking_id = :id order by rental_listing_id
+				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new RentalLineRow(
 				rs.getString("rental_listing_id"), rs.getString("rental_sku_variant_id"),
 				rs.getString("sku_snapshot"), rs.getString("name_snapshot"),
-				rs.getString("specification_snapshot"), money(rs.getBigDecimal("price_weekday_snapshot")),
-				money(rs.getBigDecimal("price_holiday_snapshot")), money(rs.getBigDecimal("discount_snapshot")),
+				rs.getString("specification_snapshot"), rs.getBigDecimal("price_weekday_snapshot"),
+				rs.getBigDecimal("price_holiday_snapshot"), rs.getBigDecimal("discount_snapshot"),
 				rs.getInt("quantity")));
 	}
 
-	public List<AdminBookingDetailResponse.HistorySummary> findHistory(String id) {
+	public List<HistoryEntry> findHistoryEntries(String id) {
 		return jdbc.query("""
 				select h.status::text, h.occurred_at, h.actor_id, a.name actor_name, h.note
 				from booking_status_history h left join admin_users a on a.id = h.actor_id
 				where h.booking_id = :id order by h.occurred_at, h.id
-				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new AdminBookingDetailResponse.HistorySummary(
+				""", new MapSqlParameterSource("id", id), (rs, rowNum) -> new HistoryEntry(
 				rs.getString("status"), instant(rs, "occurred_at"), rs.getString("actor_id"),
 				rs.getString("actor_name"), rs.getString("note")));
 	}
@@ -185,11 +192,26 @@ public class AdminBookingReadRepository {
 	}
 
 	public record DetailRow(
-			String id, String customerId, String customerName, String customerStatus,
+			String id, String displayNo, String customerId, String customerName, String customerStatus,
 			String campgroundId, String campgroundName, String region, LocalDate checkIn,
 			LocalDate checkOut, int guestCount, int weekdayCount, int holidayCount,
 			BigDecimal zoneTotal, BigDecimal rentalTotal, BigDecimal discount, BigDecimal finalAmount,
 			String paymentMethod, String paymentStatus, Instant paidAt, String status,
-			String internalNote, Instant createdAt, Instant updatedAt) {
+			String internalNote, String contactName, String contactPhone, String contactEmail,
+			Instant createdAt, Instant updatedAt) {
+	}
+
+	public record ZoneLineRow(
+			String zoneId, String type, BigDecimal priceWeekday, BigDecimal priceHoliday, int quantity) {
+	}
+
+	public record RentalLineRow(
+			String rentalListingId, String rentalSkuVariantId, String sku, String name,
+			String specification, BigDecimal priceWeekday, BigDecimal priceHoliday,
+			BigDecimal discountRate, int quantity) {
+	}
+
+	public record HistoryEntry(
+			String status, Instant occurredAt, String actorId, String actorName, String note) {
 	}
 }

@@ -704,6 +704,51 @@ const memberShippingAddressesApi = {
   },
 };
 
+const memberProfileApi = {
+  get: async () => {
+    if (!_useMockApi()) {
+      return window.ApiClient._restRequest('/me/profile', { auth: 'required' });
+    }
+    const current = window.AppState?.currentUser || {};
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem('yurui_profile') || '{}') || {};
+    } catch (_error) {
+      saved = {};
+    }
+    return {
+      name: current.name || saved.name || '',
+      email: current.email || saved.email || '',
+      phone: current.phone || saved.phone || '',
+      birthday: current.birthday || saved.birthday || null,
+      authProvider: current.authProvider || current.provider || 'local',
+      registeredAt: current.registeredAt || null,
+    };
+  },
+
+  update: async (payload) => {
+    if (!_useMockApi()) {
+      return window.ApiClient._restRequest('/me/profile', {
+        method: 'PATCH',
+        auth: 'required',
+        body: payload,
+      });
+    }
+    const current = window.AppState?.currentUser;
+    if (!current?.id) throw new Error('Unauthorized');
+    if (payload?.name) current.name = payload.name;
+    if (payload?.phone) current.phone = payload.phone;
+    if (payload?.birthday !== undefined) current.birthday = payload.birthday;
+    _setCustomerRelationOverlay(current.id, {
+      name: current.name,
+      phone: current.phone,
+      birthday: current.birthday,
+    });
+    window.saveAppState && window.saveAppState();
+    return memberProfileApi.get();
+  },
+};
+
 /**
  * 驗證並編碼 Checkout orderId，避免組出 undefined 或未編碼的路徑。
  */
@@ -1517,6 +1562,7 @@ window.API = {
 
   customers: customersApi,
   users: customersApi,
+  memberProfile: memberProfileApi,
   shippingAddresses: memberShippingAddressesApi,
 
   coupons: {

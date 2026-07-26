@@ -100,6 +100,27 @@ public class AdminAnalyticsRepository {
 				this::mapTopProduct);
 	}
 
+	/**
+	 * 商城類別營收占比：僅 shipped 訂單，分類來自 product → equipment_item → category。
+	 */
+	public List<CategoryBreakdownRow> shopCategoryBreakdown(LocalDate from, LocalDate to) {
+		return jdbc.query("""
+				select coalesce(nullif(trim(pc.name), ''), '未分類') as label,
+				       coalesce(sum(oi.quantity * oi.unit_price_snapshot), 0)::text as value
+				from order_items oi
+				join orders o on o.id = oi.order_id
+				join products p on p.id = oi.product_id
+				join equipment_items ei on ei.id = p.item_id
+				join product_categories pc on pc.id = ei.category_id
+				where o.status = 'shipped'
+				  and %s between :from and :to
+				group by pc.name
+				order by sum(oi.quantity * oi.unit_price_snapshot) desc, label
+				""".formatted(ORDER_DAY),
+				params(from, to),
+				this::mapCategoryBreakdown);
+	}
+
 	public long countBookingsInPeriod(LocalDate from, LocalDate to) {
 		return queryLong("""
 				select count(*) from bookings b
@@ -196,12 +217,38 @@ public class AdminAnalyticsRepository {
 				(rs, rowNum) -> new RegionRevenueRow(rs.getString("region"), rs.getBigDecimal("revenue")));
 	}
 
+	/**
+	 * 租借裝備類別占比：paid 預約，分類來自 rental SKU → equipment_item → category；value 為租借件數。
+	 */
+	public List<CategoryBreakdownRow> bookingRentalCategoryBreakdown(LocalDate from, LocalDate to) {
+		return jdbc.query("""
+				select coalesce(nullif(trim(pc.name), ''), '未分類') as label,
+				       coalesce(sum(bsr.quantity), 0)::text as value
+				from booking_selected_rentals bsr
+				join bookings b on b.id = bsr.booking_id
+				join rental_sku_variants rsv on rsv.id = bsr.rental_sku_variant_id
+				join rental_skus rs on rs.id = rsv.rental_sku_id
+				join equipment_items ei on ei.id = rs.item_id
+				join product_categories pc on pc.id = ei.category_id
+				where b.payment_status = 'paid'
+				  and %s between :from and :to
+				group by pc.name
+				order by sum(bsr.quantity) desc, label
+				""".formatted(BOOKING_DAY),
+				params(from, to),
+				this::mapCategoryBreakdown);
+	}
+
 	private TopProductRow mapTopProduct(ResultSet rs, int rowNum) throws SQLException {
 		return new TopProductRow(
 				rs.getString("product_id"),
 				rs.getString("name"),
 				rs.getBigDecimal("revenue"),
 				rs.getLong("quantity"));
+	}
+
+	private CategoryBreakdownRow mapCategoryBreakdown(ResultSet rs, int rowNum) throws SQLException {
+		return new CategoryBreakdownRow(rs.getString("label"), rs.getString("value"));
 	}
 
 	private long queryLong(String sql, LocalDate from, LocalDate to) {
@@ -228,5 +275,8 @@ public class AdminAnalyticsRepository {
 	}
 
 	public record RegionRevenueRow(String region, BigDecimal revenue) {
+	}
+
+	public record CategoryBreakdownRow(String label, String value) {
 	}
 }

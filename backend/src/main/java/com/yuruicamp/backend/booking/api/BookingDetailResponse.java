@@ -5,6 +5,7 @@ import java.util.List;
 // 會員預約詳情包含表頭、金額與建立當下的營位／租借快照。
 public record BookingDetailResponse(
 		String bookingId,
+		String displayNo,
 		String status,
 		String paymentStatus,
 		String paymentMethod,

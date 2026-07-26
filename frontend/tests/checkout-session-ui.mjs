@@ -178,7 +178,7 @@ assert.equal(toastMessage, '請完成紅色標記的必填資料');
 assert.equal(elements.get('checkoutSessionPanel').dataset.state, '');
 assert.equal(elements.get('checkoutSessionTimer').hidden, true);
 assert.equal(confirmButton.disabled, false);
-assert.equal(confirmButton.textContent, '確認結帳');
+assert.equal(confirmButton.textContent, '結帳並前往付款');
 
 context._renderCheckoutSessionState(
   {
@@ -190,11 +190,13 @@ context._renderCheckoutSessionState(
   },
   confirmButton
 );
-assert.equal(elements.get('checkoutSessionPanel').dataset.state, 'isReady');
+// M2：ECPay ready_to_pay 不顯示 Ready 大面板，只保留倒數
+assert.equal(elements.get('checkoutSessionPanel').hidden, true);
+assert.equal(elements.get('checkoutSessionPanel').dataset.state, '');
 assert.equal(elements.get('checkoutSessionTimer').hidden, false);
 assert.match(elements.get('checkoutCountdown').textContent, /^1[45]:[0-5][0-9]$/);
 assert.equal(confirmButton.disabled, false);
-assert.equal(confirmButton.textContent, '確認結帳');
+assert.equal(confirmButton.textContent, '結帳並前往付款');
 assert.equal(elements.get('checkoutTotal').textContent, 'NT$3200.00');
 
 storageValues.set('checkoutIdempotencyKey', 'COD-KEY');

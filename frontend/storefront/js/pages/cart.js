@@ -1,12 +1,5 @@
-// Storefront 確認背包頁：進頁建立 Draft Checkout Session 並保留商品庫存。
-let storefrontCartSessionQueue = Promise.resolve();
-let storefrontCartSessionRevision = 0;
-let storefrontCartNeedsAuthRetry = false;
-
-const STOREFRONT_CART_LAST_SESSION_KEY = 'lastCheckoutSession';
-const STOREFRONT_CART_ORDER_ID_KEY = 'checkoutCompletedOrderId';
-const STOREFRONT_CART_IDEMPOTENCY_KEY = 'checkoutIdempotencyKey';
-const STOREFRONT_CART_FINGERPRINT_KEY = 'checkoutCartFingerprint';
+// Storefront 確認背包頁：僅 soft 驗量；hard lock 改在 checkout 進頁建立 Session。
+let storefrontCartCatalogPromise = null;
 
 window.initStorefrontCartPage = () => {
   if (document.body.dataset.storefrontCartInitialized === 'true') return;
@@ -16,35 +9,7 @@ window.initStorefrontCartPage = () => {
   _bindStorefrontCartActions();
 
   if (!window.AppState?.cart?.length) return;
-
-  const storedFingerprint = sessionStorage.getItem(STOREFRONT_CART_FINGERPRINT_KEY);
-  let currentFingerprint;
-  try {
-    currentFingerprint = _buildStorefrontCartFingerprint(window.AppState.cart);
-  } catch {
-    _setStorefrontCartSessionStatus({
-      state: 'error',
-      title: '部分商品規格資料已失效',
-      message: '請移除提示的舊商品，再從商品頁重新選擇規格。',
-    });
-    return;
-  }
-  const storedSession = _readStorefrontCartSession();
-  const mustReplace =
-    Boolean(storedSession) &&
-    (storedFingerprint !== currentFingerprint || _isStorefrontCartSessionExpired(storedSession));
-
-  if (storedSession && !mustReplace && ['draft', 'ready_to_pay'].includes(storedSession.checkoutStep)) {
-    _applyStorefrontCartSessionPricing(storedSession.pricing);
-    _setStorefrontCartSessionStatus({
-      state: 'ready',
-      title: '商品庫存已暫時保留',
-      message: '請於 15 分鐘內填寫結帳資料並完成付款。',
-    });
-    return;
-  }
-
-  _prepareStorefrontCartSession(mustReplace);
+  _runStorefrontCartSoftValidation();
 };
 
 function _bindStorefrontCartActions() {
@@ -66,7 +31,6 @@ function _bindStorefrontCartActions() {
     }
   });
 
-  // 手動輸入數量時沿用共用購物車更新事件，讓金額與 Checkout Session 一起重建。
   cartItems?.addEventListener('change', (event) => {
     const input = event.target.closest('input[data-cart-quantity]');
     if (!input) return;
@@ -87,44 +51,39 @@ function _bindStorefrontCartActions() {
   });
 
   document.getElementById('storefrontCartClearBtn')?.addEventListener('click', () => {
-    const previousSession = _readStorefrontCartSession();
-
-    // 先停止舊流程並立即更新空背包畫面，再於背景釋放後端保留庫存。
-    storefrontCartSessionRevision += 1;
     window.clearCart();
-    _clearStorefrontCartSessionState();
     _renderStorefrontCartPage();
-    _cancelStorefrontCartSession(previousSession);
+    _setStorefrontCartSessionStatus({
+      state: 'idle',
+      title: '背包已清空',
+      message: '返回商品列表繼續選購。',
+    });
   });
 
-  document.getElementById('storefrontCartCheckoutLink')?.addEventListener('click', (event) => {
+  // K2：前往結帳前再驗一次 soft 庫存 / Re-validate stock before checkout navigation
+  document.getElementById('storefrontCartCheckoutLink')?.addEventListener('click', async (event) => {
     if (event.currentTarget.getAttribute('aria-disabled') === 'true') {
       event.preventDefault();
-      window.showToast?.('請等待庫存確認完成。', 'info');
+      window.showToast?.('請依提示調整商品數量後再結帳。', 'info');
+      return;
     }
+
+    event.preventDefault();
+    const result = await _runStorefrontCartSoftValidation({ blockCheckout: true });
+    if (!result.ok) return;
+
+    window.location.href = event.currentTarget.getAttribute('href') || './checkout.html';
   });
 
   document.addEventListener('yurui:cart-changed', () => {
+    storefrontCartCatalogPromise = null;
     _renderStorefrontCartPage();
     if (window.AppState?.cart?.length) {
-      _prepareStorefrontCartSession(true);
+      _runStorefrontCartSoftValidation();
     } else {
-      storefrontCartSessionRevision += 1;
-      _clearStorefrontCartSessionState();
-    }
-  });
-
-  window.addEventListener('yurui:auth-changed', (event) => {
-    if (event.detail?.type === 'login' && storefrontCartNeedsAuthRetry) {
-      storefrontCartNeedsAuthRetry = false;
-      _prepareStorefrontCartSession(false);
-    } else if (event.detail?.type === 'logout') {
-      storefrontCartSessionRevision += 1;
-      storefrontCartNeedsAuthRetry = true;
-      _clearStorefrontCartSessionState();
       _setStorefrontCartSessionStatus({
-        state: 'error',
-        title: '請先登入',
+        state: 'idle',
+        title: '背包已清空',
         message: '',
       });
     }
@@ -138,7 +97,6 @@ function _renderStorefrontCartPage() {
   const content = document.getElementById('storefrontCartContent');
   const stepProgress = document.querySelector('.storefrontCartStepProgress');
 
-  // 空背包時同步隱藏結帳流程與商品內容，只保留空狀態引導。
   if (empty) empty.hidden = hasItems;
   if (content) content.hidden = !hasItems;
   if (stepProgress) stepProgress.hidden = !hasItems;
@@ -167,6 +125,10 @@ function _buildStorefrontCartItemHtml(item) {
   const quantity = Number(item.quantity || 0);
   const maxQuantity = Number(window.AppConfig?.CART?.MAX_QUANTITY || 999);
   const unitPrice = Number(item.price || 0);
+  const stockHint =
+    Number.isFinite(Number(item.availableQuantity)) && item.inStock !== false
+      ? `<p class="storefrontCartItemStock">剩餘 ${Number(item.availableQuantity)} 件</p>`
+      : '';
 
   return `
     <article class="storefrontCartItem">
@@ -177,6 +139,7 @@ function _buildStorefrontCartItemHtml(item) {
         ${brand ? `<p class="storefrontCartItemBrand">${brand}</p>` : ''}
         <h3 class="storefrontCartItemName">${name}</h3>
         ${spec ? `<p class="storefrontCartItemSpec">${spec}</p>` : ''}
+        ${stockHint}
         <p class="storefrontCartItemUnitPrice">單價 ${window.formatCurrency(unitPrice)}</p>
       </div>
       <div class="storefrontCartItemActions">
@@ -194,211 +157,93 @@ function _buildStorefrontCartItemHtml(item) {
   `;
 }
 
-// 進頁或數量變更時建立 Draft；變更商品前先取消舊保留。
-function _prepareStorefrontCartSession(replaceExisting) {
-  const revision = ++storefrontCartSessionRevision;
+/** 從 catalog 補齊 variant 可售量（若 API 有提供）/ Enrich cart lines with catalog stock when available */
+async function _hydrateStorefrontCartStockFromCatalog(cart) {
+  const productIds = [...new Set((cart || []).map((item) => item.id).filter(Boolean))];
+  if (!productIds.length || !window.API?.products?.getById) return cart;
+
+  if (!storefrontCartCatalogPromise) {
+    storefrontCartCatalogPromise = Promise.all(
+      productIds.map((productId) =>
+        window.API.products.getById(productId).catch(() => null)
+      )
+    );
+  }
+
+  const products = await storefrontCartCatalogPromise;
+  const variantMap = new Map();
+  products.filter(Boolean).forEach((product) => {
+    (product.variants || []).forEach((variant) => {
+      variantMap.set(`${product.id}:${variant.id}`, variant);
+    });
+  });
+
+  return (cart || []).map((item) => {
+    const variant = variantMap.get(`${item.id}:${item.variantId || ''}`);
+    if (!variant) return item;
+    const availableQuantity = Number(variant.availableQuantity);
+    return Object.assign({}, item, {
+      availableQuantity: Number.isFinite(availableQuantity) ? availableQuantity : item.availableQuantity,
+      inStock:
+        variant.inStock !== false &&
+        (Number.isFinite(availableQuantity) ? availableQuantity > 0 : item.inStock !== false),
+    });
+  });
+}
+
+/** Soft 驗量：不建立 Checkout Session，只檢查 client 端可售量 */
+async function _runStorefrontCartSoftValidation({ blockCheckout = false } = {}) {
+  const cart = window.AppState?.cart || [];
+  if (!cart.length) {
+    _setStorefrontCartSessionStatus({ state: 'idle', title: '背包已清空', message: '' });
+    return { ok: false };
+  }
+
   _setStorefrontCartSessionStatus({
     state: 'loading',
-    title: '正在確認商品庫存',
-    message: '請稍候，我們正在建立 Checkout Session。',
+    title: '正在確認可售數量',
+    message: '請稍候，我們正在比對商品可售庫存。',
   });
 
-  storefrontCartSessionQueue = storefrontCartSessionQueue
-    .catch(() => {
-      // 前一次失敗不阻斷使用者調整數量後的下一次重試。
-    })
-    .then(async () => {
-      await _waitForStorefrontCartAuthReady();
-
-      const previousSession = _readStorefrontCartSession();
-      if (replaceExisting && previousSession?.orderId) {
-        await window.API.checkout.cancelSession(previousSession.orderId);
-      }
-
-      if (replaceExisting || _isStorefrontCartSessionExpired(previousSession)) {
-        _clearStorefrontCartSessionState();
-      }
-
-      const cartSnapshot = window.AppState.cart;
-      const request = _buildStorefrontCartCheckoutRequest(cartSnapshot);
-      const checkoutSession = await window.API.checkout.createSession(request);
-
-      return {
-        checkoutSession,
-        fingerprint: _buildStorefrontCartFingerprint(cartSnapshot),
-      };
-    })
-    .then(async (result) => {
-      if (revision !== storefrontCartSessionRevision) {
-        await _cancelStorefrontCartSession(result.checkoutSession);
-        return;
-      }
-
-      _saveStorefrontCartSession(result.checkoutSession, result.fingerprint);
-      storefrontCartNeedsAuthRetry = false;
-      _applyStorefrontCartSessionPricing(result.checkoutSession.pricing);
-      _setStorefrontCartSessionStatus({
-        state: 'ready',
-        title: '商品庫存已暫時保留',
-        message: '請於 15 分鐘內填寫結帳資料並完成付款。',
-      });
-    })
-    .catch((error) => {
-      if (revision !== storefrontCartSessionRevision) return;
-
-      _clearStorefrontCartSessionState();
-      storefrontCartNeedsAuthRetry = _isStorefrontCartAuthError(error);
-      _renderStorefrontCartSessionError(error);
-    });
-
-  return storefrontCartSessionQueue;
-}
-
-/** 等 Firebase／AppAuth 就緒後再建 Checkout Session，避免 Bearer 尚未注入就收到 401。 */
-async function _waitForStorefrontCartAuthReady() {
-  if (window.AppAuth?.whenReady) {
-    await window.AppAuth.whenReady();
-  }
-  if (window.YuruiFirebase?.waitForAuthState) {
-    await window.YuruiFirebase.waitForAuthState();
-  }
-  if (window.YuruiFirebase?.isReady?.() && window.AppAuth?.configure) {
-    try {
-      window.AppAuth.configure({ auth: window.YuruiFirebase.getAuth() });
-    } catch (error) {
-      console.warn('[storefront-cart] AppAuth.configure 略過:', error);
-    }
-  }
-}
-
-function _buildStorefrontCartCheckoutRequest(cart) {
-  return {
-    items: _buildStorefrontCartRequestItems(cart),
-    idempotencyKey: _getStorefrontCartIdempotencyKey(cart),
-  };
-}
-
-function _buildStorefrontCartRequestItems(cart) {
-  return cart.map((item) => {
-    const variantId = String(item.variantId || '').trim();
-    const quantity = Number(item.quantity);
-    if (!variantId || !Number.isInteger(quantity) || quantity < 1) {
-      throw new Error('購物車商品缺少有效的規格或數量。');
-    }
-
-    return { variantId, quantity };
-  });
-}
-
-function _buildStorefrontCartFingerprint(cart) {
-  return JSON.stringify(
-    _buildStorefrontCartRequestItems(cart)
-      .slice()
-      .sort((left, right) => left.variantId.localeCompare(right.variantId))
-  );
-}
-
-function _getStorefrontCartIdempotencyKey(cart) {
-  const fingerprint = _buildStorefrontCartFingerprint(cart);
-  const previousFingerprint = sessionStorage.getItem(STOREFRONT_CART_FINGERPRINT_KEY);
-  let key = sessionStorage.getItem(STOREFRONT_CART_IDEMPOTENCY_KEY);
-
-  if (!key || previousFingerprint !== fingerprint) {
-    if (!window.crypto?.randomUUID) throw new Error('瀏覽器無法建立安全的 Checkout 識別碼。');
-    key = window.crypto.randomUUID();
-    sessionStorage.setItem(STOREFRONT_CART_IDEMPOTENCY_KEY, key);
-    sessionStorage.setItem(STOREFRONT_CART_FINGERPRINT_KEY, fingerprint);
-  }
-
-  return key;
-}
-
-function _saveStorefrontCartSession(checkoutSession, fingerprint) {
-  sessionStorage.setItem(STOREFRONT_CART_LAST_SESSION_KEY, JSON.stringify(checkoutSession));
-  sessionStorage.setItem(STOREFRONT_CART_ORDER_ID_KEY, checkoutSession.orderId);
-  sessionStorage.setItem(STOREFRONT_CART_FINGERPRINT_KEY, fingerprint);
-}
-
-function _readStorefrontCartSession() {
+  let hydratedCart;
   try {
-    return JSON.parse(sessionStorage.getItem(STOREFRONT_CART_LAST_SESSION_KEY) || 'null');
+    hydratedCart = await _hydrateStorefrontCartStockFromCatalog(cart);
+    window.AppState.cart = hydratedCart;
+    window.saveAppState?.();
+    _renderStorefrontCartPage();
   } catch {
-    return null;
+    hydratedCart = cart;
   }
-}
 
-function _clearStorefrontCartSessionState() {
-  sessionStorage.removeItem(STOREFRONT_CART_LAST_SESSION_KEY);
-  sessionStorage.removeItem(STOREFRONT_CART_ORDER_ID_KEY);
-  sessionStorage.removeItem(STOREFRONT_CART_IDEMPOTENCY_KEY);
-  sessionStorage.removeItem(STOREFRONT_CART_FINGERPRINT_KEY);
-}
+  const issues = [];
+  hydratedCart.forEach((item) => {
+    if (item.inStock === false) {
+      issues.push(`${item.name || '商品'}目前無法購買，請移除後再結帳。`);
+      return;
+    }
+    const available = Number(item.availableQuantity);
+    if (Number.isFinite(available) && Number(item.quantity) > available) {
+      issues.push(`${item.name || '商品'}僅剩 ${available} 件，請調整數量。`);
+    }
+  });
 
-function _isStorefrontCartSessionExpired(checkoutSession) {
-  const expiresAt = checkoutSession?.checkoutExpiresAt;
-  return Boolean(expiresAt && Date.parse(expiresAt) <= Date.now());
-}
-
-async function _cancelStorefrontCartSession(checkoutSession) {
-  if (!checkoutSession?.orderId || !window.API?.checkout?.cancelSession) return;
-  try {
-    await window.API.checkout.cancelSession(checkoutSession.orderId);
-  } catch (error) {
-    console.warn('[storefront-cart] 無法釋放舊 Checkout Session：', error);
-  }
-}
-
-function _applyStorefrontCartSessionPricing(pricing) {
-  const subtotal = Number(pricing?.subtotal);
-  const shipping = Number(pricing?.shippingFee);
-  const total = Number(pricing?.total);
-  if (![subtotal, shipping, total].every((value) => Number.isFinite(value) && value >= 0)) return;
-
-  _setStorefrontCartText('storefrontCartSubtotal', window.formatCurrency(subtotal));
-  _setStorefrontCartText(
-    'storefrontCartShipping',
-    shipping === 0 ? '結帳時計算' : window.formatCurrency(shipping)
-  );
-  _setStorefrontCartText('storefrontCartTotal', window.formatCurrency(total));
-}
-
-function _renderStorefrontCartSessionError(error) {
-  const code = String(error?.code || '').toUpperCase();
-  const details = Array.isArray(error?.details) ? error.details : [];
-
-  if (code === 'STOCK_INSUFFICIENT') {
+  if (issues.length > 0) {
     _setStorefrontCartSessionStatus({
       state: 'error',
-      title: '商品剩餘數量不足請重新調整數量',
-      message: '請依目前可用數量調整購物背包。',
-      details,
+      title: blockCheckout ? '無法前往結帳' : '部分商品數量需調整',
+      message: '請依提示調整購物背包後再繼續。',
+      details: issues.map((reason) => ({ reason })),
     });
-    return;
-  }
-  if (code === 'VARIANT_NOT_SELLABLE') {
-    _setStorefrontCartSessionStatus({
-      state: 'error',
-      title: '部分商品目前無法購買',
-      message: '請移除已下架的商品後再繼續。',
-      details,
-    });
-    return;
-  }
-  if (_isStorefrontCartAuthError(error)) {
-    _setStorefrontCartSessionStatus({
-      state: 'error',
-      title: '請先登入',
-      message: '',
-    });
-    window.openModal?.('loginModal');
-    return;
+    if (blockCheckout) window.showToast?.(issues[0], 'warning');
+    return { ok: false, issues };
   }
 
   _setStorefrontCartSessionStatus({
-    state: 'error',
-    title: '暫時無法確認商品庫存',
-    message: error?.message || '請稍後重新整理頁面再試。',
+    state: 'ready',
+    title: '商品數量已確認',
+    message: '可以前往結帳填寫收件資料。',
   });
+  return { ok: true };
 }
 
 function _setStorefrontCartSessionStatus({ state, title, message, details = [] }) {
@@ -436,7 +281,9 @@ function _setStorefrontCartSessionStatus({ state, title, message, details = [] }
     checkoutLink.setAttribute('aria-disabled', String(!ready));
     checkoutLink.innerHTML = ready
       ? '<i class="bi bi-arrow-right-circle" aria-hidden="true"></i> 前往填寫結帳資料'
-      : '<i class="bi bi-hourglass-split" aria-hidden="true"></i> 正在確認庫存';
+      : state === 'error'
+        ? '<i class="bi bi-exclamation-octagon" aria-hidden="true"></i> 請調整數量'
+        : '<i class="bi bi-hourglass-split" aria-hidden="true"></i> 正在確認可售量';
   }
 }
 
@@ -444,11 +291,6 @@ function _findStorefrontCartItem(productId, variantId) {
   return (window.AppState?.cart || []).find(
     (item) => item.id === productId && (item.variantId || '') === (variantId || '')
   );
-}
-
-function _isStorefrontCartAuthError(error) {
-  const code = String(error?.code || '').toUpperCase();
-  return code === 'UNAUTHORIZED' || code === 'AUTH_TOKEN_UNAVAILABLE';
 }
 
 function _setStorefrontCartText(id, value) {

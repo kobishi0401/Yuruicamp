@@ -5,6 +5,7 @@ import java.util.List;
 // 回傳目前 Checkout 草稿、價格、商品與收件資料。
 public record CheckoutSessionResponse(
 		String orderId,
+		String displayNo,
 		String paymentStatus,
 		String paymentMethod,
 		String status,

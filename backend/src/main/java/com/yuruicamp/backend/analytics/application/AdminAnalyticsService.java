@@ -17,8 +17,10 @@ import com.yuruicamp.backend.analytics.api.AdminAnalyticsPeriodResponse;
 import com.yuruicamp.backend.analytics.api.AdminAnalyticsShopSummaryResponse;
 import com.yuruicamp.backend.analytics.api.AdminAnalyticsShopSummaryResponse.ShopKpis;
 import com.yuruicamp.backend.analytics.api.AdminAnalyticsShopSummaryResponse.TopProductRow;
+import com.yuruicamp.backend.analytics.api.AdminAnalyticsCategoryBreakdownRow;
 import com.yuruicamp.backend.analytics.infrastructure.AdminAnalyticsRepository;
 import com.yuruicamp.backend.analytics.infrastructure.AdminAnalyticsRepository.CampgroundRevenueRow;
+import com.yuruicamp.backend.analytics.infrastructure.AdminAnalyticsRepository.CategoryBreakdownRow;
 import com.yuruicamp.backend.analytics.infrastructure.AdminAnalyticsRepository.DailyRevenueRow;
 import com.yuruicamp.backend.analytics.infrastructure.AdminAnalyticsRepository.RegionRevenueRow;
 import com.yuruicamp.backend.common.exception.BusinessException;
@@ -70,12 +72,16 @@ public class AdminAnalyticsService {
 				.map(row -> new TopProductRow(row.productId(), row.name(), row.revenue(), row.quantity()))
 				.toList();
 
+		List<AdminAnalyticsCategoryBreakdownRow> categoryBreakdown =
+				toCategoryBreakdownRows(repository.shopCategoryBreakdown(from, to));
+
 		return new AdminAnalyticsShopSummaryResponse(
 				new AdminAnalyticsPeriodResponse(from, to),
 				granularity,
 				kpis,
 				series,
-				topProducts);
+				topProducts,
+				categoryBreakdown);
 	}
 
 	@Transactional(readOnly = true)
@@ -111,17 +117,27 @@ public class AdminAnalyticsService {
 				.map(row -> new RegionRow(row.region(), row.revenue()))
 				.toList();
 
+		List<AdminAnalyticsCategoryBreakdownRow> categoryBreakdown =
+				toCategoryBreakdownRows(repository.bookingRentalCategoryBreakdown(from, to));
+
 		return new AdminAnalyticsBookingSummaryResponse(
 				new AdminAnalyticsPeriodResponse(from, to),
 				granularity,
 				kpis,
 				series,
 				byCampground,
-				byRegion);
+				byRegion,
+				categoryBreakdown);
 	}
 
 	private CampgroundRow toCampgroundRow(CampgroundRevenueRow row) {
 		return new CampgroundRow(row.campgroundId(), row.name(), row.region(), row.revenue());
+	}
+
+	private List<AdminAnalyticsCategoryBreakdownRow> toCategoryBreakdownRows(List<CategoryBreakdownRow> rows) {
+		return rows.stream()
+				.map(row -> new AdminAnalyticsCategoryBreakdownRow(row.label(), row.value()))
+				.toList();
 	}
 
 	private List<AdminAnalyticsShopSummaryResponse.TimeSeriesPoint> buildSeries(

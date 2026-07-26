@@ -71,6 +71,7 @@ public class MemberOrderService {
 
 		return new MemberOrderResponse(
 				order.getId(),
+				order.getDisplayNo(),
 				order.getCustomerId(),
 				order.getBuyerName(),
 				order.getBuyerEmail(),

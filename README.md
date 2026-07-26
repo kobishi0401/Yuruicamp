@@ -6,7 +6,7 @@
 | ------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | [`frontend/`](./frontend/)                                                      | 主站、booking、admin、mock `data/`、Vite／npm | 網頁、樣式、假資料、前端腳本                                                                |
 | [`backend/`](./backend/)                                                        | Spring Boot                                   | Java API（線 A 骨架：Firebase ID Token；見 [`backend/README.md`](./backend/README.md)）     |
-| [`docs/`](./docs/)                                                              | Schema、前端規格、資料表說明                  | DB／規格文件                                                                                |
+| [`docs/`](./docs/)                                                              | Schema、前端規格、資料表說明                  | DB／規格文件；**組員本機啟動 → [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)** |
 | [`plans/`](./plans/)                                                            | 規劃與遷移規格                                | 例如 [`plans/frontend-folder-migration-spec.md`](./plans/frontend-folder-migration-spec.md) |
 | [`docker-compose.yml`](./docker-compose.yml) + [`.env.example`](./.env.example) | 本機 PostgreSQL                               | 資料庫基礎設施                                                                              |
 
@@ -49,8 +49,8 @@
 - Booking 線 E 的 E-4 已完成：同一個 Checkout 交易會鎖定租借實體庫存、扣除住宿日期重疊的 active 保留、建立租借快照與保留帳；不同日期可共用庫存，重疊日期不可超租。
 - Booking 線 E 的 E-5 已完成：會員可分頁查看自己的預約列表、完整詳情與 Checkout 快照；後端不接受任意 customerId，讀取他人與不存在的預約都回 404。
 - Booking 線 E 的 E-6 已完成：會員可主動取消 pending／unpaid 預約；排程每分鐘處理逾時 Checkout，同交易恢復營位占用、釋放 active 租借保留並寫入狀態歷程，E-1～E-6 共 46 項 PostgreSQL 回歸測試通過。
-- Booking 線 E 的 E-7 已完成：`BookingAPI` 在 Backend 模式統一呼叫 `/api/booking/**`，可用性、價格、Booking ID、本人列表／詳情／取消與 15 分鐘倒數都使用後端結果；不再寫入 `mockBookings` 或自行標記 paid。進入 `booking-cart.html` 即建立 Checkout Session 並顯示庫存不足提示，數量變更會重新鎖位；`booking-checkout.html` 的「前往 ECPay」只使用已建立的 `bookingId` 取得後端簽章表單，不再建立第二筆 Session。訂購人欄位預設空白且只由「帶入會員資料」填入，實際 ECPay 端點、Notify 與付款確認仍待線 D。
-- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨與 COD 確認：進入 `storefront/pages/cart.html` 即建立 Draft Session 並鎖庫 15 分鐘；確認背包與結帳頁採節點式流程列，商品數量支援按鈕與直接輸入；`checkout.html` 的主要按鈕固定顯示「確認結帳」，資料不完整時只以 toast 與紅色欄位提示，送出時只 PATCH 既有 Session，再接續 `confirm-cod` 或 ECPay，不重複建單。COD 成立後仍為 `unpaid` 且不再受 Checkout 期限限制；若有套券，claim 會改為 `consumed`。
+- Booking 線 E 的 E-7 已完成：`BookingAPI` 在 Backend 模式統一呼叫 `/api/booking/**`，可用性、價格、`displayNo`、本人列表／詳情／取消與 15 分鐘倒數都使用後端結果。**B3（ADR 0002）**：`booking-cart.html` 僅 soft 驗量、不建 Session；進 `booking-checkout.html` 登入後才 `createBooking` 並開始 15 分鐘 hard lock；ECPay launch 帶 contact 快照（O2）。Payment stub／Notify 由線 D 負責（2026-07-25 ✅）。
+- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨與 COD／ECPay：**B3** — `cart.html` 僅 soft 驗量，進 `checkout.html` 才 `createSession` 並鎖庫 15 分鐘；**M2** — ECPay 按「結帳並前往付款」一次跳轉綠界；確認背包與結帳頁採節點式流程列；COD 按「確認結帳」直接成立。
 - 商城取消訂單入口已移至會員中心：待出貨且未付款的商品訂單可在訂單明細最下方取消；COD 成立頁會提示前往會員中心，購物車 Drawer 的圖層亦高於 Toast，避免提示遮住操作。
 - 商品詳情頁的「立即購買」會以商品 ID 與 variant ID 檢查購物車；相同品項已存在時保留原數量並直接前往確認背包，只有「加入購物車」會繼續累加數量。
 - 商品訂單的 canonical `cancelled` 狀態已與預約訂單對齊，會員中心及後台商品訂單列表、詳情與篩選器統一顯示「已取消」。
@@ -74,7 +74,7 @@
 - Checkout 優惠券套用具備前後端雙層冪等保護：確認結帳不重送 Session 已綁定的 claim；後端收到同訂單、同 claim 時保留快照，只有換券才替換 `order_coupons`。
 - 會員中心正式優惠券已接線：Backend 模式以 `GET /api/me/coupons` 顯示會員本人 claims，包含 Checkout 領取的 `promotion` 券；`claimed` 顯示為可用，`consumed/revoked/expired` 顯示為不可用，不再依前端靜態會員資料推算資格。
 - Checkout Mock 與 Backend 共用 `CheckoutSession`：Mock 由商品契約重算價格、支援冪等並寫入獨立 `mockCheckoutSessions`；Backend 模式禁止 Legacy `orders.create()`。
-- Storefront 確認背包頁呼叫 `API.checkout.createSession()`；Request 只含規格 ID、數量與冪等鍵，不傳會員 ID、商品快照、前端價格、總額、狀態或點數。正式 Checkout 頁只 PATCH 配送與付款資料。
+- Storefront 確認背包頁 **不** 呼叫 `createSession`（soft 驗量）；進 `checkout.html` 登入後才建 Session 並 hard lock。Request 只含規格 ID、數量與冪等鍵。正式 Checkout 頁 PATCH 配送／付款／優惠券後接 COD 或 ECPay。
 - Checkout 冪等鍵由 `crypto.randomUUID()` 產生並暫存在 sessionStorage；網路重試與連點沿用同一 key，成功保存後端 `orderId`，購物車變更、取消或逾時才清除。
 - Checkout I-5／CK-4 已完成：建立成功後摘要只採用後端 `CheckoutSession.pricing`；Backend 模式不建立 Legacy Order，優惠券以會員 claim 套用，ECPay 也不在本站收集卡號、到期日或 CVV。
 - Checkout I-6 已完成：Draft 可 PATCH 補資料，Ready 顯示後端金額與 15 分鐘倒數；逾時／取消會清除 Session、保留購物車，並依後端錯誤碼提供重新登入、調整庫存或重建 Checkout 操作。
@@ -90,6 +90,7 @@
 - 38 筆評論 Mock 的舊 `v-P...` 已全數轉為 canonical variant／SKU；Seed 只建立有明確 orderId 與 order item 的 `REV031`。舊庫存異動因缺 variant、單一表頭語意與員工主檔對照，維持不搬移。
 - 會員周邊 Seed 已獨立補入 `020-identity.sql`：18 個偏好選項、200 筆會員偏好、50 筆預設地址、3 個會員標籤與 56 筆標籤指派；逐筆對齊 `frontend/data/customers/*.json`，不影響訂單／預訂成立條件。
 - 完整 Seed 已於 2026-07-22 使用 PostgreSQL 16 全新獨立資料庫實灌，`latest_schema.sql` 與 `010`～`070` 一次成功 `COMMIT`；同一版本也已成功套用到目前 `yuruicamp`。可重做的流程與判定標準見 [`資料庫與完整 Seed 實際驗證`](./docs/backend-specs/test/database-seed-validation.md)。
+- **Commerce UX（2026-07-26 ✅）**：`orders`／`bookings` 人類可讀 `displayNo`（`ORD-xxxx`／`BK-xxxx`）；後台預約明細 lineTotal、contact 快照、中文狀態時間軸；Analytics `categoryBreakdown` 甜甜圈；會員 Profile API；靜態驗收入口 `frontend/tests/commerce-ux-browser.mjs`。規格見 [`.scratch/commerce-ux-display-checkout/spec.md`](./.scratch/commerce-ux-display-checkout/spec.md)。
 
 ### 用 npm 開啟前端（推薦／日常開發請用這個）
 
@@ -586,6 +587,9 @@ Yuruicamp/
 
 ## 🚀 快速開始
 
+> **組員本機啟動（Firebase + 後端 + DB）**：請先看精簡 checklist → [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)  
+> 下面章節為完整說明；日常開發只需依 local-dev-setup 開三個 Terminal 即可。
+
 ### 環境要求
 
 - 現代瀏覽器：Chrome 90+ / Firefox 88+ / Safari 14+ / Edge 90+
@@ -670,7 +674,7 @@ npx http-server -p 8000
 入口頁 → index.html
 首頁   → storefront/pages/home.html
 商品   → storefront/pages/products.html → storefront/pages/product-detail.html
-購物   → 商品詳情／購物車 Drawer → storefront/pages/cart.html（確認背包並鎖庫）→ storefront/pages/checkout.html → storefront/pages/checkout-success.html
+購物   → 商品詳情／購物背包 Drawer → storefront/pages/cart.html（soft 驗量）→ storefront/pages/checkout.html（hard lock 15 分）→ checkout-success.html
 會員   → storefront/pages/member-center.html
 內容   → storefront/pages/blog.html → storefront/pages/blog-detail.html
 分店   → storefront/pages/branches.html
@@ -702,8 +706,8 @@ npx http-server -p 8000
 搜尋   → booking/pages/camp-search.html（篩選地區、環境、設施）
 詳情   → booking/pages/camp-detail.html（選日期、選營位類型，寫入 localStorage.bookingCart）
 租借   → booking/pages/camp-rental.html（加選裝備，更新 bookingCart）
-背包   → booking/pages/booking-cart.html（確認明細並建立 15 分鐘 Checkout Session）
-結帳   → booking/pages/booking-checkout.html（填聯絡資訊並使用既有 Session 前往 ECPay）
+背包   → booking/pages/booking-cart.html（soft 驗量、確認明細）
+結帳   → booking/pages/booking-checkout.html（登入後建 Session、15 分 hard lock、ECPay + contact 快照）
 說明   → booking/pages/rental-guide.html（租借流程圖文說明）
 FAQ    → booking/pages/booking-faq.html（預約與退款常見問題）
 ```

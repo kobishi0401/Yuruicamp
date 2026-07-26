@@ -86,6 +86,14 @@ class AdminCustomerPostgreSqlIntegrationTest {
 				.andExpect(status().isUnauthorized());
 	}
 
+	@Test
+	void detailReturnsBirthdayAsIsoDateOnly() throws Exception {
+		mockMvc.perform(get("/api/admin/customers/G2A-CUSTOMER")
+					.header("Authorization", "Bearer dev:uid-g2a-admin:g2a-admin@example.test:google:G2A Admin"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.birthday").value("1995-05-20"));
+	}
+
 	private void cleanup() {
 		jdbc.query("SELECT soft_delete_customer('G2A-CUSTOMER')", resultSet -> {
 		});

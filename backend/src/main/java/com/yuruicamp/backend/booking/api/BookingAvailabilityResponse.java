@@ -6,5 +6,6 @@ import java.util.List;
 public record BookingAvailabilityResponse(
 		boolean available,
 		List<String> reasons,
-		List<BookingZoneAvailabilityResponse> zones) {
+		List<BookingZoneAvailabilityResponse> zones,
+		List<BookingRentalAvailabilityResponse> rentals) {
 }

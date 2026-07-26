@@ -125,7 +125,7 @@ class CheckoutExpirationServiceTest {
 	// 建立指定結帳期限的未付款測試訂單。
 	private static Order orderDueAt(Instant expiresAt) {
 		Order order = new Order();
-		order.initialize("O-EXPIRY-TEST", "C001", "expiry-key", "request-hash",
+		order.initialize("O-EXPIRY-TEST", "ORD-0099", "C001", "expiry-key", "request-hash",
 				"Buyer", "buyer@example.com", "Recipient", "Address", "0912345678",
 				com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				PaymentMethod.ecpay_credit, NOW.minusSeconds(900), expiresAt);
