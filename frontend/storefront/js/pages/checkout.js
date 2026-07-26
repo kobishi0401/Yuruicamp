@@ -9,6 +9,9 @@ let appliedCheckoutCouponCodes = [];
 let selectedShippingMethod = 'delivery';
 let checkoutCountdownTimer = null;
 let checkoutBranches = [];
+let checkoutSessionQueue = Promise.resolve();
+let checkoutSessionRevision = 0;
+let checkoutSessionNeedsAuthRetry = false;
 
 const CHECKOUT_LAST_SESSION_STORAGE_KEY = 'lastCheckoutSession';
 const CHECKOUT_IDEMPOTENCY_KEY = 'checkoutIdempotencyKey';
@@ -90,7 +93,8 @@ window.initCheckoutPage = async () => {
   _renderCheckoutItems();
   _updateCheckoutSummary();
   _restoreCheckoutFormDraft();
-  _restoreCheckoutSession();
+  await _prefillCheckoutContactFields();
+  await _initCheckoutSessionOnEntry();
   _initAccordionPanels();
   _initShippingMethodChange();
   _initPaymentMethodChange();
@@ -311,6 +315,7 @@ function _initPaymentMethodChange() {
     radio.addEventListener('change', () => {
       _syncRadioGroupState('paymentMethod');
       _syncPaymentNoticeState();
+      _syncConfirmButtonLabel(_getStoredCheckoutSession());
       _saveCheckoutFormDraft();
     });
   });
@@ -366,19 +371,173 @@ function _syncPaymentNoticeState() {
   if (codNotice) codNotice.hidden = selected !== 'cod';
 }
 
-// Initialize fill-profile action.
+// 進 checkout 頁自動帶入姓名／Email／電話（N3）；保留手動「帶入會員資料」
+async function _prefillCheckoutContactFields() {
+  const user = _resolveCheckoutUser();
+  if (!user) return;
+  // 草稿或使用者已輸入時不覆寫 / Skip when draft or manual input exists
+  if (document.getElementById('buyerName')?.value.trim()) return;
+
+  let shippingAddr = null;
+  try {
+    shippingAddr = await window.API?.shippingAddresses?.getDefault?.();
+  } catch (error) {
+    console.warn('[checkout] 無法讀取預設配送地址', error);
+  }
+
+  const profile = _readLocalProfile();
+  const resolvedName =
+    (shippingAddr &&
+      `${shippingAddr.lastName || ''}${shippingAddr.firstName || ''}`.trim()) ||
+    user.name ||
+    profile.name ||
+    '';
+  const resolvedPhone = shippingAddr?.phone || user.phone || profile.phone || '';
+  const resolvedEmail = shippingAddr?.email || user.email || profile.email || '';
+
+  if (resolvedName) _setCheckoutDraftFieldValue('buyerName', resolvedName);
+  if (resolvedPhone) _setCheckoutDraftFieldValue('buyerPhone', resolvedPhone);
+  if (resolvedEmail) _setCheckoutDraftFieldValue('buyerEmail', resolvedEmail);
+
+  if (window.YuruiShippingAddressUI && shippingAddr) {
+    window.YuruiShippingAddressUI.setAddress(shippingAddr);
+  }
+}
+
+// 結帳頁進入後（登入後）建立 Draft Checkout Session 並開始 15 分鐘保留
+async function _initCheckoutSessionOnEntry() {
+  const confirmBtn = document.getElementById('confirmOrderBtn');
+  _setCheckoutSessionPanel({
+    state: 'isDraft',
+    icon: 'bi-hourglass-split',
+    badge: 'Locking stock',
+    title: '正在保留商品庫存',
+    message: '請稍候，我們正在建立 Checkout Session。',
+  });
+
+  const revision = ++checkoutSessionRevision;
+  checkoutSessionQueue = checkoutSessionQueue
+    .catch(() => {})
+    .then(async () => {
+      await _waitForCheckoutAuthReady();
+      if (!_getCheckoutUserId()) {
+        throw Object.assign(new Error('請先登入'), { code: 'UNAUTHORIZED' });
+      }
+
+      const storedSession = _getStoredCheckoutSession();
+      const fingerprint = _buildCheckoutCartFingerprint(window.AppState.cart);
+      const storedFingerprint = sessionStorage.getItem(CHECKOUT_CART_FINGERPRINT_KEY);
+      const canReuse =
+        storedSession?.orderId &&
+        storedFingerprint === fingerprint &&
+        ['draft', 'ready_to_pay'].includes(storedSession.checkoutStep) &&
+        storedSession.status !== 'cancelled' &&
+        !_isCheckoutSessionExpired(storedSession);
+
+      if (canReuse) {
+        return { checkoutSession: storedSession, fingerprint, reused: true };
+      }
+
+      if (storedSession?.orderId) {
+        await _cancelCheckoutSession(storedSession);
+      }
+      _clearCheckoutIdempotencyState();
+      sessionStorage.setItem(CHECKOUT_CART_FINGERPRINT_KEY, fingerprint);
+
+      const request = {
+        items: _buildCheckoutRequestItems(window.AppState.cart),
+        idempotencyKey: _getCheckoutIdempotencyKey(window.AppState.cart),
+      };
+      const checkoutSession = await window.API.checkout.createSession(request);
+      return { checkoutSession, fingerprint, reused: false };
+    })
+    .then((result) => {
+      if (revision !== checkoutSessionRevision) return;
+
+      _saveCheckoutSession(result.checkoutSession, result.fingerprint);
+      checkoutSessionNeedsAuthRetry = false;
+      _renderCheckoutSessionState(result.checkoutSession, confirmBtn);
+    })
+    .catch((error) => {
+      if (revision !== checkoutSessionRevision) return;
+      checkoutSessionNeedsAuthRetry = _isCheckoutAuthError(error);
+      _handleCheckoutError(error, confirmBtn);
+    });
+
+  return checkoutSessionQueue;
+}
+
+async function _waitForCheckoutAuthReady() {
+  if (window.AppAuth?.whenReady) await window.AppAuth.whenReady();
+  if (window.YuruiFirebase?.waitForAuthState) await window.YuruiFirebase.waitForAuthState();
+  if (window.YuruiFirebase?.isReady?.() && window.AppAuth?.configure) {
+    try {
+      window.AppAuth.configure({ auth: window.YuruiFirebase.getAuth() });
+    } catch (error) {
+      console.warn('[checkout] AppAuth.configure 略過:', error);
+    }
+  }
+}
+
+function _isCheckoutAuthError(error) {
+  const code = String(error?.code || '').toUpperCase();
+  return code === 'UNAUTHORIZED' || code === 'AUTH_TOKEN_UNAVAILABLE';
+}
+
+function _isCheckoutSessionExpired(checkoutSession) {
+  const expiresAt = checkoutSession?.checkoutExpiresAt;
+  return Boolean(expiresAt && Date.parse(expiresAt) <= Date.now());
+}
+
+async function _cancelCheckoutSession(checkoutSession) {
+  if (!checkoutSession?.orderId || !window.API?.checkout?.cancelSession) return;
+  try {
+    await window.API.checkout.cancelSession(checkoutSession.orderId);
+  } catch (error) {
+    console.warn('[checkout] 無法釋放舊 Checkout Session：', error);
+  }
+}
+
+function _getCheckoutIdempotencyKey(cart) {
+  const fingerprint = _buildCheckoutCartFingerprint(cart);
+  const previousFingerprint = sessionStorage.getItem(CHECKOUT_CART_FINGERPRINT_KEY);
+  let key = sessionStorage.getItem(CHECKOUT_IDEMPOTENCY_KEY);
+
+  if (!key || previousFingerprint !== fingerprint) {
+    if (!window.crypto?.randomUUID) throw new Error('瀏覽器無法建立安全的 Checkout 識別碼。');
+    key = window.crypto.randomUUID();
+    sessionStorage.setItem(CHECKOUT_IDEMPOTENCY_KEY, key);
+    sessionStorage.setItem(CHECKOUT_CART_FINGERPRINT_KEY, fingerprint);
+  }
+
+  return key;
+}
+
+function _getConfirmButtonLabel(checkoutSession) {
+  const paymentMethod =
+    checkoutSession?.paymentMethod || _getSelectedPaymentCode();
+  return paymentMethod === 'cod' ? '確認結帳' : '結帳並前往付款';
+}
+
+function _syncConfirmButtonLabel(checkoutSession) {
+  const confirmBtn = document.getElementById('confirmOrderBtn');
+  if (!confirmBtn || confirmBtn.disabled || confirmBtn.classList.contains('isLoading')) return;
+  confirmBtn.textContent = _getConfirmButtonLabel(checkoutSession);
+}
+
+/** 綁定「帶入會員資料」按鈕 / Bind fill-profile button */
 function _initFillProfileBtn() {
   const button = document.getElementById('fillProfileBtn');
   if (!button) return;
   button.addEventListener('click', () => {
     if (!window.AppState.isLoggedIn || !window.AppState.currentUser) {
-      window.showToast('\u8acb\u5148\u767b\u5165\u5f8c\u518d\u5e36\u5165\u6703\u54e1\u8cc7\u6599', 'info');
+      window.showToast('請先登入後再帶入會員資料', 'info');
       window.openModal('loginModal');
       return;
     }
     _fillBuyerFields(window.AppState.currentUser);
     _saveCheckoutFormDraft();
-    window.showToast('\u5df2\u5e36\u5165\u6703\u54e1\u8cc7\u6599', 'success');
+    window.showToast('已帶入會員資料', 'success');
   });
 }
 
@@ -807,8 +966,8 @@ async function _handleConfirmOrder(confirmBtn) {
 
     _saveCheckoutSession(checkoutSession);
 
-    // COD 的 Ready Session 立即確認，使用者不需要再按一次按鈕。
-    if (_shouldConfirmCodImmediately(checkoutSession)) {
+    // ECPay / COD：PATCH 為 ready_to_pay 後同一按鈕接續（M2）
+    if (checkoutSession.checkoutStep === 'ready_to_pay') {
       await _continueReadyCheckout(checkoutSession, confirmBtn);
       return;
     }
@@ -817,10 +976,6 @@ async function _handleConfirmOrder(confirmBtn) {
   } catch (error) {
     _handleCheckoutError(error, confirmBtn);
   }
-}
-
-function _shouldConfirmCodImmediately(checkoutSession) {
-  return checkoutSession?.paymentMethod === 'cod' && checkoutSession?.checkoutStep === 'ready_to_pay';
 }
 
 // 接續處理 Ready Session：COD 成立或 ECPay 導轉。
@@ -1105,7 +1260,9 @@ function _openCheckoutPanel(panelId) {
 function _setConfirmButtonLoading(button, isLoading) {
   button.disabled = isLoading;
   button.classList.toggle('isLoading', isLoading);
-  button.textContent = isLoading ? 'Checkout 處理中...' : '確認結帳';
+  button.textContent = isLoading
+    ? 'Checkout 處理中...'
+    : _getConfirmButtonLabel(_getStoredCheckoutSession());
 }
 
 // 草稿 PATCH 只送後端允許修改的收件資料與付款方式。
@@ -1156,28 +1313,21 @@ function _showCheckoutSessionReady(checkoutSession, confirmBtn) {
   _renderCheckoutSessionState(checkoutSession, confirmBtn);
 }
 
-// 重新整理頁面時還原已建立 Session 的後端金額與狀態。
+// 重新整理頁面時還原已建立 Session 的後端金額與狀態（B3：Session 在 checkout 進頁建立）。
 function _restoreCheckoutSession() {
-  const completedOrderId = sessionStorage.getItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
-  if (!completedOrderId) {
-    _showCheckoutSessionMissing(document.getElementById('confirmOrderBtn'));
-    return;
-  }
-
-  const checkoutSession = _readCompletedCheckoutSession(completedOrderId);
-  if (!checkoutSession.pricing) {
-    _showCheckoutSessionMissing(document.getElementById('confirmOrderBtn'));
-    return;
-  }
-
+  const checkoutSession = _getStoredCheckoutSession();
+  if (!checkoutSession?.orderId) return;
   const confirmBtn = document.getElementById('confirmOrderBtn');
   if (confirmBtn) _renderCheckoutSessionState(checkoutSession, confirmBtn);
 }
 
 // 保存完整 Session，讓重新整理後能還原狀態與後端金額。
-function _saveCheckoutSession(checkoutSession) {
+function _saveCheckoutSession(checkoutSession, fingerprint) {
   sessionStorage.setItem(CHECKOUT_LAST_SESSION_STORAGE_KEY, JSON.stringify(checkoutSession));
   sessionStorage.setItem(CHECKOUT_COMPLETED_ORDER_ID_KEY, checkoutSession.orderId);
+  if (fingerprint) {
+    sessionStorage.setItem(CHECKOUT_CART_FINGERPRINT_KEY, fingerprint);
+  }
 }
 
 // 安全讀取目前分頁的完整 CheckoutSession。
@@ -1196,31 +1346,39 @@ function _renderCheckoutSessionState(checkoutSession, confirmBtn) {
 
   if (checkoutSession.checkoutStep === 'draft') {
     _stopCheckoutCountdown();
-    // Draft 是正常填表階段，不用額外顯示資料不完整的錯誤面板。
     _hideCheckoutSessionPanel();
     _setCheckoutTimerVisible(false);
     confirmBtn.disabled = false;
     confirmBtn.classList.remove('isLoading');
-    confirmBtn.textContent = '確認結帳';
+    confirmBtn.textContent = _getConfirmButtonLabel(checkoutSession);
     return;
   }
 
   if (checkoutSession.checkoutStep === 'ready_to_pay') {
     const isEcpay = checkoutSession.paymentMethod !== 'cod';
-    _setCheckoutSessionPanel({
-      state: 'isReady',
-      icon: 'bi-check-circle',
-      badge: 'Ready to pay',
-      title: '訂單已建立，等待付款',
-      message: isEcpay
-        ? '金額與庫存已由後端確認，請在保留時間內前往 ECPay。'
-        : '金額與庫存已由後端確認，請在保留時間內確認貨到付款。',
-      details: [`訂單編號：${checkoutSession.orderId}`],
-    });
+    if (isEcpay) {
+      // ECPay 不顯示 Ready 大面板，只保留倒數（M2）
+      _hideCheckoutSessionPanel();
+    } else {
+      _setCheckoutSessionPanel({
+        state: 'isReady',
+        icon: 'bi-check-circle',
+        badge: 'Ready to pay',
+        title: '訂單已建立，等待確認',
+        message: '金額與庫存已由後端確認，請在保留時間內確認貨到付款。',
+        details: [
+          `訂單編號：${
+            window.formatOrderDisplayId
+              ? window.formatOrderDisplayId(checkoutSession)
+              : checkoutSession.orderId
+          }`,
+        ],
+      });
+    }
     _startCheckoutCountdown(checkoutSession.checkoutExpiresAt);
     confirmBtn.disabled = false;
     confirmBtn.classList.remove('isLoading');
-    confirmBtn.textContent = '確認結帳';
+    confirmBtn.textContent = _getConfirmButtonLabel(checkoutSession);
     return;
   }
 
@@ -1395,7 +1553,7 @@ function _handleCheckoutError(error, confirmBtn) {
 }
 
 function _showCheckoutSessionMissing(confirmBtn) {
-  _showCheckoutErrorPanel('尚未確認購物背包', '請先返回確認背包，完成商品庫存保留後再填寫結帳資料。');
+  _showCheckoutErrorPanel('尚未建立結帳保留', '請重新整理此頁，或返回確認背包後再進入結帳。');
   _toggleCheckoutSessionButtons({ cart: true });
   _disableCheckoutConfirmButton(confirmBtn);
 }
@@ -1455,12 +1613,12 @@ function _markCheckoutValidationFields(details) {
   });
 }
 
-function _resetCheckoutConfirmButton(confirmBtn, label = '確認結帳') {
+function _resetCheckoutConfirmButton(confirmBtn, label) {
   if (!confirmBtn) return;
 
   confirmBtn.disabled = false;
   confirmBtn.classList.remove('isLoading');
-  confirmBtn.textContent = label;
+  confirmBtn.textContent = label || _getConfirmButtonLabel(_getStoredCheckoutSession());
 }
 
 // 購物車只轉成規格 ID 與數量，商品快照由後端從資料庫建立。

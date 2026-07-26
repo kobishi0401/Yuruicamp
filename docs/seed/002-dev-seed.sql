@@ -10,6 +10,7 @@ BEGIN;
 \ir dev/050-coupons.sql
 \ir dev/060-orders.sql
 \ir dev/070-bookings.sql
+\ir dev/071-display-no-backfill.sql
 \ir dev/080-reviews.sql
 \ir dev/090-w1-manual-fixtures.sql
 

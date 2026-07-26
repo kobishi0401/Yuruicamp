@@ -41,6 +41,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.yuruicamp.backend.branch.infrastructure.BranchRepository;
+import com.yuruicamp.backend.commerce.application.DisplayNoService;
 
 // 驗證建立結帳的冪等與空值處理。
 class CheckoutServiceTest {
@@ -54,6 +55,7 @@ class CheckoutServiceTest {
 	private EquipmentImageRepository images;
 	private CouponService couponService;
 	private BranchRepository branches;
+	private DisplayNoService displayNoService;
 	private CheckoutService service;
 
 	// 每個測試開始前建立乾淨的模擬元件。
@@ -68,9 +70,11 @@ class CheckoutServiceTest {
 		images = mock(EquipmentImageRepository.class);
 		couponService = mock(CouponService.class);
 		branches = mock(BranchRepository.class);
+		displayNoService = mock(DisplayNoService.class);
+		when(displayNoService.nextOrderDisplayNo()).thenReturn("ORD-0001");
 		when(couponService.appliedClaimId(any())).thenReturn(null);
 		service = new CheckoutService(customers, products, stocks, reservations, orders, histories, images,
-				couponService, branches);
+				couponService, branches, displayNoService);
 	}
 
 	// 相同請求重送時應回傳原本的訂單。
@@ -270,7 +274,7 @@ class CheckoutServiceTest {
 	@Test
 	void confirmCodConsumesAppliedCouponClaim() {
 		Order order = new Order();
-		order.initialize("O-COD", "C001", "cod-key", "cod-request-hash",
+		order.initialize("O-COD", "ORD-0001", "C001", "cod-key", "cod-request-hash",
 				"Buyer", "buyer@example.com", "Buyer", "Taipei",
 				"0912345678", com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				com.yuruicamp.backend.order.domain.PaymentMethod.cod,
@@ -370,7 +374,7 @@ class CheckoutServiceTest {
 	// 建立可供 C-4 更新的待付款 Checkout。
 	private static Order editableOrder(Instant expiresAt) {
 		Order order = new Order();
-		order.initialize("O-C4", "C001", "c4-key", "c4-request-hash",
+		order.initialize("O-C4", "ORD-0002", "C001", "c4-key", "c4-request-hash",
 				"Buyer", "buyer@example.com", "PENDING_CHECKOUT", "PENDING_CHECKOUT",
 				"PENDING_CHECKOUT", com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				com.yuruicamp.backend.order.domain.PaymentMethod.ecpay_credit,

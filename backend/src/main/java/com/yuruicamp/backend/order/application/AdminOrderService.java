@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.yuruicamp.backend.common.admin.AdminStatusLabels;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
@@ -207,8 +208,20 @@ public class AdminOrderService {
 	}
 
 	private AdminOrderDetailResponse toDetail(AdminOrderReadRepository.DetailRow row) {
+		List<AdminOrderDetailResponse.HistorySummary> history = readRepository.findHistoryEntries(row.id())
+				.stream()
+				.map(entry -> new AdminOrderDetailResponse.HistorySummary(
+						entry.status(),
+						entry.occurredAt(),
+						entry.actorId(),
+						entry.actorName(),
+						entry.note(),
+						AdminStatusLabels.orderHistoryLabel(entry.status(), entry.note())))
+				.toList();
+
 		return new AdminOrderDetailResponse(
 				row.id(),
+				row.displayNo(),
 				new AdminOrderDetailResponse.CustomerSummary(row.customerId(), row.customerName(), row.customerStatus()),
 				new AdminOrderDetailResponse.BuyerSummary(row.buyerName(), row.buyerEmail()),
 				new AdminOrderDetailResponse.ShippingSummary(row.recipientName(), row.shippingPhone(), row.shippingAddress()),
@@ -217,7 +230,7 @@ public class AdminOrderService {
 				row.paymentMethod(), row.paymentStatus(), row.refundStatus(), row.status(),
 				row.internalNote(),
 				row.placedAt(), row.paidAt(), row.updatedAt(),
-				readRepository.findItems(row.id()), readRepository.findHistory(row.id()));
+				readRepository.findItems(row.id()), history);
 	}
 
 	private AdminOrderCommandRepository.OrderState lock(String id) {

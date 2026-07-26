@@ -1,5 +1,7 @@
 package com.yuruicamp.backend.booking.application;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,6 +16,7 @@ import com.yuruicamp.backend.booking.api.AdminBookingDetailResponse;
 import com.yuruicamp.backend.booking.api.AdminBookingListResponse;
 import com.yuruicamp.backend.booking.infrastructure.AdminBookingCommandRepository;
 import com.yuruicamp.backend.booking.infrastructure.AdminBookingReadRepository;
+import com.yuruicamp.backend.common.admin.AdminStatusLabels;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
@@ -177,16 +180,96 @@ public class AdminBookingService {
 	}
 
 	private AdminBookingDetailResponse toDetail(AdminBookingReadRepository.DetailRow row) {
+		List<AdminBookingDetailResponse.ZoneSummary> zones = readRepository.findZoneLines(row.id())
+				.stream()
+				.map(zone -> toZoneSummary(zone, row.weekdayCount(), row.holidayCount()))
+				.toList();
+		List<AdminBookingDetailResponse.RentalSummary> rentals = readRepository.findRentalLines(row.id())
+				.stream()
+				.map(rental -> toRentalSummary(rental, row.weekdayCount(), row.holidayCount()))
+				.toList();
+		List<AdminBookingDetailResponse.HistorySummary> history = readRepository.findHistoryEntries(row.id())
+				.stream()
+				.map(entry -> new AdminBookingDetailResponse.HistorySummary(
+						entry.status(),
+						entry.occurredAt(),
+						entry.actorId(),
+						entry.actorName(),
+						entry.note(),
+						AdminStatusLabels.bookingHistoryLabel(entry.status(), entry.note())))
+				.toList();
+
 		return new AdminBookingDetailResponse(
 				row.id(),
-				new AdminBookingDetailResponse.CustomerSummary(row.customerId(), row.customerName(), row.customerStatus()),
+				row.displayNo(),
+				new AdminBookingDetailResponse.CustomerSummary(
+						row.customerId(), row.customerName(), row.customerStatus()),
+				toContactSummary(row.contactName(), row.contactPhone(), row.contactEmail()),
 				row.campgroundId(), row.campgroundName(), row.region(), row.checkIn(), row.checkOut(),
 				row.guestCount(), row.weekdayCount(), row.holidayCount(), row.paymentMethod(),
 				row.paymentStatus(), row.paidAt(), row.status(), row.internalNote(),
 				new AdminBookingDetailResponse.PricingSummary(
-						money(row.zoneTotal()), money(row.rentalTotal()), money(row.discount()), money(row.finalAmount())),
-				row.createdAt(), row.updatedAt(), readRepository.findZones(row.id()),
-				readRepository.findRentals(row.id()), readRepository.findHistory(row.id()));
+						money(row.zoneTotal()), money(row.rentalTotal()), money(row.discount()),
+						money(row.finalAmount())),
+				row.createdAt(), row.updatedAt(), zones, rentals, history);
+	}
+
+	private AdminBookingDetailResponse.ContactSummary toContactSummary(
+			String name,
+			String phone,
+			String email) {
+		if (name == null && phone == null && email == null) {
+			return null;
+		}
+
+		return new AdminBookingDetailResponse.ContactSummary(name, phone, email);
+	}
+
+	private AdminBookingDetailResponse.ZoneSummary toZoneSummary(
+			AdminBookingReadRepository.ZoneLineRow zone,
+			int weekdayCount,
+			int holidayCount) {
+		BigDecimal lineTotal = stayPrice(zone.priceWeekday(), zone.priceHoliday(), weekdayCount, holidayCount)
+				.multiply(BigDecimal.valueOf(zone.quantity()));
+
+		return new AdminBookingDetailResponse.ZoneSummary(
+				zone.zoneId(),
+				zone.type(),
+				money(zone.priceWeekday()),
+				money(zone.priceHoliday()),
+				zone.quantity(),
+				money(lineTotal));
+	}
+
+	private AdminBookingDetailResponse.RentalSummary toRentalSummary(
+			AdminBookingReadRepository.RentalLineRow rental,
+			int weekdayCount,
+			int holidayCount) {
+		BigDecimal lineTotal = stayPrice(rental.priceWeekday(), rental.priceHoliday(), weekdayCount, holidayCount)
+				.multiply(BigDecimal.valueOf(rental.quantity()))
+				.multiply(BigDecimal.ONE.subtract(rental.discountRate()))
+				.setScale(2, RoundingMode.HALF_UP);
+
+		return new AdminBookingDetailResponse.RentalSummary(
+				rental.rentalListingId(),
+				rental.rentalSkuVariantId(),
+				rental.sku(),
+				rental.name(),
+				rental.specification(),
+				money(rental.priceWeekday()),
+				money(rental.priceHoliday()),
+				money(rental.discountRate()),
+				rental.quantity(),
+				money(lineTotal));
+	}
+
+	private BigDecimal stayPrice(
+			BigDecimal weekdayPrice,
+			BigDecimal holidayPrice,
+			int weekdayCount,
+			int holidayCount) {
+		return weekdayPrice.multiply(BigDecimal.valueOf(weekdayCount))
+				.add(holidayPrice.multiply(BigDecimal.valueOf(holidayCount)));
 	}
 
 	private AdminBookingCommandRepository.BookingState lock(String id) {
@@ -223,8 +306,8 @@ public class AdminBookingService {
 		return note.trim();
 	}
 
-	private static String money(java.math.BigDecimal value) {
-		return value.setScale(2).toPlainString();
+	private static String money(BigDecimal value) {
+		return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
 	}
 
 	private static BusinessException validation(String message) {

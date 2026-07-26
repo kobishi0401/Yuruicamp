@@ -73,7 +73,11 @@ function normalizeBackendOrder(order) {
       });
     }),
     history: (detail.history || []).map(function (entry) {
-      return { time: entry.occurredAt || '', action: entry.note || entry.status };
+      return {
+        time: entry.occurredAt || entry.time || '',
+        label: entry.label || entry.note || entry.status || entry.action || '',
+        action: entry.label || entry.note || entry.status || entry.action || ''
+      };
     }),
     backendDetailLoaded: Array.isArray(detail.items)
   });
@@ -856,7 +860,7 @@ function renderOrdersTable(orders) {
     var idLink = '<span class="admin-cell-link order-id-link" ' +
                  'data-order-id="' + order.id + '" ' +
                  'title="點擊查看訂單明細">' +
-                 window.formatOrderId(order.id) + '</span>';
+                 window.formatOrderId(order) + '</span>';
 
     // ── 顧客姓名超連結（參考 bookings.js）──
     var customerId   = orderCustomerMap[order.id];
@@ -904,7 +908,7 @@ function renderOrdersTable(orders) {
 window.showOrderModal = function (order) {
   // 基本資訊
   $('#orderDetailModal').data('order-id', order.id);
-  $('#modalOrderId').text(window.formatOrderId(order.id));
+  $('#modalOrderId').text(window.formatOrderId(order));
   $('#modalBuyerName').text(order.buyerName);
 
   // 訂單狀態 badge（4 種，需與 renderOrdersTable 的 statusMap 保持一致）
@@ -952,14 +956,15 @@ window.showOrderModal = function (order) {
   // 記錄已儲存版本，供 dirty 比對（有改動才顯示「儲存」按鈕）
   $('#orderDetailModal').data('seller-note-saved', savedNote);
 
-  // 訂單紀錄時間軸（時間顯示：台北 yyyy-MM-dd HH:mm）
+  // 訂單紀錄時間軸：yyyy-MM-dd HH:mm｜{label}
   var historyHtml = (order.history || []).map(function (entry) {
     var timeLabel = typeof window.formatAdminDateTimeDisplay === 'function'
       ? window.formatAdminDateTimeDisplay(entry.time)
       : String(entry.time || '');
+    var label = entry.label || entry.action || '';
     return '<li class="d-flex align-items-start gap-2 mb-1">' +
            '<i class="fas fa-circle mt-1" style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-           '<span><span class="text-muted me-2">' + timeLabel + '</span>' + entry.action + '</span>' +
+           '<span>' + timeLabel + '｜' + label + '</span>' +
            '</li>';
   }).join('');
   $('#modalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');

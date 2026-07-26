@@ -38,7 +38,7 @@ public class BookingMemberRepository {
 			int size,
 			long offset) {
 		return jdbcTemplate.query("""
-				select id, status::text, payment_status::text,
+				select id, display_no, status::text, payment_status::text,
 				       campground_name_snapshot, region_snapshot,
 				       check_in, check_out, guest_count, final_amount, created_at
 				from bookings
@@ -47,6 +47,7 @@ public class BookingMemberRepository {
 				limit ? offset ?
 				""", (rs, rowNum) -> new BookingSummaryRow(
 				rs.getString("id"),
+				rs.getString("display_no"),
 				rs.getString("status"),
 				rs.getString("payment_status"),
 				rs.getString("campground_name_snapshot"),
@@ -61,7 +62,7 @@ public class BookingMemberRepository {
 	// bookingId 與 customerId 必須同時符合；他人資料與不存在使用相同行為。
 	public Optional<BookingDetailRow> findOwnedBooking(String customerId, String bookingId) {
 		return jdbcTemplate.query("""
-				select id, status::text, payment_status::text, payment_method::text,
+				select id, display_no, status::text, payment_status::text, payment_method::text,
 				       paid_at, checkout_expires_at, campground_id,
 				       campground_name_snapshot, region_snapshot, check_in, check_out,
 				       guest_count, weekday_count, holiday_count, zone_total,
@@ -70,6 +71,7 @@ public class BookingMemberRepository {
 				where id = ? and customer_id = ?
 				""", (rs, rowNum) -> new BookingDetailRow(
 				rs.getString("id"),
+				rs.getString("display_no"),
 				rs.getString("status"),
 				rs.getString("payment_status"),
 				rs.getString("payment_method"),
@@ -140,6 +142,7 @@ public class BookingMemberRepository {
 
 	public record BookingSummaryRow(
 			String id,
+			String displayNo,
 			String status,
 			String paymentStatus,
 			String campgroundName,
@@ -153,6 +156,7 @@ public class BookingMemberRepository {
 
 	public record BookingDetailRow(
 			String id,
+			String displayNo,
 			String status,
 			String paymentStatus,
 			String paymentMethod,

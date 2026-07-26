@@ -5,7 +5,6 @@
   const COMPLETED_ORDER_ID_KEY = 'checkoutCompletedOrderId';
   let countdownTimer = null;
 
-  // 只信任後端 Session 狀態；付款返回頁的 query string 不代表付款成功。
   function resolveViewState(session, now = Date.now()) {
     const expiresAt = Date.parse(session?.checkoutExpiresAt || '');
     const expired = Number.isFinite(expiresAt) && expiresAt <= now;
@@ -65,17 +64,21 @@
     };
   }
 
+  function readStoredSession() {
+    try {
+      return JSON.parse(global.sessionStorage.getItem(LAST_SESSION_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  }
+
   function readOrderId() {
     const params = new URLSearchParams(global.location.search);
     const queryId = params.get('orderId') || params.get('orderNum');
     if (queryId) return String(queryId).replace(/^#/, '');
     const completedId = global.sessionStorage.getItem(COMPLETED_ORDER_ID_KEY);
     if (completedId) return completedId;
-    try {
-      return JSON.parse(global.sessionStorage.getItem(LAST_SESSION_KEY) || 'null')?.orderId || '';
-    } catch {
-      return '';
-    }
+    return readStoredSession()?.orderId || '';
   }
 
   function setText(id, value) {
@@ -83,9 +86,14 @@
     if (element) element.textContent = value;
   }
 
-  function formatOrderId(orderId) {
-    const value = global.formatOrderDisplayId ? global.formatOrderDisplayId(orderId) : orderId;
-    return `#${String(value || '--').replace(/^#/, '')}`;
+  /** 顯示 displayNo，不加 # 前綴 / Show displayNo without hash prefix */
+  function formatOrderIdForDisplay(orderId, session) {
+    const entity = session?.displayNo ? session : { id: orderId, displayNo: session?.displayNo };
+    const value = global.formatOrderDisplayId
+      ? global.formatOrderDisplayId(entity, session?.displayNo)
+      : String(orderId || '');
+    const normalized = String(value || '').replace(/^#/, '').trim();
+    return normalized || '—';
   }
 
   function formatRemaining(expiresAt) {
@@ -109,7 +117,7 @@
     setText('checkoutStatusBadge', state.badge);
     setText('successTitle', state.title);
     setText('checkoutStatusDescription', state.description);
-    setText('orderNumberDisplay', formatOrderId(session.orderId));
+    setText('orderNumberDisplay', formatOrderIdForDisplay(session.orderId, session));
     setText('paymentStatusDisplay', session.paymentStatus === 'paid' ? '已付款' : '未付款');
     setText(
       'orderTotalDisplay',
@@ -141,16 +149,17 @@
     setText('checkoutStatusBadge', 'Unavailable');
     setText('successTitle', '無法確認訂單狀態');
     setText('checkoutStatusDescription', message);
-    setText('orderNumberDisplay', '#--');
+    setText('orderNumberDisplay', '—');
   }
 
   async function init() {
     const orderId = readOrderId();
+    const storedSession = readStoredSession();
     if (!orderId) {
       renderError('找不到訂單編號，請由會員中心查看訂單。');
       return;
     }
-    setText('orderNumberDisplay', formatOrderId(orderId));
+    setText('orderNumberDisplay', formatOrderIdForDisplay(orderId, storedSession));
     try {
       const session = await global.API.checkout.getSession(orderId);
       renderSession(session);

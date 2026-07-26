@@ -5,6 +5,7 @@ import java.util.List;
 // 回傳會員自己的訂單快照，不公開 Checkout 冪等資料。
 public record MemberOrderResponse(
 		String id,
+		String displayNo,
 		String customerId,
 		String buyerName,
 		String buyerEmail,

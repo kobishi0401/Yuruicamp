@@ -37,6 +37,7 @@ import com.yuruicamp.backend.booking.infrastructure.BookingCheckoutRepository.Se
 import com.yuruicamp.backend.booking.infrastructure.BookingCheckoutRepository.SelectedZoneRow;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.commerce.application.DisplayNoService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,12 +50,15 @@ public class BookingCheckoutService {
 
 	private final BookingCheckoutRepository repository;
 	private final BookingPublicService bookingPublicService;
+	private final DisplayNoService displayNoService;
 
 	public BookingCheckoutService(
 			BookingCheckoutRepository repository,
-			BookingPublicService bookingPublicService) {
+			BookingPublicService bookingPublicService,
+			DisplayNoService displayNoService) {
 		this.repository = repository;
 		this.bookingPublicService = bookingPublicService;
+		this.displayNoService = displayNoService;
 	}
 
 	// 建立 pending、unpaid 的預約、營位與租借保留；相同冪等請求直接回放原結果。
@@ -105,6 +109,7 @@ public class BookingCheckoutService {
 
 		repository.insertBooking(new BookingInsert(
 				bookingId,
+				displayNoService.nextBookingDisplayNo(),
 				customerId,
 				normalized.idempotencyKey(),
 				requestHash,
@@ -473,6 +478,7 @@ public class BookingCheckoutService {
 
 		return new BookingCheckoutSessionResponse(
 				booking.id(),
+				booking.displayNo(),
 				booking.status(),
 				booking.paymentStatus(),
 				booking.paymentMethod(),

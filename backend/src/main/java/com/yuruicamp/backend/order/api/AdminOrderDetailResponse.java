@@ -5,6 +5,7 @@ import java.util.List;
 
 public record AdminOrderDetailResponse(
 		String id,
+		String displayNo,
 		CustomerSummary customer,
 		BuyerSummary buyer,
 		ShippingSummary shipping,
@@ -51,6 +52,7 @@ public record AdminOrderDetailResponse(
 			Instant occurredAt,
 			String actorId,
 			String actorName,
-			String note) {
+			String note,
+			String label) {
 	}
 }

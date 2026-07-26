@@ -87,7 +87,7 @@ class CouponPostgreSqlIntegrationTest {
 		insertCoupon(99004L, "F-PERCENT", "promotion", "percent", "10.00", 2);
 		Long claimId = service.claim("CF001", 99004L).id();
 		Order order = new Order();
-		order.initialize("OF99004", "CF001", "coupon-order", "coupon-hash",
+		order.initialize("OF99004", "ORD-9904", "CF001", "coupon-order", "coupon-hash",
 				"Coupon Tester", "coupon-f1@example.com", "Tester", "Taipei", "0900000000",
 				com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				PaymentMethod.ecpay_credit, Instant.now(), Instant.now().plusSeconds(900));
@@ -187,7 +187,7 @@ class CouponPostgreSqlIntegrationTest {
 		insertCoupon(99006L, "F-CANCEL", "promotion", "fixed", "100.00", 2);
 		Long claimId = service.claim("CF001", 99006L).id();
 		Order order = new Order();
-		order.initialize("OF99006", "CF001", "coupon-cancel", "coupon-cancel-hash",
+		order.initialize("OF99006", "ORD-9906", "CF001", "coupon-cancel", "coupon-cancel-hash",
 				"Coupon Tester", "coupon-f1@example.com", "Tester", "Taipei", "0900000000",
 				com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				PaymentMethod.ecpay_credit, Instant.now(), Instant.now().plusSeconds(900));
@@ -237,7 +237,7 @@ class CouponPostgreSqlIntegrationTest {
 
 	private Order createOrder(String orderId, String idempotencyKey, String requestHash) {
 		Order order = new Order();
-		order.initialize(orderId, "CF001", idempotencyKey, requestHash,
+		order.initialize(orderId, "ORD-" + orderId, "CF001", idempotencyKey, requestHash,
 				"Coupon Tester", "coupon-f1@example.com", "Tester", "Taipei", "0900000000",
 				com.yuruicamp.backend.order.domain.ShippingMethod.delivery, null,
 				PaymentMethod.ecpay_credit, Instant.now(), Instant.now().plusSeconds(900));

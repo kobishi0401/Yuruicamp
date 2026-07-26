@@ -75,7 +75,8 @@ coupons
 
 ## 欄位說明
 ### orders
-* id                         訂單識別碼
+* id                         訂單識別碼（內部 UUID 主鍵）
+* display_no                 人類可讀序號，例 `ORD-0001`；**UNIQUE**；`order_display_no_seq`（Commerce UX spec，planned）
 * customer_id                下單會員 ID
   checkout_idempotency_key   建立結帳的客戶端冪等鍵，可空；同一會員不可重複。
                              *UNIQUE (customer_id, checkout_idempotency_key)*

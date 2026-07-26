@@ -7,6 +7,8 @@ import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import com.yuruicamp.backend.booking.api.BookingEcpayLaunchRequest;
+import com.yuruicamp.backend.booking.infrastructure.BookingCheckoutRepository;
 import com.yuruicamp.backend.booking.infrastructure.BookingLifecycleRepository;
 import com.yuruicamp.backend.booking.infrastructure.BookingMemberRepository;
 import com.yuruicamp.backend.common.exception.BusinessException;
@@ -36,16 +38,19 @@ public class EcpayLaunchService {
 	private final OrderRepository orders;
 	private final BookingLifecycleRepository bookingLifecycle;
 	private final BookingMemberRepository bookingMembers;
+	private final BookingCheckoutRepository bookingCheckoutRepository;
 
 	public EcpayLaunchService(
 			EcpayGateway ecpayGateway,
 			OrderRepository orders,
 			BookingLifecycleRepository bookingLifecycle,
-			BookingMemberRepository bookingMembers) {
+			BookingMemberRepository bookingMembers,
+			BookingCheckoutRepository bookingCheckoutRepository) {
 		this.ecpayGateway = ecpayGateway;
 		this.orders = orders;
 		this.bookingLifecycle = bookingLifecycle;
 		this.bookingMembers = bookingMembers;
+		this.bookingCheckoutRepository = bookingCheckoutRepository;
 	}
 
 	@Transactional
@@ -85,7 +90,15 @@ public class EcpayLaunchService {
 	}
 
 	@Transactional
-	public EcpayLaunchResponse launchForBooking(String customerId, String bookingId) {
+	public EcpayLaunchResponse launchForBooking(
+			String customerId,
+			String bookingId,
+			BookingEcpayLaunchRequest request) {
+		if (request == null || request.contact() == null) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "contact is required");
+		}
+		validateContact(request.contact());
+
 		var locked = bookingLifecycle.lockOwnedBooking(customerId.trim(), bookingId.trim())
 				.orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN,
 						"Booking not found or not owned by customer"));
@@ -102,6 +115,13 @@ public class EcpayLaunchService {
 					"Booking checkout does not support cod");
 		}
 
+		bookingCheckoutRepository.updateContactSnapshot(
+				bookingId.trim(),
+				request.contact().name(),
+				request.contact().phone(),
+				request.contact().email(),
+				now);
+
 		var detail = bookingMembers.findOwnedBooking(customerId.trim(), bookingId.trim())
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Booking not found"));
 
@@ -109,7 +129,7 @@ public class EcpayLaunchService {
 		String itemName = detail.campgroundName() == null || detail.campgroundName().isBlank()
 				? "Yuruicamp booking"
 				: detail.campgroundName();
-		var request = new EcpayCheckoutRequest(
+		var checkoutRequest = new EcpayCheckoutRequest(
 				detail.id(),
 				false,
 				toTradeAmt(detail.finalAmount()),
@@ -118,14 +138,23 @@ public class EcpayLaunchService {
 				choosePaymentFromDb(detail.paymentMethod()),
 				detail.checkoutExpiresAt() == null ? null : detail.checkoutExpiresAt().toString());
 
-		var fields = ecpayGateway.buildAioCheckoutFields(request, merchantTradeNo);
+		var fields = ecpayGateway.buildAioCheckoutFields(checkoutRequest, merchantTradeNo);
 		return new EcpayLaunchResponse(
 				null,
 				detail.id(),
 				merchantTradeNo,
 				ecpayGateway.checkoutActionUrl(),
 				fields,
-				request.expiresAtIso());
+				checkoutRequest.expiresAtIso());
+	}
+
+	private static void validateContact(BookingEcpayLaunchRequest.Contact contact) {
+		if (contact.name() == null || contact.name().isBlank()
+				|| contact.phone() == null || contact.phone().isBlank()
+				|| contact.email() == null || contact.email().isBlank()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+					"contact name, phone and email are required");
+		}
 	}
 
 	private void assertOrderPayable(Order order, Instant now) {

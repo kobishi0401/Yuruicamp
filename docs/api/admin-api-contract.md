@@ -304,8 +304,8 @@ Request：
 
 | 方法 | 路徑 | 權限 | 說明 |
 |------|------|------|------|
-| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序 |
-| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、狀態歷程與 `internalNote` |
+| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
+| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、中文狀態歷程、`internalNote` |
 | `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped` |
 | `POST` | `/api/admin/orders/{id}/complete` | `orders.edit` | `shipped` → `completed`；COD 同交易標記 paid |
 | `POST` | `/api/admin/orders/{id}/cancel` | `orders.edit` | 未出貨取消 O1（W3-01）；已付款線上單同交易退款 O3 |
@@ -365,8 +365,8 @@ Request：
 
 | 方法 | 路徑 | 權限 | 說明 |
 |------|------|------|------|
-| `GET` | `/api/admin/bookings` | `bookings.view` | 分頁、篩選與排序 |
-| `GET` | `/api/admin/bookings/{id}` | `bookings.view` | 營位、租借快照、狀態歷程與 `internalNote` |
+| `GET` | `/api/admin/bookings` | `bookings.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
+| `GET` | `/api/admin/bookings/{id}` | `bookings.view` | 營位、租借快照（含 **`lineTotal`**）、**`contact` 快照**、中文 **history**、`internalNote` |
 | `POST` | `/api/admin/bookings/{id}/confirm` | `bookings.edit` | 已付款 `pending` → `confirmed` |
 | `POST` | `/api/admin/bookings/{id}/complete` | `bookings.edit` | 已退房 `confirmed` → `completed` |
 | `POST` | `/api/admin/bookings/{id}/cancel` | `bookings.edit` | 已付款取消 B1（W3-03）；同交易退款 |

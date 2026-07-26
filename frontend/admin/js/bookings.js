@@ -68,6 +68,7 @@ function normalizeBackendBooking(booking) {
     : 0;
   return Object.assign({}, detail, {
     sellerNote: detail.internalNote != null ? detail.internalNote : (detail.sellerNote || ''),
+    contact: detail.contact || null,
     submittedAt: detail.createdAt || '',
     bookingInfo: {
       campgroundId: detail.campgroundId,
@@ -99,7 +100,11 @@ function normalizeBackendBooking(booking) {
       finalAmount: Number(detail.finalAmount || (detail.pricing && detail.pricing.finalAmount) || 0)
     },
     history: (detail.history || []).map(function (entry) {
-      return { time: entry.occurredAt || '', action: entry.note || entry.status };
+      return {
+        time: entry.occurredAt || entry.time || '',
+        label: entry.label || entry.note || entry.status || entry.action || '',
+        action: entry.label || entry.note || entry.status || entry.action || ''
+      };
     }),
     backendDetailLoaded: Array.isArray(detail.zones)
   });
@@ -946,7 +951,7 @@ function renderBookingsTable(bookings) {
     var idLink =
       '<span class="admin-cell-link booking-id-link" ' +
       'data-booking-id="' + booking.id + '" ' +
-      'title="點擊查看預約明細">' + window.formatBookingId(booking.id) + '</span>';
+      'title="點擊查看預約明細">' + window.formatBookingId(booking) + '</span>';
 
     // ── 顧客姓名超連結 ──
     var customerLink =
@@ -998,7 +1003,7 @@ function showBookingModal(booking) {
 
   // ── 標題：預約單號 + 狀態 badge ──
   $('#bookingDetailModal').data('booking-id', booking.id);
-  $('#bkModalId').text(window.formatBookingId(booking.id));
+  $('#bkModalId').text(window.formatBookingId(booking));
 
   var statusLabelMap = {
     pending:   '<span class="badge bg-warning text-dark">待確認</span>',
@@ -1008,10 +1013,11 @@ function showBookingModal(booking) {
   };
   $('#bkModalStatus').html(statusLabelMap[booking.status] || '');
 
-  // ── 訂購人資訊（需查詢 customersCache 取得電話/Email）──
-  var customerName  = booking.customerName || getCustomerName(booking.customerId);
-  var customerPhone = getCustomerField(booking.customerId, 'phone');
-  var customerEmail = getCustomerField(booking.customerId, 'email');
+  // ── 訂購人資訊：優先 API contact 快照 / Prefer booking.contact snapshot from API ──
+  var contact = booking.contact || {};
+  var customerName = contact.name || booking.customerName || getCustomerName(booking.customerId);
+  var customerPhone = contact.phone || booking.contactPhone || getCustomerField(booking.customerId, 'phone');
+  var customerEmail = contact.email || booking.contactEmail || getCustomerField(booking.customerId, 'email');
   $('#bkModalName').text(customerName);
   $('#bkModalPhone').text(customerPhone || '—');
   $('#bkModalEmail').text(customerEmail || '—');
@@ -1129,16 +1135,16 @@ function showBookingModal(booking) {
     $('#btnCompleteBooking').addClass('d-none');
   }
 
-  // ── 狀態紀錄時間軸（時間顯示：台北 yyyy-MM-dd HH:mm）──
+  // ── 狀態紀錄時間軸：yyyy-MM-dd HH:mm｜{label} ──
   var historyHtml = (booking.history || []).map(function (entry) {
     var timeLabel = typeof window.formatAdminDateTimeDisplay === 'function'
       ? window.formatAdminDateTimeDisplay(entry.time)
       : String(entry.time || '');
+    var label = entry.label || entry.action || '';
     return '<li class="d-flex align-items-start gap-2 mb-1">' +
            '<i class="fas fa-circle mt-1" ' +
            'style="font-size:5px; color:var(--admin-brand-accent); flex-shrink:0;"></i>' +
-           '<span><span class="text-muted me-2">' + timeLabel + '</span>' +
-           entry.action + '</span>' +
+           '<span>' + timeLabel + '｜' + label + '</span>' +
            '</li>';
   }).join('');
   $('#bkModalHistory').html(historyHtml || '<li class="text-muted">無紀錄</li>');

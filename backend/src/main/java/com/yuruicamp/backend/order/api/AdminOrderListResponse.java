@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record AdminOrderListResponse(
 		String id,
+		String displayNo,
 		String customerId,
 		String customerName,
 		String recipientName,

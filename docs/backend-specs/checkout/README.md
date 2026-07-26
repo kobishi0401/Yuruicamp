@@ -5,7 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | C-2～C-8、商城優惠券、Checkout Read 與 COD Confirm 已實作 |
-| **更新日期** | 2026-07-24 |
+| **更新日期** | 2026-07-26 |
+| **Commerce UX** | 顯示編號、B3 鎖庫、M2 一次 ECPay → [`commerce/display-numbers-and-checkout-ux.md`](../commerce/display-numbers-and-checkout-ux.md) |
 | **文件定位** | Checkout C-2～C-8 唯一流程與驗收文件 |
 | **持久化策略** | D1.A：待付款 `orders` + `order_items` + `product_stock_reservations` |
 | **保留時間** | 15 分鐘 |
@@ -28,9 +29,11 @@ Checkout 負責在會員進入結帳時建立待付款訂單、由資料庫價�
 
 ## 2. 完整流程
 
+> **前端對齊（2026-07-26 spec）**：契約為 cart **不**建 Session；**checkout 進頁**才 `POST /api/checkout/sessions`。現行 cart 頁進頁建 Session 屬待修正。ECPay 應在 PATCH `ready_to_pay` 後**同一按鈕**直接 launch，不顯示第二段 Ready 面板。
+
 ```text
-前端購物車（不鎖庫存）
-→ POST /api/checkout/sessions
+前端購物車（不鎖庫存；client soft 驗 availableQuantity）
+→ 進 checkout 頁 → POST /api/checkout/sessions
 → 驗證會員、商品、數量與 idempotencyKey
 → 合併相同 variant，建立正規化請求指紋
 → 悲觀鎖定會員列，檢查同會員冪等鍵

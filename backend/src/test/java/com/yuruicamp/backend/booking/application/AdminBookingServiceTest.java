@@ -92,10 +92,10 @@ class AdminBookingServiceTest {
 
 	private static AdminBookingReadRepository.DetailRow detail() {
 		return new AdminBookingReadRepository.DetailRow(
-				"B1", "C1", "Customer", "active", "C002", "Camp", "北部",
+				"B1", "BK-0001", "C1", "Customer", "active", "C002", "Camp", "北部",
 				LocalDate.of(2026, 7, 18), LocalDate.of(2026, 7, 20), 2, 2, 0,
 				java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
 				java.math.BigDecimal.ZERO, "ecpay-credit", "paid", Instant.EPOCH,
-				"completed", null, Instant.EPOCH, Instant.EPOCH);
+				"completed", null, null, null, null, Instant.EPOCH, Instant.EPOCH);
 	}
 }

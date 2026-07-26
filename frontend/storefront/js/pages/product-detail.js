@@ -2,6 +2,7 @@
 const DEFAULT_PRODUCT_ID = 'P001';
 const FREE_SHIPPING_THRESHOLD = 3000;
 const REVIEW_PAGE_SIZE = 6;
+let _detailProduct = null;
 
 // 公開評論瀏覽狀態，篩選變更時會從第一頁重新載入。
 const _reviewBrowserState = {
@@ -49,6 +50,7 @@ function _setProductPageState(state) {
 
 // Render all product detail sections and bind interactions.
 function _renderProductPage(product) {
+  _detailProduct = product;
   product.rating = Number(product.rating ?? 0);
   product.ratingDisplay = product.rating.toFixed(1);
   product.reviewCount = Number(product.reviewCount ?? 0);
@@ -64,6 +66,36 @@ function _renderProductPage(product) {
   _initActionButtons(product);
   _initTabSwitching();
   _updatePageMeta(product);
+  _updateProductStockUi();
+}
+
+/** 依目前選中規格更新庫存提示與加購按鈕 / Update stock hint and add button for selected variant */
+function _updateProductStockUi() {
+  if (!_detailProduct) return;
+  const specs = _getSelectedSpecs();
+  const variant = window.findProductVariant(_detailProduct, specs.color, specs.size);
+  const availableQuantity = Number(variant?.availableQuantity);
+  const inStock =
+    variant?.inStock !== false && (!Number.isFinite(availableQuantity) || availableQuantity > 0);
+
+  const stockEl = document.getElementById('productStockHint');
+  if (stockEl) {
+    if (Number.isFinite(availableQuantity)) {
+      stockEl.hidden = false;
+      stockEl.textContent = inStock ? `剩餘 ${availableQuantity} 件` : '暫無庫存';
+      stockEl.classList.toggle('isOutOfStock', !inStock);
+    } else {
+      stockEl.hidden = true;
+    }
+  }
+
+  const addBtn = document.getElementById('addToCartBtn');
+  const buyBtn = document.getElementById('buyNowBtn');
+  if (addBtn) {
+    addBtn.disabled = !inStock;
+    addBtn.textContent = inStock ? '加入購物車' : '暫無庫存';
+  }
+  if (buyBtn) buyBtn.disabled = !inStock;
 }
 
 // Update title and breadcrumb for the loaded product.
@@ -496,6 +528,7 @@ function _handleSpecClick(event, type, container, label) {
   container.querySelectorAll('.specOptionBtn').forEach((item) => item.classList.remove('isSelected'));
   button.classList.add('isSelected');
   if (label) label.textContent = button.dataset[type];
+  _updateProductStockUi();
 }
 
 // Capitalize a simple ASCII word.
@@ -631,6 +664,7 @@ function _normalizeQuantity(input) {
 // Initialize add-to-cart and buy-now actions.
 function _initActionButtons(product) {
   document.getElementById('addToCartBtn')?.addEventListener('click', () => {
+    if (document.getElementById('addToCartBtn')?.disabled) return;
     _addSelectedProductToCart(product);
   });
   document.getElementById('buyNowBtn')?.addEventListener('click', () => {

@@ -3,7 +3,8 @@
 | 欄位         | 內容                                                                                                          |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | **狀態**     | Locked（E-1～E-7 已實作；Booking Prepare／Reservation 完成，Payment Confirmation 延後至線 D）                 |
-| **日期**     | 2026-07-23                                                                                                    |
+| **日期**     | 2026-07-26                                                                                                    |
+| **Commerce UX** | `displayNo`、booking-checkout 進頁鎖位、ecpay contact 快照 → [`../backend-specs/commerce/display-numbers-and-checkout-ux.md`](../backend-specs/commerce/display-numbers-and-checkout-ux.md) |
 | **版本**     | 1.0                                                                                                           |
 | **共用**     | [`common-api-conventions.md`](./common-api-conventions.md)                                                    |
 | **相關**     | [`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md)  |
@@ -210,7 +211,8 @@
 
 | JSON                           | 型別    | DB／說明                                                                             |
 | ------------------------------ | ------- | ------------------------------------------------------------------------------------ |
-| `bookingId`                    | string  | `bookings.id`                                                                        |
+| `bookingId`                    | string  | `bookings.id`（內部主鍵）                                                            |
+| `displayNo`                    | string  | `bookings.display_no`；例 `BK-0042`（**planned**，Commerce UX spec）                  |
 | `status`                       | string  | `pending`（進結帳）                                                                  |
 | `paymentStatus`                | string  | `unpaid`                                                                             |
 | `paymentMethod`                | string  | 非 `cod`                                                                             |
@@ -353,13 +355,29 @@ rental_sku_variant_stocks.on_hand_quantity
 | 項目                                         | 原因                                                 |
 | -------------------------------------------- | ---------------------------------------------------- |
 | COD                                          | DB／產品禁止                                         |
-| `/booking/checkout/sessions/{id}/ecpay`      | 延後至線 D；線 E 不產生綠界表單                      |
+| `/booking/checkout/sessions/{id}/ecpay`      | **已實作**（線 D）；Commerce UX 將增 contact Request body |
 | 優惠券套用                                   | 延後至線 F；目前 `couponClaimId` 只能省略或為 `null` |
 | 付款後 `confirmed`                           | 付款真相必須由線 D 的 ECPay Notify webhook 寫入      |
 | 舊 Mock 胖欄位（隨意 picsum 欄）             | 不當契約真相                                         |
 | 前端直接 `POST /booking/bookings` 當建單真相 | 改走 checkout sessions                               |
 
-線 E 的完成定義是 Booking Prepare／Reservation：前端可查詢、建立 `pending + unpaid`、讀取本人預約、主動取消並等待逾時釋放。ECPay 表單、Notify 驗簽、`paid`、`confirmed` 與付款後導頁屬線 D，前端不得先模擬成功。
+線 E 的完成定義是 Booking Prepare／Reservation：前端可查詢、建立 `pending + unpaid`、讀取本人預約、主動取消並等待逾時釋放。ECPay 表單、Notify 驗簽、`paid` 與付款後導頁屬線 D；`confirmed` 仍由後台確認。
+
+### 7.1 ECPay Launch + 聯絡快照（Commerce UX，planned）
+
+`POST /api/booking/checkout/sessions/{bookingId}/ecpay`
+
+Request body（新增）：
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| `contact.name` | string | 是 | 寫入 `bookings.contact_name_snapshot` |
+| `contact.phone` | string | 是 | 寫入 `contact_phone_snapshot` |
+| `contact.email` | string | 是 | 寫入 `contact_email_snapshot` |
+
+同一 transaction 驗證可付 → 寫快照 → 回傳 Payment Launch（與 [`payment-api-contract.md`](./payment-api-contract.md) 一致）。
+
+**前端 B3**：`POST /booking/checkout/sessions` 改在 **booking-checkout 進頁**呼叫，不在 booking-cart 進頁。
 
 ---
 
@@ -367,6 +385,7 @@ rental_sku_variant_stocks.on_hand_quantity
 
 | 版本 | 日期       | 說明                                                                                                                   |
 | ---- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1.1  | 2026-07-26 | Commerce UX：`displayNo`、ecpay contact 快照、booking-checkout 進頁鎖位（spec）                                        |
 | 1.0  | 2026-07-23 | 公開營區列表與詳情補回 `environmentTags`、`facilityTags`，供前台環境特徵與設施篩選使用                                 |
 | 0.9  | 2026-07-21 | E-7 前端接線完成；統一 facade 路徑、Bearer／Envelope／meta、後端可用性與價格、Booking ID、倒數及 Payment Deferred 邊界 |
 | 0.8  | 2026-07-21 | E-6 主動取消與 15 分鐘逾時釋放已實作；鎖定狀態競爭、租借 released 與歷程冪等                                           |

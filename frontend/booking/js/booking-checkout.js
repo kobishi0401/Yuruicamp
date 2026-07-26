@@ -1,18 +1,18 @@
 /**
  * booking-checkout.js
  * 功能：預約結帳頁邏輯
- *   ① 讀取 LocalStorage 取得完整 bookingCart
- *   ② 渲染住宿明細、裝備明細、費用加總
- *   ③ 聯絡資訊表單驗證
- *   ④ 讀取預約背包頁已建立的 Booking Checkout Session
- *   ⑤ 只取得後端簽好的 ECPay 表單並導向付款頁
+ *   B3：進頁 createBooking hard lock；N3 自動帶入聯絡資料
  */
 
 const BOOKING_SESSION_KEY = 'lastCheckoutBooking';
 const BOOKING_SESSION_FINGERPRINT_KEY = 'lastCheckoutBookingFingerprint';
+const BOOKING_IDEMPOTENCY_KEY = 'bookingCheckoutIdempotencyKey';
+const BOOKING_FINGERPRINT_KEY = 'bookingCheckoutFingerprint';
+
+let preparedBookingSession = null;
+let bookingCheckoutSessionRevision = 0;
 
 $(document).ready(function () {
-  // 讀取並正規化 bookingCart（camelCase；相容舊 snake_case）
   const bookingCart = typeof window.readBookingCart === 'function' ? window.readBookingCart() : null;
 
   if (!bookingCart || !bookingCart.bookingInfo) {
@@ -21,7 +21,6 @@ $(document).ready(function () {
     return;
   }
 
-  // 舊格式立刻寫回 camelCase
   if (typeof window.writeBookingCart === 'function') {
     window.writeBookingCart(bookingCart);
   }
@@ -30,6 +29,7 @@ $(document).ready(function () {
   initAccordionPanels();
   initPaymentMethod();
   initFillProfileBtn();
+  prefillBookingContactFields();
   initPreparedBookingSession(bookingCart);
 
   $('#confirmPayBtn').on('click', function () {
@@ -147,7 +147,42 @@ function fillContactFields(user) {
   if (user.email) $('#contactEmail').val(user.email);
 }
 
-/** 綁定「帶入會員資料」按鈕；進頁與登入完成時都不自動填入 */
+/** 進 checkout 頁自動帶入 name/email/phone（N3） */
+async function prefillBookingContactFields() {
+  if ($('#contactName').val().trim()) return;
+
+  var user = getLoggedInUser();
+  if (!user) return;
+
+  var shippingAddr = null;
+  try {
+    shippingAddr = await window.API?.shippingAddresses?.getDefault?.();
+  } catch (error) {
+    console.warn('[booking-checkout] 無法讀取預設配送地址', error);
+  }
+
+  var profile = {};
+  try {
+    profile = JSON.parse(localStorage.getItem('yurui_profile') || '{}');
+  } catch {
+    profile = {};
+  }
+
+  var resolvedName =
+    (shippingAddr &&
+      `${shippingAddr.lastName || ''}${shippingAddr.firstName || ''}`.trim()) ||
+    user.name ||
+    profile.name ||
+    '';
+  var resolvedPhone = shippingAddr?.phone || user.phone || profile.phone || '';
+  var resolvedEmail = shippingAddr?.email || user.email || profile.email || '';
+
+  if (resolvedName) $('#contactName').val(resolvedName);
+  if (resolvedPhone) $('#contactPhone').val(resolvedPhone);
+  if (resolvedEmail) $('#contactEmail').val(resolvedEmail);
+}
+
+/** 綁定「帶入會員資料」按鈕 */
 function initFillProfileBtn() {
   $('#fillProfileBtn').on('click', function () {
     var user = getLoggedInUser();
@@ -243,10 +278,100 @@ function initPaymentMethod() {
 // ============================================================
 
 function initPreparedBookingSession(cart) {
-  if (readPreparedBookingSession(cart)) return;
+  var revision = ++bookingCheckoutSessionRevision;
+  $('#confirmPayBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> 正在保留庫存...');
 
-  $('#confirmPayBtn').prop('disabled', true);
-  showToast('預約保留尚未建立，請返回預約背包重新確認庫存。', 'warning');
+  var stored = readPreparedBookingSession(cart);
+  if (stored) {
+    preparedBookingSession = stored;
+    resetConfirmPayButton();
+    return;
+  }
+
+  createPreparedBookingSession(cart, revision).catch(function (error) {
+    console.error('[booking-checkout] 建立預約保留失敗', error);
+    var message = error && error.message ? error.message : '暫時無法保留庫存，請返回背包重試。';
+    showToast(message, 'error');
+    $('#confirmPayBtn').prop('disabled', true).html('<i class="bi bi-exclamation-octagon"></i> 無法保留庫存');
+  });
+}
+
+function createPreparedBookingSession(cart, revision) {
+  if (!window.BookingAPI || typeof window.BookingAPI.createBooking !== 'function') {
+    return Promise.reject(new Error('BookingAPI 未載入，請重新整理頁面。'));
+  }
+
+  var fingerprint = getBookingCartFingerprint(cart);
+  var request = buildBookingPayload(cart, 'ecpay-credit');
+
+  return window.BookingAPI.createBooking(request, cart).then(function (booking) {
+    if (revision !== bookingCheckoutSessionRevision) {
+      return cancelBookingResult(booking);
+    }
+    sessionStorage.setItem(BOOKING_SESSION_KEY, JSON.stringify(booking));
+    sessionStorage.setItem(BOOKING_SESSION_FINGERPRINT_KEY, fingerprint);
+    preparedBookingSession = booking;
+    resetConfirmPayButton();
+    return booking;
+  });
+}
+
+function buildBookingPayload(cart, paymentMethod) {
+  var info = cart.bookingInfo || {};
+  return {
+    campgroundId: info.campgroundId,
+    checkIn: info.checkIn,
+    checkOut: info.checkOut,
+    guestCount: Number(info.guestCount) || 1,
+    zones: (cart.selectedZones || []).map(function (zone) {
+      return { zoneId: zone.zoneId, quantity: Number(zone.quantity) || 1 };
+    }),
+    rentals: (cart.selectedRentals || []).map(function (rental) {
+      return {
+        rentalListingId: rental.rentalListingId || rental.equipmentId,
+        rentalSkuVariantId: rental.rentalSkuVariantId || rental.variantId,
+        quantity: Number(rental.quantity) || 1,
+      };
+    }),
+    couponClaimId: null,
+    paymentMethod: paymentMethod === 'ecpay-credit' ? paymentMethod : 'ecpay-credit',
+    idempotencyKey: getBookingIdempotencyKey(cart),
+  };
+}
+
+function getBookingCartFingerprint(cart) {
+  return JSON.stringify({
+    bookingInfo: cart && cart.bookingInfo,
+    selectedZones: cart && cart.selectedZones,
+    selectedRentals: cart && cart.selectedRentals,
+  });
+}
+
+function getBookingIdempotencyKey(cart) {
+  var fingerprint = getBookingCartFingerprint(cart);
+  var previousFingerprint = sessionStorage.getItem(BOOKING_FINGERPRINT_KEY);
+  var key = sessionStorage.getItem(BOOKING_IDEMPOTENCY_KEY);
+
+  if (!key || previousFingerprint !== fingerprint) {
+    key =
+      window.crypto && typeof window.crypto.randomUUID === 'function'
+        ? window.crypto.randomUUID()
+        : 'booking-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    sessionStorage.setItem(BOOKING_IDEMPOTENCY_KEY, key);
+    sessionStorage.setItem(BOOKING_FINGERPRINT_KEY, fingerprint);
+  }
+
+  return key;
+}
+
+function cancelBookingResult(booking) {
+  var bookingId = booking && (booking.bookingId || booking.id);
+  if (!bookingId || !window.BookingAPI || typeof window.BookingAPI.cancelBooking !== 'function') {
+    return Promise.resolve();
+  }
+  return window.BookingAPI.cancelBooking(bookingId).catch(function (error) {
+    console.warn('[booking-checkout] 無法釋放舊的庫存保留：', error);
+  });
 }
 
 function handleCheckout(cart) {
@@ -273,9 +398,9 @@ function handleCheckout(cart) {
     return;
   }
 
-  var booking = readPreparedBookingSession(cart);
+  var booking = preparedBookingSession || readPreparedBookingSession(cart);
   if (!booking) {
-    showToast('預約保留尚未建立，請返回預約背包重新確認庫存。', 'warning');
+    showToast('預約保留尚未建立，請重新整理此頁或返回預約背包。', 'warning');
     return;
   }
 
@@ -287,8 +412,8 @@ function handleCheckout(cart) {
     return;
   }
 
-  // 待付款預約已在 booking-cart.html 建立；此按鈕只取得 ECPay 表單。
-  launchEcpayPayment(booking).catch(function (err) {
+  // 進頁已建立 pending booking；此按鈕帶 contact 快照並取得 ECPay 表單。
+  launchEcpayPayment(booking, { name: name, phone: phone, email: email }).catch(function (err) {
     console.error('[booking-checkout] ECPay 導向失敗 / Failed:', err);
     showToast(err && err.message ? err.message : 'ECPay 尚未啟用，請稍後再試。', 'error');
     resetConfirmPayButton();
@@ -300,8 +425,8 @@ function resetConfirmPayButton() {
   $('#confirmPayBtn').prop('disabled', false).html('<i class="bi bi-lock-fill"></i> 前往 ECPay');
 }
 
-// 保存待付款預約並向後端取得 ECPay 導向表單。
-function launchEcpayPayment(booking) {
+// 帶 contact 快照向後端取得 ECPay 導向表單。
+function launchEcpayPayment(booking, contact) {
   var bookingId = booking && (booking.bookingId || booking.id);
   if (!bookingId) {
     return Promise.reject(new Error('預約已建立，但後端未回傳 bookingId'));
@@ -310,7 +435,7 @@ function launchEcpayPayment(booking) {
     return Promise.reject(new Error('ECPay 導向功能尚未載入'));
   }
 
-  return window.BookingAPI.createEcpayForm(bookingId).then(function (launch) {
+  return window.BookingAPI.createEcpayForm(bookingId, contact).then(function (launch) {
     submitEcpayForm(launch);
   });
 }

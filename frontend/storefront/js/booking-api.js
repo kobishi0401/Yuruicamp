@@ -541,8 +541,9 @@
       return createMockBooking(request, mockCart);
     },
 
-    // 取得後端簽好的 ECPay 表單；前端不得自行產生付款簽章。
-    createEcpayForm: function (bookingId) {
+    // 取得後端簽好的 ECPay 表單；同一請求寫入 contact 快照（O2）。
+    // Fetch signed ECPay form; same request persists contact snapshot (O2).
+    createEcpayForm: function (bookingId, contact) {
       if (useMockApi()) {
         return Promise.reject(new Error('ECPay form is unavailable in Mock mode'));
       }
@@ -552,6 +553,7 @@
         {
           method: 'POST',
           auth: 'required',
+          body: { contact: contact || {} },
         }
       );
     },

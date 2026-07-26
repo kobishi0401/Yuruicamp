@@ -35,7 +35,15 @@ customers ─ 1:N ─ bookings ─ N:1 ─ campgrounds
 
 ## 欄位說明
 ### bookings
-* id                            預約識別碼，呼叫端必須提供。
+* id                            預約識別碼，呼叫端必須提供（內部 UUID 主鍵）。
+
+* display_no                    人類可讀序號，例 `BK-0042`；**UNIQUE**；由 `booking_display_no_seq` 指派（Commerce UX spec，planned）。
+
+* contact_name_snapshot         下單／付款前聯絡人姓名快照（ecpay launch 寫入，planned）。
+
+* contact_phone_snapshot        聯絡電話快照。
+
+* contact_email_snapshot        聯絡 Email 快照。
 
 * customer_id                   預約會員；參照 customers.id。
                                 *idx_bookings_customer_created* `(customer_id, created_at)`

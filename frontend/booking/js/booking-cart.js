@@ -1,24 +1,8 @@
 /**
  * booking-cart.js
  * 功能：預約背包確認頁（步驟 4）
- *   ① 讀取 LocalStorage（camelCase），渲染住宿 + 裝備項目
- *   ② 「修改日期」連結帶入正確 campgroundId
- *   ③ 住宿：每個已選營位固定為單次預約，不提供數量調整
- *   ④ 裝備：調整數量 / 刪除項目，即時重算小計
- *   ⑤ 右側摘要隨數量變化同步更新
- *   ⑥ 所有變更即時寫回 localStorage（camelCase）
- *   ⑦ 進頁即建立 Booking Checkout Session，先鎖定營位與租借庫存
+ *   B3：不在此頁 createBooking；僅 soft 驗量，hard lock 改在 booking-checkout 進頁
  */
-
-// 目前操作中的 bookingCart（camelCase），初始從 localStorage 讀取
-var bookingCart = null;
-var BOOKING_IDEMPOTENCY_KEY = 'bookingCheckoutIdempotencyKey';
-var BOOKING_FINGERPRINT_KEY = 'bookingCheckoutFingerprint';
-var BOOKING_SESSION_KEY = 'lastCheckoutBooking';
-var BOOKING_SESSION_FINGERPRINT_KEY = 'lastCheckoutBookingFingerprint';
-var bookingSessionQueue = Promise.resolve();
-var bookingSessionRevision = 0;
-var bookingSessionNeedsAuthRetry = false;
 
 $(document).ready(function () {
   bookingCart = typeof window.readBookingCart === 'function' ? window.readBookingCart() : null;
@@ -36,16 +20,13 @@ $(document).ready(function () {
   normalizeStayQuantity();
 
   renderAll();
-  initBookingCheckoutSession();
+  initBookingCartCheckoutLink();
 
   // 清除背包
   $('#bookingCartClearButton').on('click', function () {
     showConfirmToast('確定清除背包中的所有預約資料？', function () {
-      cancelPreparedBookingSession();
       localStorage.removeItem('bookingCart');
       bookingCart = null;
-      clearPreparedBookingSession();
-      clearBookingIdempotencyKey();
       showToast('背包已清除', 'info');
       $('#bookingCartContent').removeClass('isVisible');
       showEmptyState();
@@ -89,7 +70,6 @@ $(document).ready(function () {
     saveCart();
     renderRentalBody();
     renderSummary();
-    prepareBookingCheckoutSession(true);
 
     if (bookingCart.selectedRentals.length === 0) {
       showToast('裝備已全部移除', 'info');
@@ -109,100 +89,49 @@ function updateRentalQuantity(idx, newQty) {
   saveCart();
   renderRentalBody();
   renderSummary();
-  prepareBookingCheckoutSession(true);
 }
 
 // ============================================================
-// 進頁建立 Booking Checkout Session
+// Soft 驗量 + 前往結帳（K2）
 // ============================================================
 
-function initBookingCheckoutSession() {
+function initBookingCartCheckoutLink() {
+  setBookingSessionState('ready', '確認無誤後前往結帳；進入結帳頁才會鎖定庫存並開始 15 分鐘保留。');
+
   $('#bookingCartCheckoutButton').on('click', function (event) {
-    if ($(this).attr('aria-disabled') === 'true') {
+    if (!runBookingCartSoftValidation({ block: true })) {
       event.preventDefault();
-      showToast('請等待庫存確認完成。', 'info');
+      showToast('請依提示調整預約內容後再結帳。', 'warning');
     }
   });
-
-  // Firebase 登入完成後自動重試，不需要使用者重新整理背包頁。
-  window.addEventListener('yurui:auth-changed', function (event) {
-    if (event.detail && event.detail.type === 'login' && bookingSessionNeedsAuthRetry) {
-      bookingSessionNeedsAuthRetry = false;
-      prepareBookingCheckoutSession(false);
-    } else if (event.detail && event.detail.type === 'logout') {
-      bookingSessionRevision += 1;
-      bookingSessionNeedsAuthRetry = true;
-      clearPreparedBookingSession();
-      clearBookingIdempotencyKey();
-      setBookingSessionState('error', '請先登入，登入後系統會自動確認並保留庫存。');
-    }
-  });
-
-  prepareBookingCheckoutSession(false);
 }
 
-/**
- * 依目前背包內容建立 pending/unpaid Session。
- * 數量變更時先取消舊保留，再以新冪等鍵重新鎖位。
- */
-function prepareBookingCheckoutSession(replaceExisting) {
-  var revision = ++bookingSessionRevision;
-  setBookingSessionState('loading', '正在確認營位與租借商品庫存…');
+/** 不在 cart 頁 hard lock，只做基本數量檢查 / Soft validate before leaving cart */
+function runBookingCartSoftValidation({ block }) {
+  if (!bookingCart || !bookingCart.bookingInfo) {
+    if (block) showToast('背包資料不完整，請重新選擇。', 'warning');
+    setBookingSessionState('error', '背包資料不完整，請重新選擇。');
+    return false;
+  }
 
-  bookingSessionQueue = bookingSessionQueue
-    .catch(function () {
-      // 前一次失敗不應阻斷後續數量調整後的重試。
-    })
-    .then(function () {
-      var storedBooking = readStoredBookingSession();
-      if (storedBooking && isBookingSessionExpired(storedBooking)) {
-        clearPreparedBookingSession();
-        clearBookingIdempotencyKey();
-      }
+  if (!bookingCart.selectedZones || bookingCart.selectedZones.length === 0) {
+    if (block) showToast('請至少選擇一個營位。', 'warning');
+    setBookingSessionState('error', '請至少選擇一個營位。');
+    return false;
+  }
 
-      var previousBooking = replaceExisting ? readStoredBookingSession() : null;
-      var cancelPromise =
-        previousBooking && window.BookingAPI && typeof window.BookingAPI.cancelBooking === 'function'
-          ? window.BookingAPI.cancelBooking(previousBooking.bookingId || previousBooking.id)
-          : Promise.resolve();
+  var rentalIssues = (bookingCart.selectedRentals || []).filter(function (rental) {
+    var qty = Number(rental.quantity);
+    return !Number.isInteger(qty) || qty < 1 || qty > 20;
+  });
+  if (rentalIssues.length > 0) {
+    if (block) showToast('租借數量需在 1 到 20 之間。', 'warning');
+    setBookingSessionState('error', '租借數量需在 1 到 20 之間，請調整後再結帳。');
+    return false;
+  }
 
-      return cancelPromise.then(function () {
-        if (replaceExisting) clearPreparedBookingSession();
-        if (!window.BookingAPI || typeof window.BookingAPI.createBooking !== 'function') {
-          throw new Error('BookingAPI 未載入，請重新整理頁面。');
-        }
-
-        var cartSnapshot = bookingCart;
-        var fingerprint = getBookingCartFingerprint(cartSnapshot);
-        var request = buildBookingPayload(cartSnapshot, 'ecpay-credit');
-
-        return window.BookingAPI.createBooking(request, cartSnapshot).then(function (booking) {
-          return { booking: booking, fingerprint: fingerprint };
-        });
-      });
-    })
-    .then(function (result) {
-      // 使用者連續調整數量時，舊回應不得覆蓋最新一次 Session。
-      if (revision !== bookingSessionRevision) {
-        return cancelBookingResult(result.booking);
-      }
-
-      sessionStorage.setItem(BOOKING_SESSION_KEY, JSON.stringify(result.booking));
-      sessionStorage.setItem(BOOKING_SESSION_FINGERPRINT_KEY, result.fingerprint);
-      bookingSessionNeedsAuthRetry = false;
-      setBookingSessionState('ready', '庫存已暫時保留，請於 15 分鐘內完成付款。');
-    })
-    .catch(function (error) {
-      if (revision !== bookingSessionRevision) return;
-
-      clearPreparedBookingSession();
-      bookingSessionNeedsAuthRetry = isBookingAuthError(error);
-      var message = getBookingSessionErrorMessage(error);
-      setBookingSessionState('error', message);
-      showToast(message, 'error');
-    });
-
-  return bookingSessionQueue;
+  setBookingSessionState('ready', '確認無誤後前往結帳；進入結帳頁才會鎖定庫存並開始 15 分鐘保留。');
+  return true;
 }
 
 function setBookingSessionState(state, message) {
@@ -215,124 +144,12 @@ function setBookingSessionState(state, message) {
     .toggleClass('isReady', isReady)
     .toggleClass('isError', state === 'error');
   $status.text(message);
-  $checkoutButton.attr('aria-disabled', isReady ? 'false' : 'true');
+  $checkoutButton.attr('aria-disabled', state === 'error' ? 'true' : 'false');
   $checkoutButton.html(
-    isReady
-      ? '<i class="bi bi-arrow-right-circle"></i> 前往結帳'
-      : '<i class="bi bi-hourglass-split"></i> 正在確認庫存'
+    state === 'error'
+      ? '<i class="bi bi-exclamation-octagon"></i> 請調整內容'
+      : '<i class="bi bi-arrow-right-circle"></i> 前往結帳'
   );
-}
-
-function getBookingSessionErrorMessage(error) {
-  var code = String((error && error.code) || '').toUpperCase();
-
-  if (code === 'RENTAL_STOCK_INSUFFICIENT') {
-    return '商品剩餘數量不足請重新調整數量';
-  }
-  if (code === 'ZONE_UNAVAILABLE') {
-    return '營位剩餘數量不足，請重新調整預約內容。';
-  }
-  if (isBookingAuthError(error)) {
-    return '請先登入，登入後系統會自動確認並保留庫存。';
-  }
-
-  return error && error.message ? error.message : '暫時無法確認庫存，請稍後再試。';
-}
-
-function isBookingAuthError(error) {
-  var code = String((error && error.code) || '').toUpperCase();
-  return code === 'AUTH_TOKEN_UNAVAILABLE' || code === 'UNAUTHORIZED';
-}
-
-function cancelPreparedBookingSession() {
-  return cancelBookingResult(readStoredBookingSession());
-}
-
-function cancelBookingResult(booking) {
-  var bookingId = booking && (booking.bookingId || booking.id);
-  if (!bookingId || !window.BookingAPI || typeof window.BookingAPI.cancelBooking !== 'function') {
-    return Promise.resolve();
-  }
-
-  return window.BookingAPI.cancelBooking(bookingId).catch(function (error) {
-    console.warn('[booking-cart] 無法釋放舊的庫存保留：', error);
-  });
-}
-
-function readStoredBookingSession() {
-  try {
-    return JSON.parse(sessionStorage.getItem(BOOKING_SESSION_KEY) || 'null');
-  } catch {
-    return null;
-  }
-}
-
-function clearPreparedBookingSession() {
-  sessionStorage.removeItem(BOOKING_SESSION_KEY);
-  sessionStorage.removeItem(BOOKING_SESSION_FINGERPRINT_KEY);
-}
-
-function clearBookingIdempotencyKey() {
-  sessionStorage.removeItem(BOOKING_IDEMPOTENCY_KEY);
-  sessionStorage.removeItem(BOOKING_FINGERPRINT_KEY);
-}
-
-function isBookingSessionExpired(booking) {
-  var expiresAt = booking && booking.checkoutExpiresAt;
-  return Boolean(expiresAt && Date.parse(expiresAt) <= Date.now());
-}
-
-// 只把後端契約允許的 ID、數量、日期與付款方式送出。
-function buildBookingPayload(cart, paymentMethod) {
-  var info = cart.bookingInfo || {};
-
-  return {
-    campgroundId: info.campgroundId,
-    checkIn: info.checkIn,
-    checkOut: info.checkOut,
-    guestCount: Number(info.guestCount) || 1,
-    zones: (cart.selectedZones || []).map(function (zone) {
-      return {
-        zoneId: zone.zoneId,
-        quantity: Number(zone.quantity) || 1,
-      };
-    }),
-    rentals: (cart.selectedRentals || []).map(function (rental) {
-      return {
-        rentalListingId: rental.rentalListingId || rental.equipmentId,
-        rentalSkuVariantId: rental.rentalSkuVariantId || rental.variantId,
-        quantity: Number(rental.quantity) || 1,
-      };
-    }),
-    couponClaimId: null,
-    paymentMethod: paymentMethod === 'ecpay-credit' ? paymentMethod : 'ecpay-credit',
-    idempotencyKey: getBookingIdempotencyKey(cart),
-  };
-}
-
-function getBookingCartFingerprint(cart) {
-  return JSON.stringify({
-    bookingInfo: cart && cart.bookingInfo,
-    selectedZones: cart && cart.selectedZones,
-    selectedRentals: cart && cart.selectedRentals,
-  });
-}
-
-function getBookingIdempotencyKey(cart) {
-  var fingerprint = getBookingCartFingerprint(cart);
-  var previousFingerprint = sessionStorage.getItem(BOOKING_FINGERPRINT_KEY);
-  var key = sessionStorage.getItem(BOOKING_IDEMPOTENCY_KEY);
-
-  if (!key || previousFingerprint !== fingerprint) {
-    key =
-      window.crypto && typeof window.crypto.randomUUID === 'function'
-        ? window.crypto.randomUUID()
-        : 'booking-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-    sessionStorage.setItem(BOOKING_IDEMPOTENCY_KEY, key);
-    sessionStorage.setItem(BOOKING_FINGERPRINT_KEY, fingerprint);
-  }
-
-  return key;
 }
 
 // ============================================================

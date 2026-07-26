@@ -43,6 +43,7 @@ public class BookingMemberService {
 				.stream()
 				.map(row -> new BookingListItemResponse(
 						row.id(),
+						row.displayNo(),
 						row.status(),
 						row.paymentStatus(),
 						row.campgroundName(),
@@ -65,6 +66,7 @@ public class BookingMemberService {
 
 		return new BookingDetailResponse(
 				booking.id(),
+				booking.displayNo(),
 				booking.status(),
 				booking.paymentStatus(),
 				booking.paymentMethod(),
@@ -94,6 +96,7 @@ public class BookingMemberService {
 
 		return new BookingCheckoutSessionResponse(
 				booking.id(),
+				booking.displayNo(),
 				booking.status(),
 				booking.paymentStatus(),
 				booking.paymentMethod(),

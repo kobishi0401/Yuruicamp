@@ -3,8 +3,9 @@
 | 欄位         | 內容                                                                                                                                                             |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **狀態**     | Implemented（Prepare、Read、Update、COD Confirm、Cancel、ECPay Launch）                                                                                          |
-| **日期**     | 2026-07-25                                                                                                                                                       |
-| **版本**     | 0.13                                                                                                                                                             |
+| **日期**     | 2026-07-26                                                                                                                                                       |
+| **Commerce UX** | `displayNo`、checkout 進頁鎖庫、M2 一次 ECPay → [`../backend-specs/commerce/display-numbers-and-checkout-ux.md`](../backend-specs/commerce/display-numbers-and-checkout-ux.md) |
+| **版本**     | 0.14                                                                                                                                                             |
 | **共用**     | [`common-api-conventions.md`](./common-api-conventions.md)                                                                                                       |
 | **相關**     | [`order-api-contract.md`](./order-api-contract.md)、[`payment-api-contract.md`](./payment-api-contract.md)、[`coupon-api-contract.md`](./coupon-api-contract.md) |
 | **實作說明** | [`../backend-specs/checkout/README.md`](../backend-specs/checkout/README.md)                                                                                     |
@@ -78,7 +79,8 @@
 
 | JSON | 型別 | 說明／DB |
 |------|------|----------|
-| `orderId` | string | `orders.id` |
+| `orderId` | string | `orders.id`（內部主鍵；ECPay CustomField1） |
+| `displayNo` | string | `orders.display_no`；人類可讀序號，例 `ORD-0001`（**planned**，Commerce UX spec） |
 | `paymentStatus` | string | `unpaid`（建立時） |
 | `paymentMethod` | string \| null | `orders.payment_method` |
 | `status` | string | `orders.status` |
@@ -209,6 +211,7 @@ Request 範例：
 
 | 版本 | 日期       | 說明                                                                                             |
 | ---- | ---------- | ------------------------------------------------------------------------------------------------ |
+| 0.14 | 2026-07-26 | Commerce UX：`displayNo`；前端 B3 checkout 進頁鎖庫；M2 ECPay 一次 launch（spec）                 |
 | 0.13 | 2026-07-25 | 合併 ECPay Launch（0.8）與 coupon 生命週期（0.12）                                               |
 | 0.12 | 2026-07-24 | 主動取消將已綁 claim 改為 `revoked`；Checkout 逾時將 claim 改為 `expired`                        |
 | 0.11 | 2026-07-24 | COD 確認成立時於同一交易將已套用 claim 改為 `consumed` 並設定 `consumed_at`                      |

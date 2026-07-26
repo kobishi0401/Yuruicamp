@@ -191,7 +191,19 @@ function _buildCard(product) {
   const ratingText = product.ratingDisplay ?? starRating.toFixed(1);
   const defaultSel = window.getDefaultCardSpecSelection
     ? window.getDefaultCardSpecSelection(product)
-    : { color: '', size: '', specLabel: '' };
+    : { color: '', size: '', specLabel: '', variant: null };
+  const variant = defaultSel.variant || window.getProductVariants?.(product)?.[0];
+  const availableQuantity = Number(variant?.availableQuantity);
+  const inStock =
+    variant?.inStock !== false && (!Number.isFinite(availableQuantity) || availableQuantity > 0);
+  const stockHtml =
+    Number.isFinite(availableQuantity) && inStock
+      ? `<p class="productCardStock">剩餘 ${availableQuantity} 件</p>`
+      : !inStock
+        ? '<p class="productCardStock productCardStockOut">暫無庫存</p>'
+        : '';
+  const addBtnDisabled = inStock ? '' : ' disabled aria-disabled="true"';
+  const addBtnLabel = inStock ? '加入購物車' : '暫無庫存';
 
   // Multi-image gallery: Swiper swipe + GLightbox zoom / 多圖輪播 + 點擊放大
   const images = window.getItemImages
@@ -225,7 +237,8 @@ function _buildCard(product) {
         <div class="productCardPrice">
           <span class="priceCurrent">NT$ ${priceFormatted}</span>
         </div>
-        <button class="productCardAddBtn" data-product-id="${product.id}">\u52a0\u5165\u8cfc\u7269\u8eca</button>
+        ${stockHtml}
+        <button class="productCardAddBtn" data-product-id="${product.id}"${addBtnDisabled}>${addBtnLabel}</button>
       </div>
     </div>
   `;
@@ -597,11 +610,32 @@ function _bindCardEvents() {
         } else if (preview) {
           preview.remove();
         }
+        const addBtn = card.querySelector('.productCardAddBtn');
+        if (addBtn && variant) {
+          const availableQuantity = Number(variant.availableQuantity);
+          const inStock =
+            variant.inStock !== false &&
+            (!Number.isFinite(availableQuantity) || availableQuantity > 0);
+          addBtn.disabled = !inStock;
+          addBtn.setAttribute('aria-disabled', String(!inStock));
+          addBtn.textContent = inStock ? '加入購物車' : '暫無庫存';
+          let stockEl = card.querySelector('.productCardStock');
+          if (Number.isFinite(availableQuantity)) {
+            if (!stockEl) {
+              stockEl = document.createElement('p');
+              stockEl.className = 'productCardStock';
+              card.querySelector('.productCardPrice')?.after(stockEl);
+            }
+            stockEl.classList.toggle('productCardStockOut', !inStock);
+            stockEl.textContent = inStock ? `剩餘 ${availableQuantity} 件` : '暫無庫存';
+          }
+        }
       }
       return;
     }
 
     if (event.target.classList.contains('productCardAddBtn')) {
+      if (event.target.disabled) return;
       event.stopPropagation();
       const card = event.target.closest('.productCard');
       await _handleAddToCart(event.target.dataset.productId, card);
