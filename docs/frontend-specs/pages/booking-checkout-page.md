@@ -1,4 +1,4 @@
-﻿# BookingCheckoutPage Spec
+# BookingCheckoutPage Spec
 
 **Status:** Draft
 **Category:** Page

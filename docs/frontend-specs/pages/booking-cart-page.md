@@ -1,4 +1,4 @@
-﻿# BookingCartPage Spec
+# BookingCartPage Spec
 
 **Status:** Implemented (B3 2026-07-26)
 **Category:** Page

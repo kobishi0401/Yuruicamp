@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.yuruicamp.backend.booking.application.AdminCampgroundAvailabilityService;
+import com.yuruicamp.backend.booking.application.AdminCampgroundNightBookingService;
 import com.yuruicamp.backend.booking.application.AdminCampgroundService;
 import com.yuruicamp.backend.common.api.ApiResponse;
 import com.yuruicamp.backend.config.OpenApiConfig;
@@ -38,12 +39,15 @@ public class AdminCampgroundController {
 
 	private final AdminCampgroundService service;
 	private final AdminCampgroundAvailabilityService availabilityService;
+	private final AdminCampgroundNightBookingService nightBookingService;
 
 	public AdminCampgroundController(
 			AdminCampgroundService service,
-			AdminCampgroundAvailabilityService availabilityService) {
+			AdminCampgroundAvailabilityService availabilityService,
+			AdminCampgroundNightBookingService nightBookingService) {
 		this.service = service;
 		this.availabilityService = availabilityService;
+		this.nightBookingService = nightBookingService;
 	}
 
 	@GetMapping
@@ -71,6 +75,18 @@ public class AdminCampgroundController {
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
 			@RequestParam(required = false) String zoneId) {
 		return ApiResponse.ok(availabilityService.getAvailability(campgroundId, from, to, zoneId));
+	}
+
+	@GetMapping("/{id}/bookings-for-night")
+	@PreAuthorize("hasAuthority('booking-calendar.view')")
+	@Operation(
+			summary = "營區單晚占用預約",
+			description = "RBAC: booking-calendar.view；供預約排程點日明細；zoneId 省略＝全部 active 營位")
+	public ApiResponse<AdminCampgroundNightBookingsResponse> getBookingsForNight(
+			@PathVariable("id") String campgroundId,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+			@RequestParam(required = false) String zoneId) {
+		return ApiResponse.ok(nightBookingService.getBookingsForNight(campgroundId, date, zoneId));
 	}
 
 	@PostMapping

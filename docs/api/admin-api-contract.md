@@ -717,6 +717,7 @@ Request（可省略 body）：
 | `PATCH` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 部分更新；傳 `active` 即啟停 |
 | `DELETE` | `/api/admin/campgrounds/{id}` | `booking-calendar.edit` | 無引用才可硬刪；有引用 → `409`，改 `active=false` |
 | `GET` | `/api/admin/campgrounds/{id}/availability` | `booking-calendar.view` | 區間可用性（月曆）；見 §11.0 |
+| `GET` | `/api/admin/campgrounds/{id}/bookings-for-night` | `booking-calendar.view` | 單晚占用預約（點日明細）；見 §11.0.1 |
 
 ### 11.0 Campground availability（預約排程月曆｜Admin UX 03）
 
@@ -750,6 +751,38 @@ Response `data`：
 | `status` | `available`｜`low`｜`full`｜`closed`｜`out_of_window` |
 
 `status` 依 booking policy（`advanceDays`／`bookingWindowDays`／`lowAvailabilityThreshold`）推導，對齊月曆圖例。
+
+未知營區 → `404`；未知或非 active 的 `zoneId` → `404`。
+
+### 11.0.1 Campground night bookings（預約排程點日明細｜Admin UX follow-up 02）
+
+供後台「預約排程面板」點選單日後的占用明細；lazy load。占用規則對齊 `get_zone_availability`（`booking_policy_occupying_statuses`；`check_in <= date < check_out`）。
+
+| Query | 必填 | 說明 |
+|-------|------|------|
+| `date` | 是 | `YYYY-MM-DD` 查詢之夜 |
+| `zoneId` | 否 | 省略＝**全部 active 營位**（回應 `zoneId: "__ALL__"`）；與月曆 zone 下拉一致 |
+
+Response `data`：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `campgroundId` | string | 路徑營區 |
+| `date` | date | 請求之夜 |
+| `zoneId` | string | `__ALL__` 或單一 zone slug |
+| `rows[]` | array | 占用預約列（已取消等非占用狀態不回） |
+
+`rows[]` 單列：
+
+| 欄位 | 說明 |
+|------|------|
+| `bookingId` | 預約主鍵 |
+| `displayNo` | 顯示編號 |
+| `customerId`／`customerName` | 顧客 |
+| `zoneId`／`zoneType` | 營位 |
+| `quantity` | 該 zone 當晚占用帳數 |
+| `status` | 預約狀態 |
+| `checkIn`／`checkOut` | 入住／退房日 |
 
 未知營區 → `404`；未知或非 active 的 `zoneId` → `404`。
 
@@ -1014,3 +1047,4 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | 0.23 | 2026-07-25 | W4-06：`/api/admin/analytics/shop-summary`、`booking-summary`；口徑／366 天／`analytics.view` |
 | 0.24 | 2026-07-26 | Analytics summary 擴充 `categoryBreakdown[]`（商城營收／租借件數；DB 分類 FK） |
 | 0.25 | 2026-07-27 | Admin UX 03：`GET /api/admin/campgrounds/{id}/availability`；月曆 Backend 可用性；RBAC `booking-calendar.view` |
+| 0.26 | 2026-07-27 | Admin UX follow-up 02：`GET /api/admin/campgrounds/{id}/bookings-for-night`；點日占用明細 lazy load |

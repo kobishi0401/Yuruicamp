@@ -16,11 +16,16 @@
     $('#loginError').addClass('d-none').text('');
   }
 
+  /** 僅 warning/error 時顯示；成功則隱藏整個 status 區塊。 */
   function showFirebaseStatus(message, type) {
     $('#firebaseLoginStatus')
       .removeClass('d-none alert-info alert-success alert-warning')
       .addClass('alert-' + type)
       .text(message);
+  }
+
+  function hideFirebaseStatus() {
+    $('#firebaseLoginStatus').addClass('d-none').text('');
   }
 
   function setBusy($button, busy, label) {
@@ -149,7 +154,7 @@
         );
         return;
       }
-      showFirebaseStatus('Firebase 已就緒，可以使用 Google 管理員帳號登入。', 'success');
+      hideFirebaseStatus();
       $googleButton.prop('disabled', false);
       if (auth.currentUser) {
         $googleButton.html(

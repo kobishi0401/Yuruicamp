@@ -10,6 +10,14 @@ const authSource = readFileSync(join(rootDir, 'admin/js/admin-auth.js'), 'utf8')
 const idUtilsSource = readFileSync(join(rootDir, 'admin/js/id-utils.js'), 'utf8');
 const reviewsSource = readFileSync(join(rootDir, 'admin/js/reviews.js'), 'utf8');
 
+// Ticket 01: login cleanup（Admin UX follow-up）
+assert.match(loginHtml, /賣家管理系統/);
+assert.doesNotMatch(loginHtml, /Firebase Google 登入/);
+assert.doesNotMatch(loginHtml, /id="mockLoginHint"/);
+assert.doesNotMatch(loginHtml, /Firebase 已就緒/);
+assert.match(authSource, /hideFirebaseStatus/);
+assert.match(authSource, /hideFirebaseStatus\(\)/);
+
 // Ticket 01: login hover dev zone
 assert.match(loginHtml, /id="devLoginHoverZone"/);
 assert.match(loginHtml, /dev-login-hover-zone/);

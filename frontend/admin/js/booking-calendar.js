@@ -246,6 +246,13 @@ function isAvailabilityBackendReady() {
     && AdminAPI.campgrounds.getAvailability;
 }
 
+/** Admin UX follow-up 02：點日占用明細 API 是否就緒 */
+function isNightBookingsBackendReady() {
+  return isAvailabilityBackendReady()
+    && AdminRuntime.isFeatureReady('booking-calendar.nightBookings')
+    && AdminAPI.campgrounds.getBookingsForNight;
+}
+
 /** 依 readiness 顯示「特殊節日曆」按鈕 */
 function syncCalendarDatesButton() {
   $('#bcBtnCalendarDates').toggleClass('d-none', !isCalendarDatesReady());
@@ -724,12 +731,7 @@ function loadBookingCalendarData() {
       customers.forEach(function (c) { bcState.customersById[c.id] = c; });
 
       if (isAvailabilityBackendReady()) {
-        return Promise.all([
-          loadBackendBookingsForCalendar(),
-          window.BookingAPI.getPolicy().then(function (policy) {
-            bcState.policy = policy;
-          }),
-        ]);
+        return null;
       }
 
       if (!bcState.ctx) {
@@ -934,52 +936,46 @@ function loadMonthAvailability(range) {
     });
 }
 
-/** Backend 模式：載入預約列表供「點日明細」使用（對齊 bookings.js normalize） */
-function loadBackendBookingsForCalendar() {
-  if (!AdminAPI.bookings || !AdminAPI.bookings.list) {
-    window.bookingsCache = [];
+/** Backend 模式：向 Admin API 載入單晚占用列 */
+function loadNightBookingsForDetail(dateISO) {
+  var camp = getCurrentCamp();
+  if (!camp || !isNightBookingsBackendReady()) {
     return Promise.resolve([]);
   }
-  return AdminAPI.bookings.list({ page: 0, size: 200, sort: 'createdAt,desc' })
+  var query = { date: dateISO };
+  if (bcState.zoneId && bcState.zoneId !== BC_ALL_ZONES) {
+    query.zoneId = bcState.zoneId;
+  }
+  return AdminAPI.campgrounds.getBookingsForNight(camp.campgroundId, query)
     .then(function (response) {
-      var rows = (response && response.data) || [];
-      window.bookingsCache = rows.map(normalizeCalendarBackendBooking);
-      return window.bookingsCache;
-    })
-    .catch(function (err) {
-      console.warn('[booking-calendar] 預約列表載入失敗:', err);
-      window.bookingsCache = [];
-      return [];
+      return (response && response.data && response.data.rows) || [];
     });
 }
 
-/** 精簡版後端預約 → 月曆明細 ViewModel */
-function normalizeCalendarBackendBooking(booking) {
-  var detail = booking || {};
-  var nights = detail.checkIn && detail.checkOut
-    ? Math.max(0, Math.round((new Date(detail.checkOut) - new Date(detail.checkIn)) / 86400000))
-    : 0;
-  return {
-    id: detail.id,
-    customerId: detail.customerId,
-    status: detail.status,
-    bookingInfo: {
-      campgroundId: detail.campgroundId,
-      campgroundName: detail.campgroundName,
-      region: detail.region,
-      checkIn: detail.checkIn,
-      checkOut: detail.checkOut,
-      guestCount: detail.guestCount,
-      totalDays: nights,
-    },
-    selectedZones: (detail.zones || []).map(function (zone) {
-      return {
-        zoneId: zone.zoneId || zone.id,
-        zoneType: zone.type || zone.zoneType,
-        quantity: zone.quantity,
-      };
-    }),
-  };
+/** 將占用列渲染成明細表格（Backend API 列或 Mock 轉換列） */
+function paintDayDetailRows(rows) {
+  if (!rows.length) {
+    $('#bcDayDetailBody').empty();
+    $('#bcDayDetailEmpty').removeClass('d-none').text('此日無佔用預約。');
+    return;
+  }
+  $('#bcDayDetailEmpty').addClass('d-none').text('此日無佔用預約。');
+  var html = rows.map(function (row) {
+    var bookingNo = row.displayNo || ('BK-' + String(row.bookingId).padStart(4, '0'));
+    return (
+      '<tr>' +
+      '<td>' + escapeHtml(bookingNo) + '</td>' +
+      '<td>' + escapeHtml(row.zoneType || '—') + '</td>' +
+      '<td>' + escapeHtml(row.customerName || row.customerId || '—') + '</td>' +
+      '<td class="text-center">× ' + (row.quantity != null ? row.quantity : '—') + '</td>' +
+      '<td>' + (BC_BOOKING_STATUS_LABEL[row.status] || row.status || '—') + '</td>' +
+      '<td class="small">' + escapeHtml(row.checkIn || '—') + ' ～ ' + escapeHtml(row.checkOut || '—') + '</td>' +
+      '<td><button type="button" class="btn btn-sm btn-outline-primary bc-view-booking" data-booking-id="' +
+      escapeHtml(String(row.bookingId)) + '">查看</button></td>' +
+      '</tr>'
+    );
+  }).join('');
+  $('#bcDayDetailBody').html(html);
 }
 
 function renderCalendar() {
@@ -1140,20 +1136,34 @@ function renderDayDetail(dateISO) {
   }
 
   var bookings = [];
+  if (isNightBookingsBackendReady()) {
+    $('#bcDayDetailBody').html(
+      '<tr><td colspan="7" class="text-muted text-center py-2">載入占用明細中…</td></tr>'
+    );
+    $('#bcDayDetailEmpty').addClass('d-none');
+    loadNightBookingsForDetail(dateISO)
+      .then(function (rows) {
+        if (bcState.selectedDate !== dateISO) return;
+        paintDayDetailRows(rows);
+      })
+      .catch(function (err) {
+        console.error('[booking-calendar] 占用明細載入失敗:', err);
+        if (bcState.selectedDate !== dateISO) return;
+        $('#bcDayDetailBody').empty();
+        $('#bcDayDetailEmpty').removeClass('d-none').text('占用明細載入失敗，請稍後再試。');
+        if (window.AdminAPI && AdminAPI.handleError) {
+          AdminAPI.handleError(err, '占用明細載入失敗');
+        }
+      });
+    return;
+  }
+
   if (AV && bcState.ctx && bcState.ctx.bookings) {
     bookings = AV.getBookingsForCampgroundNight(
       camp.campgroundId,
       dateISO,
       bcState.ctx.bookings,
       bcState.ctx.policy,
-      bcState.zoneId
-    );
-  } else if (isAvailabilityBackendReady() && AV && bcState.policy) {
-    bookings = AV.getBookingsForCampgroundNight(
-      camp.campgroundId,
-      dateISO,
-      window.bookingsCache || [],
-      bcState.policy,
       bcState.zoneId
     );
   }
@@ -1164,31 +1174,23 @@ function renderDayDetail(dateISO) {
     return;
   }
 
-  var rows = bookings.map(function (b) {
+  paintDayDetailRows(bookings.map(function (b) {
     var info = b.bookingInfo || {};
     var zoneLine = (b.selectedZones || []).find(function (z) {
       return bcState.zoneId === BC_ALL_ZONES || z.zoneId === bcState.zoneId;
     }) || (b.selectedZones || [])[0];
-    var qty = zoneLine ? zoneLine.quantity : '—';
-    var zoneType = zoneLine ? zoneLine.zoneType : '—';
     var customer = bcState.customersById[b.customerId];
-    var bookingNo = typeof formatBookingId === 'function'
-      ? formatBookingId(b) : ('BK-' + String(b.id).padStart(4, '0'));
-
-    return (
-      '<tr>' +
-      '<td>' + bookingNo + '</td>' +
-      '<td>' + escapeHtml(zoneType) + '</td>' +
-      '<td>' + escapeHtml(customer ? customer.name : b.customerId) + '</td>' +
-      '<td class="text-center">× ' + qty + '</td>' +
-      '<td>' + (BC_BOOKING_STATUS_LABEL[b.status] || b.status) + '</td>' +
-      '<td class="small">' + (info.checkIn || '—') + ' ～ ' + (info.checkOut || '—') + '</td>' +
-      '<td><button type="button" class="btn btn-sm btn-outline-primary bc-view-booking" data-booking-id="' + b.id + '">查看</button></td>' +
-      '</tr>'
-    );
-  }).join('');
-
-  $('#bcDayDetailBody').html(rows);
+    return {
+      bookingId: b.id,
+      displayNo: typeof formatBookingId === 'function' ? formatBookingId(b) : null,
+      customerName: customer ? customer.name : b.customerId,
+      zoneType: zoneLine ? zoneLine.zoneType : '—',
+      quantity: zoneLine ? zoneLine.quantity : '—',
+      status: b.status,
+      checkIn: info.checkIn,
+      checkOut: info.checkOut,
+    };
+  }));
 }
 
 function renderClosureTable() {
@@ -1496,10 +1498,27 @@ function deleteClosure(closureId) {
 
 function openBookingDetail(bookingId) {
   var booking = (window.bookingsCache || []).find(function (b) {
-    return Number(b.id) === Number(bookingId);
+    return String(b.id) === String(bookingId);
   });
   if (booking && typeof window.showBookingModal === 'function') {
     window.showBookingModal(booking);
+    return;
+  }
+  if (window.AdminAPI && AdminAPI.bookings && AdminAPI.bookings.getById) {
+    AdminAPI.bookings.getById(bookingId)
+      .then(function (response) {
+        var detail = response && response.data;
+        if (detail && typeof window.showBookingModal === 'function' && typeof normalizeBackendBooking === 'function') {
+          window.showBookingModal(normalizeBackendBooking(detail));
+          return;
+        }
+        window.pendingBookingId = bookingId;
+        $('.sidebar-link[data-section="bookings"]').first().trigger('click');
+      })
+      .catch(function () {
+        window.pendingBookingId = bookingId;
+        $('.sidebar-link[data-section="bookings"]').first().trigger('click');
+      });
     return;
   }
   window.pendingBookingId = bookingId;

@@ -70,6 +70,8 @@
     'booking-calendar.calendarDates': true,
     /** Admin UX 03：月曆可用性（Backend 模式 renderCalendar） */
     'booking-calendar.availability': true,
+    /** Admin UX follow-up 02：點日占用明細 API */
+    'booking-calendar.nightBookings': true,
     /** W4-06：分析報表伺服器端彙總（不再拉 orders／bookings 全列表做 KPI） */
     'analytics.summary': true,
   };

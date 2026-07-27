@@ -697,6 +697,17 @@
           'GET',
           '/campgrounds/' + encodeURIComponent(campgroundId) + '/availability?' + params.toString()
         );
+      },
+      /** Admin UX follow-up 02：單晚占用預約（點日明細 lazy load） */
+      getBookingsForNight: function (campgroundId, query) {
+        var params = new URLSearchParams({ date: query.date });
+        if (query && query.zoneId) {
+          params.set('zoneId', query.zoneId);
+        }
+        return request(
+          'GET',
+          '/campgrounds/' + encodeURIComponent(campgroundId) + '/bookings-for-night?' + params.toString()
+        );
       }
     },
 

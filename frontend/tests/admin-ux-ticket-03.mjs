@@ -13,6 +13,12 @@ const calendarHtml = readFileSync(join(rootDir, 'admin/partials/booking-calendar
 const runtimeJs = readFileSync(join(rootDir, 'admin/js/admin-runtime.js'), 'utf8');
 const apiJs = readFileSync(join(rootDir, 'admin/js/admin-api.js'), 'utf8');
 
+assert.match(calendarJs, /isNightBookingsBackendReady/);
+assert.match(calendarJs, /loadNightBookingsForDetail/);
+assert.match(calendarJs, /paintDayDetailRows/);
+assert.match(calendarJs, /getBookingsForNight/);
+assert.match(runtimeJs, /booking-calendar\.nightBookings/);
+assert.match(apiJs, /getBookingsForNight:\s*function/);
 assert.match(calendarJs, /isAvailabilityBackendReady/);
 assert.match(calendarJs, /loadMonthAvailability/);
 assert.match(calendarJs, /paintCalendarGrid/);
