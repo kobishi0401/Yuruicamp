@@ -1,6 +1,6 @@
 # BookingCheckoutPage Spec
 
-**Status:** Draft
+**Status:** Implemented (B3 / E-7 2026-07-26)
 **Category:** Page
 **Design Ref:** N/A - derived from existing source file `booking/pages/booking-checkout.html`
 
@@ -169,8 +169,8 @@ const colors = {
 - [ ] Keyboard navigation works correctly
 - [ ] Screen reader announces correctly
 - [ ] Design tokens match the Yuruicamp AI style sheet
-- [ ] Contact fields are blank until `#fillProfileBtn` is selected
-- [ ] The page contains no card number, expiry, or CVV inputs
-- [ ] `booking-checkout.html` 進頁建立 Booking Checkout Session（B3 hard lock）
-- [ ] `#confirmPayBtn` requests ECPay form with contact body and submits backend-signed form
-- [ ] Unit tests or smoke checks cover required props and primary events
+- [x] Contact fields are blank until `#fillProfileBtn` is selected
+- [x] The page contains no card number, expiry, or CVV inputs
+- [x] `booking-checkout.html` 進頁建立 Booking Checkout Session（B3 hard lock）
+- [x] `#confirmPayBtn` requests ECPay form with contact body and submits backend-signed form
+- [x] Unit tests or smoke checks cover required props and primary events（`booking-checkout-request.mjs`）

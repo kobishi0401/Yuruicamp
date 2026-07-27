@@ -29,7 +29,7 @@ Checkout 負責在會員進入結帳時建立待付款訂單、由資料庫價�
 
 ## 2. 完整流程
 
-> **前端對齊（2026-07-26 spec）**：契約為 cart **不**建 Session；**checkout 進頁**才 `POST /api/checkout/sessions`。現行 cart 頁進頁建 Session 屬待修正。ECPay 應在 PATCH `ready_to_pay` 後**同一按鈕**直接 launch，不顯示第二段 Ready 面板。
+> **前端對齊（2026-07-26 ✅ 已實作，B3／M2）**：`cart.html` **不**建 Session（僅 soft 驗量）；**checkout 進頁**登入後才 `POST /api/checkout/sessions` hard lock 15 分鐘。ECPay 在 PATCH `ready_to_pay` 後**同一按鈕**直接 launch（M2），不顯示第二段 Ready 面板。詳見 [`commerce/display-numbers-and-checkout-ux.md`](../commerce/display-numbers-and-checkout-ux.md)。
 
 ```text
 前端購物車（不鎖庫存；client soft 驗 availableQuantity）
