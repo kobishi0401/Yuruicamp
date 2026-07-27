@@ -169,3 +169,4 @@ const colors = {
 - [ ] Unit tests or smoke checks cover required props and primary events
 - [ ] Rental quantity can be entered directly and invalid values are restored.
 - [ ] Clear cart removes all booking cart data and displays the specified empty-state guidance.
+- [x] Summary sidebar must not show SSL or generic secure-payment trust boilerplate.

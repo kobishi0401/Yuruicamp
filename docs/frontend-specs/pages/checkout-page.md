@@ -198,3 +198,4 @@ const colors = {
 - [ ] `#confirmOrderBtn` 不呼叫建立 Session，只 PATCH 既有 Draft 或接續付款動作。
 - [ ] 已套用優惠券後確認結帳，不會再次傳送相同的 `couponClaimId`。
 - [ ] 同會員、同購物車與同一筆 Checkout Session 重新整理後可還原表單草稿；任一識別不符時不可套用舊草稿。
+- [x] 訂單摘要區不得出現「SSL 加密保護」或「安全付款」類空泛標語（退換貨保障文案可保留）

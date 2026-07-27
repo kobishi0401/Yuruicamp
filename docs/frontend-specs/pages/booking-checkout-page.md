@@ -174,3 +174,4 @@ const colors = {
 - [x] `booking-checkout.html` 進頁建立 Booking Checkout Session（B3 hard lock）
 - [x] `#confirmPayBtn` requests ECPay form with contact body and submits backend-signed form
 - [x] Unit tests or smoke checks cover required props and primary events（`booking-checkout-request.mjs`）
+- [x] Order summary must not show SSL or generic secure-payment trust boilerplate.
