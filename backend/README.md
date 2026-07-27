@@ -2,8 +2,6 @@
 
 Spring Boot **4.1.0** / Java **25** / PostgreSQL 16。
 
-> **組員本機啟動（DB + 後端 + 前端 + Firebase）**：精簡步驟見 [`docs/local-dev-setup.md`](../docs/local-dev-setup.md)。
-
 ## 認證定案（重要）
 
 - 前端使用 **Firebase Auth** 登入後取得 **ID Token**。

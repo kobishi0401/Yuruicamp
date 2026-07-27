@@ -1,7 +1,10 @@
 package com.yuruicamp.backend.booking.api;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import com.yuruicamp.backend.booking.application.AdminCampgroundAvailabilityService;
+import com.yuruicamp.backend.booking.application.AdminCampgroundNightBookingService;
 import com.yuruicamp.backend.booking.application.AdminCampgroundService;
 import com.yuruicamp.backend.common.api.ApiResponse;
 import com.yuruicamp.backend.config.OpenApiConfig;
@@ -11,6 +14,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -33,9 +38,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminCampgroundController {
 
 	private final AdminCampgroundService service;
+	private final AdminCampgroundAvailabilityService availabilityService;
+	private final AdminCampgroundNightBookingService nightBookingService;
 
-	public AdminCampgroundController(AdminCampgroundService service) {
+	public AdminCampgroundController(
+			AdminCampgroundService service,
+			AdminCampgroundAvailabilityService availabilityService,
+			AdminCampgroundNightBookingService nightBookingService) {
 		this.service = service;
+		this.availabilityService = availabilityService;
+		this.nightBookingService = nightBookingService;
 	}
 
 	@GetMapping
@@ -50,6 +62,31 @@ public class AdminCampgroundController {
 	@Operation(summary = "營區詳情", description = "RBAC: booking-calendar.view")
 	public ApiResponse<AdminCampgroundResponse> get(@PathVariable String id) {
 		return ApiResponse.ok(service.get(id));
+	}
+
+	@GetMapping("/{id}/availability")
+	@PreAuthorize("hasAuthority('booking-calendar.view')")
+	@Operation(
+			summary = "營區可用性區間",
+			description = "RBAC: booking-calendar.view；供預約排程月曆；zoneId 省略＝全部 active 營位加總")
+	public ApiResponse<AdminCampgroundAvailabilityResponse> getAvailability(
+			@PathVariable("id") String campgroundId,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+			@RequestParam(required = false) String zoneId) {
+		return ApiResponse.ok(availabilityService.getAvailability(campgroundId, from, to, zoneId));
+	}
+
+	@GetMapping("/{id}/bookings-for-night")
+	@PreAuthorize("hasAuthority('booking-calendar.view')")
+	@Operation(
+			summary = "營區單晚占用預約",
+			description = "RBAC: booking-calendar.view；供預約排程點日明細；zoneId 省略＝全部 active 營位")
+	public ApiResponse<AdminCampgroundNightBookingsResponse> getBookingsForNight(
+			@PathVariable("id") String campgroundId,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+			@RequestParam(required = false) String zoneId) {
+		return ApiResponse.ok(nightBookingService.getBookingsForNight(campgroundId, date, zoneId));
 	}
 
 	@PostMapping

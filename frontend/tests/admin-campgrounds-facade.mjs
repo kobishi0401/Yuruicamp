@@ -42,6 +42,17 @@ await window.AdminAPI.campgrounds.createZone('C002', {
 });
 await window.AdminAPI.campgrounds.updateZone('C002', 'C002-Z-NEW', { totalSites: 3 });
 await window.AdminAPI.campgrounds.removeZone('C002', 'C002-Z-NEW');
+await window.AdminAPI.campgrounds.getAvailability('C002', { from: '2026-07-01', to: '2026-07-31' });
+await window.AdminAPI.campgrounds.getAvailability('C002', {
+  from: '2026-07-01',
+  to: '2026-07-31',
+  zoneId: 'Z001',
+});
+await window.AdminAPI.campgrounds.getBookingsForNight('C002', { date: '2026-07-29' });
+await window.AdminAPI.campgrounds.getBookingsForNight('C002', {
+  date: '2026-07-29',
+  zoneId: 'Z001',
+});
 
 assert.deepEqual(
   calls.map((call) => [call.options.method, call.path]),
@@ -55,6 +66,10 @@ assert.deepEqual(
     ['POST', '/campgrounds/C002/zones'],
     ['PATCH', '/campgrounds/C002/zones/C002-Z-NEW'],
     ['DELETE', '/campgrounds/C002/zones/C002-Z-NEW'],
+    ['GET', '/campgrounds/C002/availability?from=2026-07-01&to=2026-07-31'],
+    ['GET', '/campgrounds/C002/availability?from=2026-07-01&to=2026-07-31&zoneId=Z001'],
+    ['GET', '/campgrounds/C002/bookings-for-night?date=2026-07-29'],
+    ['GET', '/campgrounds/C002/bookings-for-night?date=2026-07-29&zoneId=Z001'],
   ],
 );
 assert.equal(calls.every((call) => call.options.auth === 'required'), true);

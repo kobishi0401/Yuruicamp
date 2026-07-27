@@ -6,7 +6,7 @@
 | ------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | [`frontend/`](./frontend/)                                                      | 主站、booking、admin、mock `data/`、Vite／npm | 網頁、樣式、假資料、前端腳本                                                                |
 | [`backend/`](./backend/)                                                        | Spring Boot                                   | Java API（線 A 骨架：Firebase ID Token；見 [`backend/README.md`](./backend/README.md)）     |
-| [`docs/`](./docs/)                                                              | Schema、前端規格、資料表說明                  | DB／規格文件；**組員本機啟動 → [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)** |
+| [`docs/`](./docs/)                                                              | Schema、前端規格、資料表說明                  | DB／規格文件                                                                                |
 | [`plans/`](./plans/)                                                            | 規劃與遷移規格                                | 例如 [`plans/frontend-folder-migration-spec.md`](./plans/frontend-folder-migration-spec.md) |
 | [`docker-compose.yml`](./docker-compose.yml) + [`.env.example`](./.env.example) | 本機 PostgreSQL                               | 資料庫基礎設施                                                                              |
 
@@ -586,9 +586,6 @@ Yuruicamp/
 ---
 
 ## 🚀 快速開始
-
-> **組員本機啟動（Firebase + 後端 + DB）**：請先看精簡 checklist → [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)  
-> 下面章節為完整說明；日常開發只需依 local-dev-setup 開三個 Terminal 即可。
 
 ### 環境要求
 
