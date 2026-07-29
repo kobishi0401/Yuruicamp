@@ -66,9 +66,8 @@ public class EcpayLogisticsMapService {
 
 	@Transactional
 	public String applyMapResult(Map<String, String> params) {
-		if (!logisticsGateway.verifyCallback(params)) {
-			throw new BusinessException(ErrorCode.FORBIDDEN, "Invalid logistics map CheckMacValue");
-		}
+		// 綠界 stage 電子地圖 callback 官方不回 CheckMacValue；本機 stub 會帶簽章。
+		validateMapCallback(params);
 		String merchantTradeNo = params.get("MerchantTradeNo");
 		if (merchantTradeNo == null || merchantTradeNo.isBlank()) {
 			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "MerchantTradeNo is required");
@@ -91,6 +90,20 @@ public class EcpayLogisticsMapService {
 		orders.save(order);
 
 		return buildCheckoutRedirect(order.getId(), "cvsMap=ok");
+	}
+
+	/**
+	 * 地圖選店 callback 驗證：MerchantID 必須吻合；CheckMacValue 僅在 stub 有帶時才驗 MD5。
+	 */
+	private void validateMapCallback(Map<String, String> params) {
+		String merchantId = params.get("MerchantID");
+		if (merchantId == null || !merchantId.trim().equals(logisticsGateway.merchantId())) {
+			throw new BusinessException(ErrorCode.FORBIDDEN, "Invalid logistics map MerchantID");
+		}
+		String checkMac = params.get("CheckMacValue");
+		if (checkMac != null && !checkMac.isBlank() && !logisticsGateway.verifyCallback(params)) {
+			throw new BusinessException(ErrorCode.FORBIDDEN, "Invalid logistics map CheckMacValue");
+		}
 	}
 
 	private String buildCheckoutRedirect(String orderId, String query) {

@@ -341,6 +341,44 @@ class CheckoutServiceTest {
 						assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
 	}
 
+	// 超商收件人姓名須符合綠界物流格式。
+	@Test
+	void updateRejectsInvalidEcpayRecipientNameOnCvs() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001"))
+				.thenReturn(Optional.of(order));
+		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
+				new CheckoutUpdateRequest.Shipping(
+						"cvs", "Po-Jung Chen", "0988777666", null, null, "006598", "全家測試店", "FAMI"),
+				"ecpay-credit",
+				null);
+
+		assertThatThrownBy(() -> service.update("C001", "O-C4", request))
+				.isInstanceOfSatisfying(BusinessException.class, ex -> {
+					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CONFLICT);
+					assertThat(ex.getMessage()).contains("綠界物流格式");
+				});
+	}
+
+	// 宅配收件人姓名須符合綠界物流格式（例如不可含連字號）。
+	@Test
+	void updateRejectsInvalidEcpayRecipientNameOnDelivery() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001"))
+				.thenReturn(Optional.of(order));
+		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
+				new CheckoutUpdateRequest.Shipping(
+						"delivery", "Po-Jung Chen", "0988777666", "台北市信義區信義路五段7號", null, null, null, null),
+				"ecpay-credit",
+				null);
+
+		assertThatThrownBy(() -> service.update("C001", "O-C4", request))
+				.isInstanceOfSatisfying(BusinessException.class, ex -> {
+					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CONFLICT);
+					assertThat(ex.getMessage()).contains("綠界物流格式");
+				});
+	}
+
 	// 準備測試建立訂單需要的商品、庫存與會員資料。
 	private AtomicReference<Order> arrangeSuccessfulCreation() {
 		Customer customer = new Customer();

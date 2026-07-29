@@ -1015,6 +1015,43 @@ const _assertMockCheckoutActive = (record) => {
 /**
  * Mock Checkout adapter 回傳與 Spring Boot 完全相同的 CheckoutSession 形狀。
  */
+const ECPAY_RECIPIENT_NAME_MESSAGE =
+  '收件人姓名不符合綠界物流格式（僅中英文、4–10 字元，不可含 - 或空格）。請使用中文姓名如「陳柏榮」。';
+
+function _mockIsEcpayRecipientNameValid(name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return false;
+  let chinese = 0;
+  let english = 0;
+  for (let offset = 0; offset < trimmed.length;) {
+    const codePoint = trimmed.codePointAt(offset);
+    const isChinese = (codePoint >= 0x4e00 && codePoint <= 0x9fff)
+      || (codePoint >= 0x3400 && codePoint <= 0x4dbf)
+      || (codePoint >= 0xf900 && codePoint <= 0xfaff);
+    const isEnglish = (codePoint >= 65 && codePoint <= 90) || (codePoint >= 97 && codePoint <= 122);
+    if (isChinese) chinese += 1;
+    else if (isEnglish) english += 1;
+    else return false;
+    offset += codePoint > 0xffff ? 2 : 1;
+  }
+  if (chinese > 0 && english > 0) {
+    const total = chinese + english;
+    return total >= 4 && total <= 10;
+  }
+  if (chinese > 0) return chinese >= 2 && chinese <= 5;
+  if (english > 0) return english >= 4 && english <= 10;
+  return false;
+}
+
+function _mockAssertEcpayRecipientIfNeeded(method, recipientName) {
+  if (method !== 'cvs' && method !== 'delivery') return;
+  const trimmed = String(recipientName || '').trim();
+  if (!trimmed || trimmed === MOCK_CHECKOUT_PENDING) return;
+  if (!_mockIsEcpayRecipientNameValid(trimmed)) {
+    throw _checkoutMockError('CONFLICT', ECPAY_RECIPIENT_NAME_MESSAGE, 409);
+  }
+}
+
 function _mockCheckoutStepAfterShipping(shipping, session) {
   const merged = { ...(session?.shipping || {}), ...(shipping || {}) };
   const pending = MOCK_CHECKOUT_PENDING;
@@ -1062,11 +1099,16 @@ const checkoutMockAdapter = {
     }
 
     const user = window.AppState?.currentUser || {};
+    const shippingMethod = shippingInput.method === 'pickup'
+      ? 'pickup'
+      : (shippingInput.method === 'cvs' ? 'cvs' : 'delivery');
     const recipientName = String(
-      shippingInput.recipientName || user.name || user.displayName || MOCK_CHECKOUT_PENDING
+      shippingInput.recipientName
+        || (shippingMethod === 'pickup' ? (user.name || user.displayName) : '')
+        || MOCK_CHECKOUT_PENDING
     ).trim();
+    _mockAssertEcpayRecipientIfNeeded(shippingMethod, recipientName);
     const phone = String(shippingInput.phone || user.phone || MOCK_CHECKOUT_PENDING).trim();
-    const shippingMethod = shippingInput.method === 'pickup' ? 'pickup' : 'delivery';
     const pickupBranchId = shippingMethod === 'pickup'
       ? String(shippingInput.pickupBranchId || '').trim()
       : null;
@@ -1163,6 +1205,8 @@ const checkoutMockAdapter = {
 
         next.shipping[field] = value;
       });
+      const effectiveMethod = next.shipping.method || result.record.session.shipping?.method;
+      _mockAssertEcpayRecipientIfNeeded(effectiveMethod, next.shipping.recipientName);
     }
 
     next.checkoutStep = _mockCheckoutStepAfterShipping(next.shipping, result.record.session);

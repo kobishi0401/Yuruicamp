@@ -142,6 +142,19 @@ class EcpayLogisticsCreateServiceTest {
 	}
 
 	@Test
+	void invalidRecipientNameBlocksShipBeforeGateway() {
+		Order order = deliveryOrder("O1", "Po-Jung Chen", "0912345678", "台北市信義區信義路五段7號");
+		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.createShipment("O1"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessageContaining("綠界物流格式");
+
+		verify(logisticsGateway, never()).createHomeOrder(any());
+		verify(logisticsGateway, never()).createCvsOrder(any());
+	}
+
+	@Test
 	void homeFieldsUseConfiguredTcatSubType() {
 		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));

@@ -40,6 +40,7 @@ import com.yuruicamp.backend.inventory.domain.InventoryStock;
 import com.yuruicamp.backend.inventory.domain.ProductStockReservation;
 import com.yuruicamp.backend.inventory.infrastructure.InventoryStockRepository;
 import com.yuruicamp.backend.inventory.infrastructure.ProductStockReservationRepository;
+import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.OrderItem;
 import com.yuruicamp.backend.order.domain.OrderStatus;
@@ -141,6 +142,7 @@ public class CheckoutService {
 		}
 
 		order.setPricing(subtotal, BigDecimal.ZERO, BigDecimal.ZERO);
+		validateEcpayRecipientIfNeeded(order.getShippingMethod(), order.getRecipientName());
 		Order saved = orders.saveAndFlush(order);
 		if (request.couponClaimId() != null) {
 			couponService.applyToOrder(saved, customerId, request.couponClaimId(), now);
@@ -199,6 +201,7 @@ public class CheckoutService {
 					updatedValue(shipping.phone(), order.getShippingPhone()),
 					shippingSnapshot.address(), shippingSnapshot.method(), shippingSnapshot.pickupBranchId(),
 					shippingSnapshot.cvsStoreId(), shippingSnapshot.cvsStoreName(), shippingSnapshot.cvsSubType());
+			validateEcpayRecipientIfNeeded(order.getShippingMethod(), order.getRecipientName());
 		}
 		if (request.paymentMethod() != null) {
 			order.changePaymentMethod(parsePaymentMethod(request.paymentMethod()));
@@ -577,6 +580,16 @@ public class CheckoutService {
 					&& !PENDING.equals(order.getShippingAddress());
 		}
 		return !PENDING.equals(order.getShippingAddress());
+	}
+
+	private static void validateEcpayRecipientIfNeeded(ShippingMethod method, String recipientName) {
+		if (method != ShippingMethod.cvs && method != ShippingMethod.delivery) {
+			return;
+		}
+		if (recipientName == null || recipientName.isBlank() || PENDING.equals(recipientName.trim())) {
+			return;
+		}
+		EcpayReceiverNameRules.validateOrThrow(recipientName);
 	}
 
 	// 暫存建立庫存保留紀錄需要的資料。

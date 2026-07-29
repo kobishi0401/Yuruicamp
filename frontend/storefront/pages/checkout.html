@@ -91,7 +91,7 @@
                 <div class="checkoutFormGrid">
                   <div class="checkoutField">
                     <label class="checkoutLabel" for="buyerName"
-                      >姓名 <span class="requiredMark">*</span></label
+                      >聯絡人姓名 <span class="requiredMark">*</span></label
                     >
                     <input
                       class="checkoutInput"
@@ -212,6 +212,28 @@
                   </span>
                 </label>
               </fieldset>
+
+              <div class="checkoutField" id="recipientNameSection">
+                <label class="checkoutLabel" for="recipientName">
+                  收件人姓名 <span class="requiredMark">*</span>
+                </label>
+                <label class="checkoutSameAsBuyer">
+                  <input type="checkbox" id="recipientSameAsBuyer" checked />
+                  <span>同聯絡人</span>
+                </label>
+                <input
+                  class="checkoutInput"
+                  type="text"
+                  id="recipientName"
+                  name="recipientName"
+                  placeholder="陳柏榮（綠界物流格式）"
+                  autocomplete="name"
+                  hidden
+                />
+                <p class="checkoutFieldHint" id="recipientNameHint">
+                  超商／宅配會送此姓名給綠界物流；若聯絡人含英文連字號，請取消勾選並填中文姓名。
+                </p>
+              </div>
 
               <div class="checkoutField checkoutAddressField" id="deliveryAddressSection">
                 <div class="shippingAddressBlock">

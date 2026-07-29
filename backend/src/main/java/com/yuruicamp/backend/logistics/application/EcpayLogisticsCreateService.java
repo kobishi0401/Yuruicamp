@@ -10,6 +10,7 @@ import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
 import com.yuruicamp.backend.config.YuruicampProperties;
 import com.yuruicamp.backend.logistics.domain.EcpayLogisticsCreateResult;
+import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
 import com.yuruicamp.backend.logistics.infrastructure.EcpayLogisticsGateway;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.ShippingMethod;
@@ -72,6 +73,7 @@ public class EcpayLogisticsCreateService {
 		if (order.getCvsStoreId() == null || order.getCvsStoreId().isBlank()) {
 			throw new BusinessException(ErrorCode.CONFLICT, "CVS store is not selected for this order");
 		}
+		validateEcpayRecipientName(order);
 
 		YuruicampProperties.EcpayLogistics cfg = properties.getEcpayLogistics();
 		CreateContext ctx = buildCreateContext(order, cfg);
@@ -99,6 +101,7 @@ public class EcpayLogisticsCreateService {
 			return existing;
 		}
 		validateDeliveryAddress(order);
+		validateEcpayRecipientName(order);
 
 		YuruicampProperties.EcpayLogistics cfg = properties.getEcpayLogistics();
 		CreateContext ctx = buildCreateContext(order, cfg);
@@ -133,6 +136,10 @@ public class EcpayLogisticsCreateService {
 				|| isIncompleteSnapshot(order.getShippingAddress())) {
 			throw new BusinessException(ErrorCode.CONFLICT, "Shipping address is incomplete for home delivery");
 		}
+	}
+
+	private static void validateEcpayRecipientName(Order order) {
+		EcpayReceiverNameRules.validateOrThrow(order.getRecipientName());
 	}
 
 	private static boolean isIncompleteSnapshot(String value) {
