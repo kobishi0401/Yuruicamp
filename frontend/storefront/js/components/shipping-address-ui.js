@@ -182,12 +182,18 @@
     fillDistrictSelect(addr.city, addr.district);
   }
 
+  function renderInstanceDisplay(inst) {
+    if (!inst.displayEl) return;
+    var addr = typeof inst.getAddress === 'function' ? inst.getAddress() : currentAddress;
+    if (typeof inst.formatDisplay === 'function') {
+      inst.displayEl.innerHTML = inst.formatDisplay(addr);
+      return;
+    }
+    inst.displayEl.innerHTML = sa() ? sa().formatDisplay(addr) : '尚未設定';
+  }
+
   function renderAllDisplays() {
-    instances.forEach(function (inst) {
-      if (!inst.displayEl) return;
-      var addr = typeof inst.getAddress === 'function' ? inst.getAddress() : currentAddress;
-      inst.displayEl.innerHTML = sa() ? sa().formatDisplay(addr) : '尚未設定';
-    });
+    instances.forEach(renderInstanceDisplay);
   }
 
   function openModal(addr) {
@@ -347,6 +353,7 @@
       getAddress: options.getAddress,
       onSave: options.onSave,
       persist: Boolean(options.persist),
+      formatDisplay: options.formatDisplay,
     };
 
     if (options.initialAddress) {

@@ -40,6 +40,7 @@ import com.yuruicamp.backend.order.infrastructure.OrderStatusHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.yuruicamp.backend.branch.domain.Branch;
 import com.yuruicamp.backend.branch.infrastructure.BranchRepository;
 import com.yuruicamp.backend.commerce.application.DisplayNoService;
 
@@ -101,7 +102,7 @@ class CheckoutServiceTest {
 		service.create("C001", request("checkout-key-002", null));
 
 		CheckoutCreateRequest changed = request("checkout-key-002",
-				new CheckoutCreateRequest.Shipping("delivery", "Amy", "0912345678", "台北市", null));
+				new CheckoutCreateRequest.Shipping("delivery", "王小明", "0912345678", "台北市", null));
 
 		assertThatThrownBy(() -> service.create("C001", changed))
 				.isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -329,6 +330,43 @@ class CheckoutServiceTest {
 		assertThat(response.checkoutStep()).isEqualTo("draft");
 	}
 
+	// 綠界物流姓名不合規時應在 PATCH 階段硬擋，而非等到 Admin 出貨。
+	@Test
+	void updateRejectsInvalidEcpayRecipientNameForDelivery() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001"))
+				.thenReturn(Optional.of(order));
+		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
+				new CheckoutUpdateRequest.Shipping("delivery", "Po-Jung Chen", "0912345678", "台北市", null),
+				null,
+				null);
+
+		assertThatThrownBy(() -> service.update("C001", "O-C4", request))
+				.isInstanceOfSatisfying(BusinessException.class, ex -> {
+					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CONFLICT);
+					assertThat(ex.getMessage()).contains("綠界物流格式");
+				});
+	}
+
+	// pickup 不套用綠界字元規則；英文名仍可當門市取貨收件人。
+	@Test
+	void updateAllowsNonEcpayRecipientNameForPickup() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001"))
+				.thenReturn(Optional.of(order));
+		Branch branch = mockPickupBranch();
+		when(branches.findById("BR001")).thenReturn(Optional.of(branch));
+		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
+				new CheckoutUpdateRequest.Shipping("pickup", "Po-Jung Chen", "0912345678", null, "BR001"),
+				null,
+				null);
+
+		CheckoutSessionResponse response = service.update("C001", "O-C4", request);
+
+		assertThat(response.shipping().recipientName()).isEqualTo("Po-Jung Chen");
+		assertThat(response.shipping().method()).isEqualTo("pickup");
+	}
+
 	// 不支援的付款方式應回傳驗證錯誤。
 	@Test
 	void updateRejectsUnsupportedPaymentMethod() {
@@ -339,44 +377,6 @@ class CheckoutServiceTest {
 		assertThatThrownBy(() -> service.update("C001", "O-C4", paymentUpdate("cash")))
 				.isInstanceOfSatisfying(BusinessException.class, ex ->
 						assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
-	}
-
-	// 超商收件人姓名須符合綠界物流格式。
-	@Test
-	void updateRejectsInvalidEcpayRecipientNameOnCvs() {
-		Order order = editableOrder(Instant.now().plusSeconds(300));
-		when(orders.findForCustomerForUpdate("O-C4", "C001"))
-				.thenReturn(Optional.of(order));
-		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
-				new CheckoutUpdateRequest.Shipping(
-						"cvs", "Po-Jung Chen", "0988777666", null, null, "006598", "全家測試店", "FAMI"),
-				"ecpay-credit",
-				null);
-
-		assertThatThrownBy(() -> service.update("C001", "O-C4", request))
-				.isInstanceOfSatisfying(BusinessException.class, ex -> {
-					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CONFLICT);
-					assertThat(ex.getMessage()).contains("綠界物流格式");
-				});
-	}
-
-	// 宅配收件人姓名須符合綠界物流格式（例如不可含連字號）。
-	@Test
-	void updateRejectsInvalidEcpayRecipientNameOnDelivery() {
-		Order order = editableOrder(Instant.now().plusSeconds(300));
-		when(orders.findForCustomerForUpdate("O-C4", "C001"))
-				.thenReturn(Optional.of(order));
-		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
-				new CheckoutUpdateRequest.Shipping(
-						"delivery", "Po-Jung Chen", "0988777666", "台北市信義區信義路五段7號", null, null, null, null),
-				"ecpay-credit",
-				null);
-
-		assertThatThrownBy(() -> service.update("C001", "O-C4", request))
-				.isInstanceOfSatisfying(BusinessException.class, ex -> {
-					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CONFLICT);
-					assertThat(ex.getMessage()).contains("綠界物流格式");
-				});
 	}
 
 	// 準備測試建立訂單需要的商品、庫存與會員資料。
@@ -444,5 +444,13 @@ class CheckoutServiceTest {
 	// 建立只修改付款方式的 C-4 請求。
 	private static CheckoutUpdateRequest paymentUpdate(String paymentMethod) {
 		return new CheckoutUpdateRequest(null, paymentMethod, null);
+	}
+
+	private static Branch mockPickupBranch() {
+		Branch branch = mock(Branch.class);
+		when(branch.getId()).thenReturn("BR001");
+		when(branch.getName()).thenReturn("測試門市");
+		when(branch.getAddress()).thenReturn("台北市測試路 1 號");
+		return branch;
 	}
 }

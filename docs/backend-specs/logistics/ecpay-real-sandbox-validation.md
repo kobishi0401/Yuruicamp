@@ -116,18 +116,19 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"
 
 ## 5. Round 1：CVS 超商取貨（全真 E2E）
 
+> **收件人姓名（重要）：** checkout 收件人來自 **會員預設配送地址**（與會員中心同一 Modal）。走 CVS／宅配時須填 **中文姓名**（例如 `陳柏榮`），**不可**使用 Firebase 英文名或含 `-`、空格的姓名，否則 Admin 出貨會得 `10500070` 或後端 CONFLICT。可在 **會員中心 → 配送地址** 先改好再下單。
+
 ### 5.1 買家 checkout
 
-1. Firebase 登入 → 加購物車 → `/storefront/pages/checkout.html`
-2. 填 **聯絡人** 姓名、電話
-3. 若聯絡人為 Firebase 英文連字號名（例如 `Po-Jung Chen`），在 **物流區** 取消「同聯絡人」並填 **中文收件人**（例如 `陳柏榮`）；不可依賴聯絡人姓名直接出貨
-4. 選 **超商取貨（全家）**
-5. 按 **選擇全家門市**
+1. Firebase 登入 → **確認會員配送地址收件人為中文**（例：陳柏榮）→ 加購物車 → `/storefront/pages/checkout.html`
+2. Step 1 **配送資訊**：確認收件人摘要（姓名／手機／Email）；不足時按 **編輯** 完成 Modal
+3. 選 **超商取貨（全家）**
+4. 按 **選擇全家門市**
 
 **預期：** 瀏覽器跳到 **綠界 stage 電子地圖**（不是「本機物流 stub」頁）。
 
-6. 在綠界地圖選一家測試門市 → 確認
-7. **預期：** 導回 checkout，URL 可能含 `?cvsMap=ok&orderId=...`，門市名稱有顯示
+5. 在綠界地圖選一家測試門市 → 確認
+6. **預期：** 導回 checkout，URL 可能含 `?cvsMap=ok&orderId=...`，門市名稱有顯示
 
 ### 5.2 真刷卡付款
 
@@ -215,9 +216,9 @@ Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api
 
 ### 6.1 買家 checkout
 
-1. Firebase 登入 → 加購物車 → checkout
+1. Firebase 登入 → **配送地址收件人改中文** → 加購物車 → checkout
 2. 選 **宅配到府**（不是超商、不是門市自取）
-3. 填 **完整收件地址**（縣市區路號）、姓名、電話 `09xxxxxxxx`
+3. 在 **收件人摘要** 與 **送達地址** 完成 Modal（縣市區路號、電話 `09xxxxxxxx`）
 4. 真刷卡 → 訂單 `paid`
 
 **注意：** 宅配 **不需要** 電子地圖；比 CVS 少一個 callback。
@@ -256,6 +257,7 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | 選店後沒回 checkout | ngrok URL 錯或未開 | 重查 `PUBLIC_API_BASE_URL` 與 ngrok Forwarding |
 | 付款完成但訂單仍 unpaid | payment notify 沒進來 | 查 ngrok inspect、`/payments/ecpay/notify` |
 | 出貨 CONFLICT 建單失敗 | MD5/欄位/地址錯 | 看 backend log 的 `RtnCode`/`RtnMsg` |
+| 出貨 `10500070` 或 CONFLICT「綠界物流格式」 | 收件人含 `-`、空格或 Firebase 英文名 | 會員中心改 **中文收件人**（如陳柏榮）後重下單 |
 | PATCH 500 `ck_orders_shipping_target` | 未選店就寫 `cvs` | 先選店；或更新至含 defer 修正的 backend |
 | `pickup` 訂單不該建綠界單 | 自家門市取貨 | 正常；只有 `cvs` 與 `delivery` 走綠界 |
 
@@ -278,4 +280,6 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | [`ecpay-cvs-sandbox-validation.md`](./ecpay-cvs-sandbox-validation.md) | Phase 1 stub 驗收 |
 | [`../payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md) | 金流真沙箱細節、測試卡 |
 | [`.scratch/ecpay-logistics-phase2/spec.md`](../../../.scratch/ecpay-logistics-phase2/spec.md) | Phase 2 完整 PRD |
+| [`.scratch/checkout-recipient-ecpay/CONTEXT.md`](../../../.scratch/checkout-recipient-ecpay/CONTEXT.md) | Buyer／Recipient／ReceiverName 詞彙 |
+| [`../../adr/0003-checkout-recipient-sync-member-address.md`](../../adr/0003-checkout-recipient-sync-member-address.md) | Checkout 收件人決策 ADR |
 | [`firebase-merge-into-main-notes.md`](../../frontend-specs/firebase-merge-into-main-notes.md) | Firebase 登入驗收 |

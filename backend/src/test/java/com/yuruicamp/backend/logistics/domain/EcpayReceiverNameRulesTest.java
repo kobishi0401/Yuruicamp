@@ -1,56 +1,32 @@
 package com.yuruicamp.backend.logistics.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.yuruicamp.backend.common.exception.BusinessException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class EcpayReceiverNameRulesTest {
 
-	@Test
-	void acceptsChineseName() {
-		assertThat(EcpayReceiverNameRules.isValid("陳柏榮")).isTrue();
-		assertThat(EcpayReceiverNameRules.isValid("王小明")).isTrue();
+	@ParameterizedTest
+	@ValueSource(strings = { "陳柏榮", "王小明", "歐陽娜娜", "Johnson", "Mary" })
+	void acceptsValidReceiverNames(String name) {
+		assertThat(EcpayReceiverNameRules.validate(name)).isEmpty();
 	}
 
-	@Test
-	void acceptsEnglishName() {
-		assertThat(EcpayReceiverNameRules.isValid("Mary")).isTrue();
-		assertThat(EcpayReceiverNameRules.isValid("PoJung")).isTrue();
+	@ParameterizedTest
+	@ValueSource(strings = { "Po-Jung Chen", "Amy", "A B", "王1", "  ", "" })
+	void rejectsInvalidReceiverNames(String name) {
+		assertThat(EcpayReceiverNameRules.validate(name)).isPresent();
 	}
 
-	@Test
-	void rejectsHyphenAndSpace() {
-		assertThat(EcpayReceiverNameRules.isValid("Po-Jung Chen")).isFalse();
-		assertThat(EcpayReceiverNameRules.isValid("王 小明")).isFalse();
-	}
-
-	@Test
-	void rejectsTooShortChinese() {
-		assertThat(EcpayReceiverNameRules.isValid("王")).isFalse();
-	}
-
-	@Test
-	void rejectsTooShortEnglish() {
-		assertThat(EcpayReceiverNameRules.isValid("Amy")).isFalse();
-	}
-
-	@Test
-	void rejectsDigitsAndSymbols() {
-		assertThat(EcpayReceiverNameRules.isValid("王小明1")).isFalse();
-		assertThat(EcpayReceiverNameRules.isValid("Test@Name")).isFalse();
-	}
-
-	@Test
-	void validateOrThrowRejectsInvalidName() {
-		assertThatThrownBy(() -> EcpayReceiverNameRules.validateOrThrow("Po-Jung Chen"))
-				.isInstanceOf(BusinessException.class)
-				.hasMessageContaining("綠界物流格式");
-	}
-
-	@Test
-	void normalizeTrimsWhitespace() {
-		assertThat(EcpayReceiverNameRules.normalize(" 陳柏榮 ")).isEqualTo("陳柏榮");
+	@ParameterizedTest
+	@CsvSource({
+			"Po-Jung Chen, true",
+			"陳柏榮, false",
+			"王小明, false",
+	})
+	void representativeSandboxCases(String name, boolean shouldFail) {
+		assertThat(EcpayReceiverNameRules.validate(name).isPresent()).isEqualTo(shouldFail);
 	}
 }

@@ -19,130 +19,6 @@ const CHECKOUT_CART_FINGERPRINT_KEY = 'checkoutCartFingerprint';
 const CHECKOUT_COMPLETED_ORDER_ID_KEY = 'checkoutCompletedOrderId';
 const CHECKOUT_FORM_DRAFT_STORAGE_KEY = 'checkoutFormDraft';
 
-const ECPAY_RECIPIENT_NAME_MESSAGE =
-  '收件人姓名不符合綠界物流格式（僅中英文、4–10 字元，不可含 - 或空格）。請使用中文姓名如「陳柏榮」。';
-
-// 綠界物流 ReceiverName 規則（與後端 EcpayReceiverNameRules 一致；僅 trim，不 silent 清洗）。
-function _isChineseCodePoint(codePoint) {
-  return (codePoint >= 0x4e00 && codePoint <= 0x9fff)
-    || (codePoint >= 0x3400 && codePoint <= 0x4dbf)
-    || (codePoint >= 0xf900 && codePoint <= 0xfaff);
-}
-
-function _isEnglishLetterCodePoint(codePoint) {
-  return (codePoint >= 65 && codePoint <= 90) || (codePoint >= 97 && codePoint <= 122);
-}
-
-function _isEcpayRecipientNameValid(name) {
-  const trimmed = String(name || '').trim();
-  if (!trimmed) return false;
-  let chinese = 0;
-  let english = 0;
-  for (let offset = 0; offset < trimmed.length;) {
-    const codePoint = trimmed.codePointAt(offset);
-    if (_isChineseCodePoint(codePoint)) chinese += 1;
-    else if (_isEnglishLetterCodePoint(codePoint)) english += 1;
-    else return false;
-    offset += codePoint > 0xffff ? 2 : 1;
-  }
-  if (chinese > 0 && english > 0) {
-    const total = chinese + english;
-    return total >= 4 && total <= 10;
-  }
-  if (chinese > 0) return chinese >= 2 && chinese <= 5;
-  if (english > 0) return english >= 4 && english <= 10;
-  return false;
-}
-
-function _needsEcpayRecipientName() {
-  return selectedShippingMethod === 'delivery' || selectedShippingMethod === 'cvs';
-}
-
-function _isRecipientSameAsBuyerChecked() {
-  return Boolean(document.getElementById('recipientSameAsBuyer')?.checked);
-}
-
-function _syncRecipientFieldVisibility() {
-  const input = document.getElementById('recipientName');
-  const sameAsBuyer = _isRecipientSameAsBuyerChecked();
-  if (!input) return;
-  const showManual = _needsEcpayRecipientName() && !sameAsBuyer;
-  input.hidden = !showManual;
-  input.required = showManual;
-  if (sameAsBuyer) {
-    input.classList.remove('isInvalid');
-    input.removeAttribute('aria-invalid');
-  }
-}
-
-function _handleInvalidBuyerForRecipientSync() {
-  const checkbox = document.getElementById('recipientSameAsBuyer');
-  const recipientInput = document.getElementById('recipientName');
-  if (!checkbox || !recipientInput) return;
-  checkbox.checked = false;
-  recipientInput.value = '';
-  _syncRecipientFieldVisibility();
-  window.showToast(
-    '聯絡人姓名不符合綠界物流格式，請在下方填寫中文收件人姓名（例如：陳柏榮）',
-    'warning'
-  );
-  _openCheckoutPanel('panelShipping');
-  recipientInput.focus();
-}
-
-function _syncRecipientFromBuyerIfChecked() {
-  if (!_needsEcpayRecipientName() || !_isRecipientSameAsBuyerChecked()) {
-    _syncRecipientFieldVisibility();
-    return;
-  }
-  const buyerName = document.getElementById('buyerName')?.value.trim() || '';
-  if (!buyerName) {
-    _syncRecipientFieldVisibility();
-    return;
-  }
-  if (!_isEcpayRecipientNameValid(buyerName)) {
-    _handleInvalidBuyerForRecipientSync();
-    return;
-  }
-  _syncRecipientFieldVisibility();
-}
-
-function _resolveCheckoutRecipientName(formData) {
-  if (!_needsEcpayRecipientName()) {
-    return formData.buyerName;
-  }
-  if (_isRecipientSameAsBuyerChecked()) {
-    return formData.buyerName;
-  }
-  return formData.recipientName;
-}
-
-function _initRecipientNameFields() {
-  const checkbox = document.getElementById('recipientSameAsBuyer');
-  const recipientInput = document.getElementById('recipientName');
-  checkbox?.addEventListener('change', () => {
-    if (checkbox.checked) {
-      recipientInput.value = '';
-      _syncRecipientFromBuyerIfChecked();
-    } else {
-      recipientInput.value = '';
-      _syncRecipientFieldVisibility();
-      recipientInput.focus();
-    }
-    _saveCheckoutFormDraft();
-  });
-  recipientInput?.addEventListener('input', () => {
-    recipientInput.classList.remove('isInvalid');
-    recipientInput.removeAttribute('aria-invalid');
-    _saveCheckoutFormDraft();
-  });
-  document.getElementById('buyerName')?.addEventListener('input', () => {
-    _syncRecipientFromBuyerIfChecked();
-  });
-  _syncRecipientFieldVisibility();
-  _syncRecipientFromBuyerIfChecked();
-}
-
 // Load shared shipping address modal partial.
 async function _loadShippingAddressModal() {
   const mount = document.getElementById('shippingAddressModalMount');
@@ -158,7 +34,7 @@ async function _loadShippingAddressModal() {
   }
 }
 
-// Initialize checkout shipping address display + modal.
+// Initialize checkout shipping address display + modal（收件人摘要 + 宅配送達地址）。
 function _initCheckoutShippingAddress() {
   if (!window.YuruiShippingAddressUI || !window.YuruiShippingAddress) return;
 
@@ -168,9 +44,8 @@ function _initCheckoutShippingAddress() {
     initial = window.YuruiShippingAddress.resolve(user, _readLocalProfile());
   }
 
-  window.YuruiShippingAddressUI.init({
-    displayEl: document.getElementById('checkoutShippingAddressDisplay'),
-    editBtn: document.getElementById('checkoutShippingAddressEditBtn'),
+  const sa = window.YuruiShippingAddress;
+  const sharedOptions = {
     initialAddress: initial,
     persist: Boolean(window.AppState?.isLoggedIn && user?.id),
     getAddress: () => window.YuruiShippingAddressUI.getAddress(),
@@ -180,6 +55,21 @@ function _initCheckoutShippingAddress() {
       }
       _saveCheckoutFormDraft();
     },
+  };
+
+  window.YuruiShippingAddressUI.init({
+    ...sharedOptions,
+    displayEl: document.getElementById('checkoutRecipientDisplay'),
+    editBtn: document.getElementById('checkoutRecipientEditBtn'),
+    formatDisplay: (addr) => sa.formatRecipientSummary(addr),
+  });
+
+  window.YuruiShippingAddressUI.init({
+    ...sharedOptions,
+    displayEl: document.getElementById('checkoutShippingAddressDisplay'),
+    editBtn: document.getElementById('checkoutShippingAddressEditBtn'),
+    formatDisplay: (addr) => sa.formatDeliveryAddress(addr),
+    persist: false,
   });
 }
 
@@ -217,15 +107,13 @@ window.initCheckoutPage = async () => {
   _renderCheckoutItems();
   _updateCheckoutSummary();
   _restoreCheckoutFormDraft();
-  await _prefillCheckoutContactFields();
+  await _prefillCheckoutShippingAddress();
   await _initCheckoutSessionOnEntry();
   _initAccordionPanels();
   _initShippingMethodChange();
-  _initRecipientNameFields();
   _initPaymentMethodChange();
   _initCheckoutInputValidation();
   _initCheckoutFormDraftPersistence();
-  _initFillProfileBtn();
   _initConfirmOrderBtn();
   _initCheckoutSessionActions();
   _initCheckoutCvsMap();
@@ -428,7 +316,6 @@ function _initShippingMethodChange() {
       _updateCheckoutSummary();
       _syncRadioGroupState('shippingMethod');
       _syncDeliveryAddressState();
-      _syncRecipientFromBuyerIfChecked();
       _saveCheckoutFormDraft();
     });
   });
@@ -466,9 +353,6 @@ function _syncDeliveryAddressState() {
   if (pickupSection) pickupSection.hidden = selectedShippingMethod !== 'pickup';
   const cvsSection = document.getElementById('cvsStoreSection');
   if (cvsSection) cvsSection.hidden = selectedShippingMethod !== 'cvs';
-  const recipientSection = document.getElementById('recipientNameSection');
-  if (recipientSection) recipientSection.hidden = !_needsEcpayRecipientName();
-  _syncRecipientFieldVisibility();
 }
 
 // 從共用 API facade 載入可選門市，不在頁面直接發送後端請求。
@@ -504,12 +388,10 @@ function _syncPaymentNoticeState() {
   if (codNotice) codNotice.hidden = selected !== 'cod';
 }
 
-// 進 checkout 頁自動帶入姓名／Email／電話（N3）；保留手動「帶入會員資料」
-async function _prefillCheckoutContactFields() {
+// 進 checkout 頁載入會員預設配送地址（收件人 = 配送地址，不再填「聯絡資訊」）。
+async function _prefillCheckoutShippingAddress() {
   const user = _resolveCheckoutUser();
-  if (!user) return;
-  // 草稿或使用者已輸入時不覆寫 / Skip when draft or manual input exists
-  if (document.getElementById('buyerName')?.value.trim()) return;
+  if (!user || !window.YuruiShippingAddress?.isEmpty(window.YuruiShippingAddressUI?.getAddress())) return;
 
   let shippingAddr = null;
   try {
@@ -519,23 +401,12 @@ async function _prefillCheckoutContactFields() {
   }
 
   const profile = _readLocalProfile();
-  const resolvedName =
-    (shippingAddr &&
-      `${shippingAddr.lastName || ''}${shippingAddr.firstName || ''}`.trim()) ||
-    user.name ||
-    profile.name ||
-    '';
-  const resolvedPhone = shippingAddr?.phone || user.phone || profile.phone || '';
-  const resolvedEmail = shippingAddr?.email || user.email || profile.email || '';
+  const resolved = shippingAddr
+    ? window.YuruiShippingAddress.clone(shippingAddr)
+    : window.YuruiShippingAddress.resolve(user, profile);
 
-  if (resolvedName) _setCheckoutDraftFieldValue('buyerName', resolvedName);
-  if (resolvedPhone) _setCheckoutDraftFieldValue('buyerPhone', resolvedPhone);
-  if (resolvedEmail) _setCheckoutDraftFieldValue('buyerEmail', resolvedEmail);
-
-  _syncRecipientFromBuyerIfChecked();
-
-  if (window.YuruiShippingAddressUI && shippingAddr) {
-    window.YuruiShippingAddressUI.setAddress(shippingAddr);
+  if (!window.YuruiShippingAddress.isEmpty(resolved)) {
+    window.YuruiShippingAddressUI.setAddress(resolved);
   }
 }
 
@@ -654,38 +525,36 @@ function _getConfirmButtonLabel(checkoutSession) {
   return paymentMethod === 'cod' ? '確認結帳' : '結帳並前往付款';
 }
 
+function _getRecipientNameFromAddress(shippingAddress) {
+  return window.YuruiShippingAddress?.formatRecipientName(shippingAddress) || '';
+}
+
+function _getRecipientPhoneFromAddress(shippingAddress) {
+  return shippingAddress?.phone || '';
+}
+
+/** 超商／宅配：綠界姓名不合規時提示改 Modal（proactive） */
+function _validateEcpayRecipientOrWarn(shippingAddress, { focusEdit = true } = {}) {
+  if (selectedShippingMethod !== 'cvs' && selectedShippingMethod !== 'delivery') {
+    return true;
+  }
+  const recipientName = _getRecipientNameFromAddress(shippingAddress);
+  const result = window.YuruiShippingAddress?.validateEcpayRecipientName(recipientName);
+  if (result?.ok) return true;
+
+  const display = document.getElementById('checkoutRecipientDisplay');
+  display?.classList.add('isInvalid');
+  display?.setAttribute('aria-invalid', 'true');
+  _openCheckoutPanel('panelShipping');
+  window.showToast(result?.message || window.YuruiShippingAddress?.ecpayRecipientMessage, 'error');
+  if (focusEdit) document.getElementById('checkoutRecipientEditBtn')?.focus();
+  return false;
+}
+
 function _syncConfirmButtonLabel(checkoutSession) {
   const confirmBtn = document.getElementById('confirmOrderBtn');
   if (!confirmBtn || confirmBtn.disabled || confirmBtn.classList.contains('isLoading')) return;
   confirmBtn.textContent = _getConfirmButtonLabel(checkoutSession);
-}
-
-/** 綁定「帶入會員資料」按鈕 / Bind fill-profile button */
-function _initFillProfileBtn() {
-  const button = document.getElementById('fillProfileBtn');
-  if (!button) return;
-  button.addEventListener('click', () => {
-    if (!window.AppState.isLoggedIn || !window.AppState.currentUser) {
-      window.showToast('請先登入後再帶入會員資料', 'info');
-      window.openModal('loginModal');
-      return;
-    }
-    _fillBuyerFields(window.AppState.currentUser);
-    _saveCheckoutFormDraft();
-    window.showToast('已帶入會員資料', 'success');
-  });
-}
-
-// Fill buyer fields from the current user profile.
-function _fillBuyerFields(user) {
-  if (user.name) document.getElementById('buyerName').value = user.name;
-  if (user.phone) document.getElementById('buyerPhone').value = user.phone;
-  if (user.email) document.getElementById('buyerEmail').value = user.email;
-
-  if (window.YuruiShippingAddressUI && window.YuruiShippingAddress) {
-    const addr = window.YuruiShippingAddress.resolve(user, _readLocalProfile());
-    window.YuruiShippingAddressUI.setAddress(addr);
-  }
 }
 
 // Initialize coupon controls.
@@ -1171,20 +1040,16 @@ function _initCheckoutSessionActions() {
   window.addEventListener?.('beforeunload', _stopCheckoutCountdown);
 }
 
-// Read checkout form field values.
+// Read checkout form field values（recipient 來自會員配送地址 Modal）。
 function _readCheckoutFormData() {
   const shippingAddress = _getCheckoutShippingAddress();
   return {
-    buyerName: document.getElementById('buyerName')?.value.trim() || '',
-    buyerPhone: document.getElementById('buyerPhone')?.value.trim() || '',
-    buyerEmail: document.getElementById('buyerEmail')?.value.trim() || '',
-    recipientName: document.getElementById('recipientName')?.value.trim() || '',
-    recipientSameAsBuyer: _isRecipientSameAsBuyerChecked(),
+    recipientName: _getRecipientNameFromAddress(shippingAddress),
+    recipientPhone: _getRecipientPhoneFromAddress(shippingAddress),
     shippingAddress,
     deliveryAddress: window.formatShippingAddressLine
       ? window.formatShippingAddressLine(shippingAddress)
       : '',
-    userNote: document.getElementById('buyerNote')?.value.trim() || '',
     pickupBranchId: document.getElementById('checkoutPickupBranch')?.value || '',
     paymentMethod: document.querySelector('input[name="paymentMethod"]:checked')?.value || '',
   };
@@ -1199,16 +1064,10 @@ function _saveCheckoutFormDraft() {
 
   const formData = _readCheckoutFormData();
   const draft = {
-    version: 1,
+    version: 2,
     cartFingerprint,
     orderId,
     customerId,
-    buyerName: formData.buyerName,
-    buyerPhone: formData.buyerPhone,
-    buyerEmail: formData.buyerEmail,
-    userNote: formData.userNote,
-    recipientName: formData.recipientName,
-    recipientSameAsBuyer: formData.recipientSameAsBuyer,
     shippingMethod: selectedShippingMethod,
     pickupBranchId: formData.pickupBranchId,
     paymentMethod: formData.paymentMethod,
@@ -1233,7 +1092,7 @@ function _restoreCheckoutFormDraft() {
   }
 
   const matchesCurrentCheckout =
-    draft?.version === 1 &&
+    (draft?.version === 1 || draft?.version === 2) &&
     draft.customerId === _getCheckoutUserId() &&
     draft.cartFingerprint === sessionStorage.getItem(CHECKOUT_CART_FINGERPRINT_KEY) &&
     draft.orderId === sessionStorage.getItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
@@ -1241,17 +1100,6 @@ function _restoreCheckoutFormDraft() {
     _clearCheckoutFormDraft();
     return false;
   }
-
-  _setCheckoutDraftFieldValue('buyerName', draft.buyerName);
-  _setCheckoutDraftFieldValue('buyerPhone', draft.buyerPhone);
-  _setCheckoutDraftFieldValue('buyerEmail', draft.buyerEmail);
-  _setCheckoutDraftFieldValue('buyerNote', draft.userNote);
-
-  if (typeof draft.recipientSameAsBuyer === 'boolean') {
-    const checkbox = document.getElementById('recipientSameAsBuyer');
-    if (checkbox) checkbox.checked = draft.recipientSameAsBuyer;
-  }
-  _setCheckoutDraftFieldValue('recipientName', draft.recipientName || '');
 
   const shippingRadio = _findCheckoutRadio('shippingMethod', draft.shippingMethod);
   if (shippingRadio && !shippingRadio.disabled) {
@@ -1271,8 +1119,6 @@ function _restoreCheckoutFormDraft() {
   if (draft.shippingAddress && typeof draft.shippingAddress === 'object') {
     window.YuruiShippingAddressUI?.setAddress?.(draft.shippingAddress);
   }
-  _syncDeliveryAddressState();
-  _syncRecipientFieldVisibility();
   return true;
 }
 
@@ -1289,13 +1135,10 @@ function _findCheckoutRadio(name, value) {
   );
 }
 
-// 監聽所有會影響結帳內容的文字欄位與門市選擇。
+// 監聽門市選擇與配送地址更新。
 function _initCheckoutFormDraftPersistence() {
-  ['buyerName', 'buyerPhone', 'buyerEmail', 'buyerNote', 'recipientName'].forEach((id) => {
-    document.getElementById(id)?.addEventListener('input', _saveCheckoutFormDraft);
-  });
-  document.getElementById('recipientSameAsBuyer')?.addEventListener('change', _saveCheckoutFormDraft);
   document.getElementById('checkoutPickupBranch')?.addEventListener('change', _saveCheckoutFormDraft);
+  window.addEventListener('yurui:shipping-address-updated', _saveCheckoutFormDraft);
 }
 
 // 清除本分頁內的結帳表單個資草稿。
@@ -1309,6 +1152,11 @@ function _initCheckoutInputValidation() {
       input.classList.remove('isInvalid');
       input.removeAttribute('aria-invalid');
     });
+  });
+  document.getElementById('checkoutRecipientEditBtn')?.addEventListener('click', () => {
+    const display = document.getElementById('checkoutRecipientDisplay');
+    display?.classList.remove('isInvalid');
+    display?.removeAttribute('aria-invalid');
   });
   document.getElementById('checkoutShippingAddressEditBtn')?.addEventListener('click', () => {
     const display = document.getElementById('checkoutShippingAddressDisplay');
@@ -1332,6 +1180,9 @@ function _validateCheckoutForm(data) {
     input.classList.remove('isInvalid');
     input.removeAttribute('aria-invalid');
   });
+  const recipientDisplay = document.getElementById('checkoutRecipientDisplay');
+  recipientDisplay?.classList.remove('isInvalid');
+  recipientDisplay?.removeAttribute('aria-invalid');
   const shippingAddressDisplay = document.getElementById('checkoutShippingAddressDisplay');
   shippingAddressDisplay?.classList.remove('isInvalid');
   shippingAddressDisplay?.removeAttribute('aria-invalid');
@@ -1340,70 +1191,31 @@ function _validateCheckoutForm(data) {
   pickupBranch?.removeAttribute('aria-invalid');
   document.getElementById('panelPayment')?.classList.remove('isInvalid');
 
-  const buyerRules = [
-    { valid: data.buyerName, field: 'buyerName', message: '請輸入聯絡人姓名' },
-    { valid: data.buyerPhone, field: 'buyerPhone', message: '請輸入手機' },
-    {
-      valid: window.isValidMobile
-        ? window.isValidMobile(data.buyerPhone)
-        : window.isValidPhone(data.buyerPhone),
-      field: 'buyerPhone',
-      message: '手機須為 09 開頭的 10 碼數字（例：0988744144）',
-    },
-    { valid: data.buyerEmail, field: 'buyerEmail', message: '請輸入 Email' },
-    { valid: window.isValidEmail(data.buyerEmail), field: 'buyerEmail', message: 'Email 格式不正確' },
-  ];
+  const sa = window.YuruiShippingAddress;
+  let addrResult;
+  if (selectedShippingMethod === 'delivery') {
+    addrResult = sa?.validate(data.shippingAddress);
+  } else {
+    addrResult = sa?.validateRecipientContact(data.shippingAddress);
+  }
 
-  const failedBuyerRules = buyerRules.filter((rule) => !rule.valid);
-  failedBuyerRules.forEach((rule) => {
-    const input = document.getElementById(rule.field);
-    input?.classList.add('isInvalid');
-    input?.setAttribute('aria-invalid', 'true');
-  });
-
-  if (failedBuyerRules.length > 0) {
-    _openCheckoutPanel('panelBuyer');
-    window.showToast('請完成紅色標記的必填資料', 'error');
-    document.getElementById(failedBuyerRules[0].field)?.focus();
+  if (!addrResult?.ok) {
+    recipientDisplay?.classList.add('isInvalid');
+    recipientDisplay?.setAttribute('aria-invalid', 'true');
+    if (selectedShippingMethod === 'delivery') {
+      shippingAddressDisplay?.classList.add('isInvalid');
+      shippingAddressDisplay?.setAttribute('aria-invalid', 'true');
+    }
+    _openCheckoutPanel('panelShipping');
+    window.showToast('請完成收件人資料（點編輯開啟表單）', 'error');
+    document.getElementById('checkoutRecipientEditBtn')?.focus();
     return false;
   }
 
-  if (selectedShippingMethod === 'delivery') {
-    const addrResult = window.YuruiShippingAddress?.validate(data.shippingAddress);
-    if (!addrResult?.ok) {
-      shippingAddressDisplay?.classList.add('isInvalid');
-      shippingAddressDisplay?.setAttribute('aria-invalid', 'true');
-      _openCheckoutPanel('panelShipping');
-      window.showToast('請完成紅色標記的必填資料', 'error');
-      document.getElementById('checkoutShippingAddressEditBtn')?.focus();
-      return false;
-    }
+  if (!_validateEcpayRecipientOrWarn(data.shippingAddress)) {
+    return false;
   }
-  if (_needsEcpayRecipientName()) {
-    const recipientName = _resolveCheckoutRecipientName(data);
-    if (!recipientName) {
-      const recipientInput = document.getElementById('recipientName');
-      recipientInput?.classList.add('isInvalid');
-      recipientInput?.setAttribute('aria-invalid', 'true');
-      _openCheckoutPanel('panelShipping');
-      window.showToast('請填寫收件人姓名', 'error');
-      recipientInput?.focus();
-      return false;
-    }
-    if (!_isEcpayRecipientNameValid(recipientName)) {
-      if (_isRecipientSameAsBuyerChecked()) {
-        _handleInvalidBuyerForRecipientSync();
-      } else {
-        const recipientInput = document.getElementById('recipientName');
-        recipientInput?.classList.add('isInvalid');
-        recipientInput?.setAttribute('aria-invalid', 'true');
-        _openCheckoutPanel('panelShipping');
-        window.showToast(ECPAY_RECIPIENT_NAME_MESSAGE, 'error');
-        recipientInput?.focus();
-      }
-      return false;
-    }
-  }
+
   if (selectedShippingMethod === 'pickup' && !data.pickupBranchId) {
     pickupBranch?.classList.add('isInvalid');
     pickupBranch?.setAttribute('aria-invalid', 'true');
@@ -1464,12 +1276,11 @@ function _buildCheckoutUpdateRequest(formData) {
   const session = _getStoredCheckoutSession();
   const hasCvsStore = Boolean(session?.shipping?.cvsStoreId);
   const shippingMethod = _resolveCheckoutShippingMethodForPatch();
-  const recipientName = _resolveCheckoutRecipientName(formData);
   const request = {
     shipping: {
       method: shippingMethod,
-      recipientName,
-      phone: formData.buyerPhone,
+      recipientName: formData.recipientName,
+      phone: formData.recipientPhone,
       address: shippingMethod === 'delivery' ? formData.deliveryAddress : null,
       pickupBranchId: shippingMethod === 'pickup' ? formData.pickupBranchId : null,
       cvsStoreId: selectedShippingMethod === 'cvs' && hasCvsStore
@@ -1791,21 +1602,22 @@ function _showCheckoutErrorPanel(title, message, details = []) {
   _setCheckoutTimerVisible(false);
 }
 
-// 依 details.field 標記買家、地址或付款欄位。
+// 依 details.field 標記收件人或地址欄位。
 function _markCheckoutValidationFields(details) {
   const fieldMap = {
-    recipientName: 'recipientName',
-    'shipping.recipientName': 'recipientName',
-    phone: 'buyerPhone',
-    'shipping.phone': 'buyerPhone',
+    recipientName: 'checkoutRecipientDisplay',
+    'shipping.recipientName': 'checkoutRecipientDisplay',
+    phone: 'checkoutRecipientDisplay',
+    'shipping.phone': 'checkoutRecipientDisplay',
   };
 
   details.forEach((detail) => {
-    const inputId = fieldMap[detail?.field];
-    if (inputId) {
-      const input = document.getElementById(inputId);
-      input?.classList.add('isInvalid');
-      input?.setAttribute('aria-invalid', 'true');
+    const targetId = fieldMap[detail?.field];
+    if (targetId) {
+      document.getElementById(targetId)?.classList.add('isInvalid');
+      if (targetId === 'checkoutRecipientDisplay') {
+        document.getElementById('checkoutRecipientEditBtn')?.setAttribute('aria-invalid', 'true');
+      }
     }
 
     if (['address', 'shipping.address'].includes(detail?.field)) {
@@ -1918,19 +1730,6 @@ function _applyCheckoutShippingFromSession(shipping) {
   if (shipping.method === 'cvs') {
     _renderCvsStoreDisplay(shipping.cvsStoreName, shipping.address);
   }
-  const pending = 'PENDING_CHECKOUT';
-  const sessionRecipient = String(shipping.recipientName || '').trim();
-  if (sessionRecipient && sessionRecipient !== pending) {
-    const buyerName = document.getElementById('buyerName')?.value.trim() || '';
-    const checkbox = document.getElementById('recipientSameAsBuyer');
-    const recipientInput = document.getElementById('recipientName');
-    if (checkbox && recipientInput) {
-      const sameAsBuyer = buyerName && sessionRecipient === buyerName;
-      checkbox.checked = sameAsBuyer;
-      recipientInput.value = sameAsBuyer ? '' : sessionRecipient;
-      _syncRecipientFieldVisibility();
-    }
-  }
 }
 
 function _renderCvsStoreDisplay(storeName, address) {
@@ -1979,24 +1778,27 @@ function _initCheckoutCvsMap() {
       return;
     }
     const formData = _readCheckoutFormData();
-    if (!formData.buyerName || !formData.buyerPhone) {
-      window.showToast('請先填寫聯絡人姓名與電話', 'warning');
-      _openCheckoutPanel('panelBuyer');
+    const sa = window.YuruiShippingAddress;
+    if (sa?.isEmpty(formData.shippingAddress)) {
+      window.showToast('請先設定收件人（姓名、手機、Email）', 'warning');
+      _openCheckoutPanel('panelShipping');
+      document.getElementById('checkoutRecipientEditBtn')?.focus();
       return;
     }
-    if (!_validateCheckoutForm(formData)) return;
+    if (!_validateEcpayRecipientOrWarn(formData.shippingAddress)) {
+      return;
+    }
 
     selectedShippingMethod = 'cvs';
     _syncRadioGroupState('shippingMethod');
     _syncDeliveryAddressState();
 
     try {
-      const recipientName = _resolveCheckoutRecipientName(formData);
       // 選店前先只 PATCH 收件人／電話；shipping.method=cvs 需等 map callback 寫入門市後才能存。
       await window.API.checkout.updateSession(session.orderId, {
         shipping: {
-          recipientName,
-          phone: formData.buyerPhone,
+          recipientName: formData.recipientName,
+          phone: formData.recipientPhone,
         },
         paymentMethod: _getSelectedPaymentCode(),
       });

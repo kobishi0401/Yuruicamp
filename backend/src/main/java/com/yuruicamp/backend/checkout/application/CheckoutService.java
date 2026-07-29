@@ -40,7 +40,6 @@ import com.yuruicamp.backend.inventory.domain.InventoryStock;
 import com.yuruicamp.backend.inventory.domain.ProductStockReservation;
 import com.yuruicamp.backend.inventory.infrastructure.InventoryStockRepository;
 import com.yuruicamp.backend.inventory.infrastructure.ProductStockReservationRepository;
-import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.OrderItem;
 import com.yuruicamp.backend.order.domain.OrderStatus;
@@ -48,6 +47,7 @@ import com.yuruicamp.backend.order.domain.OrderStatusHistory;
 import com.yuruicamp.backend.order.domain.PaymentMethod;
 import com.yuruicamp.backend.order.domain.PaymentStatus;
 import com.yuruicamp.backend.order.domain.ShippingMethod;
+import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
 import com.yuruicamp.backend.order.infrastructure.OrderRepository;
 import com.yuruicamp.backend.order.infrastructure.OrderStatusHistoryRepository;
 
@@ -110,7 +110,7 @@ public class CheckoutService {
 		Instant expires = now.plus(HOLD);
 		CheckoutCreateRequest.Shipping shipping = request.shipping();
 		ShippingSnapshot shippingSnapshot = resolveCreateShipping(shipping);
-		String recipient = firstNonBlank(shipping == null ? null : shipping.recipientName(), customer.getName(), PENDING);
+		String recipient = resolveRecipientName(shipping == null ? null : shipping.recipientName(), shippingSnapshot.method());
 		String phone = firstNonBlank(shipping == null ? null : shipping.phone(), customer.getPhone(), PENDING);
 		Order order = new Order();
 		order.initialize(newOrderId(), displayNoService.nextOrderDisplayNo(), customerId, idempotencyKey, requestHash,
@@ -142,7 +142,6 @@ public class CheckoutService {
 		}
 
 		order.setPricing(subtotal, BigDecimal.ZERO, BigDecimal.ZERO);
-		validateEcpayRecipientIfNeeded(order.getShippingMethod(), order.getRecipientName());
 		Order saved = orders.saveAndFlush(order);
 		if (request.couponClaimId() != null) {
 			couponService.applyToOrder(saved, customerId, request.couponClaimId(), now);
@@ -196,12 +195,13 @@ public class CheckoutService {
 		CheckoutUpdateRequest.Shipping shipping = request.shipping();
 		if (shipping != null) {
 			ShippingSnapshot shippingSnapshot = resolveUpdateShipping(shipping, order);
+			String recipientName = updatedValue(shipping.recipientName(), order.getRecipientName());
+			validateRecipientForMethod(shippingSnapshot.method(), recipientName);
 			order.updateShipping(
-					updatedValue(shipping.recipientName(), order.getRecipientName()),
+					recipientName,
 					updatedValue(shipping.phone(), order.getShippingPhone()),
 					shippingSnapshot.address(), shippingSnapshot.method(), shippingSnapshot.pickupBranchId(),
 					shippingSnapshot.cvsStoreId(), shippingSnapshot.cvsStoreName(), shippingSnapshot.cvsSubType());
-			validateEcpayRecipientIfNeeded(order.getShippingMethod(), order.getRecipientName());
 		}
 		if (request.paymentMethod() != null) {
 			order.changePaymentMethod(parsePaymentMethod(request.paymentMethod()));
@@ -369,6 +369,29 @@ public class CheckoutService {
 			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Checkout item quantity is too large");
 		}
 		return requested;
+	}
+
+	// recipient 只來自配送地址；不再 fallback Firebase／customer 顯示名。
+	private static String resolveRecipientName(String requestedRecipient, ShippingMethod method) {
+		String recipient = requestedRecipient != null && !requestedRecipient.isBlank()
+				? requestedRecipient.trim()
+				: PENDING;
+		if (!PENDING.equals(recipient)) {
+			validateRecipientForMethod(method, recipient);
+		}
+		return recipient;
+	}
+
+	private static void validateRecipientForMethod(ShippingMethod method, String recipient) {
+		if (PENDING.equals(recipient) || recipient.isBlank()) {
+			return;
+		}
+		if (method == ShippingMethod.pickup) {
+			return;
+		}
+		if (method == ShippingMethod.cvs || method == ShippingMethod.delivery) {
+			EcpayReceiverNameRules.validateOrThrow(recipient);
+		}
 	}
 
 	// 取得第一個有內容的文字，全部空白時使用草稿佔位文字。
@@ -580,16 +603,6 @@ public class CheckoutService {
 					&& !PENDING.equals(order.getShippingAddress());
 		}
 		return !PENDING.equals(order.getShippingAddress());
-	}
-
-	private static void validateEcpayRecipientIfNeeded(ShippingMethod method, String recipientName) {
-		if (method != ShippingMethod.cvs && method != ShippingMethod.delivery) {
-			return;
-		}
-		if (recipientName == null || recipientName.isBlank() || PENDING.equals(recipientName.trim())) {
-			return;
-		}
-		EcpayReceiverNameRules.validateOrThrow(recipientName);
 	}
 
 	// 暫存建立庫存保留紀錄需要的資料。

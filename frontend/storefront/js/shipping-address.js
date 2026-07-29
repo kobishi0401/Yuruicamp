@@ -89,6 +89,110 @@
     return [a.city, a.district, a.township, a.addressLine1].filter(Boolean).join('');
   }
 
+  /** 收件人全名（姓 + 名）/ Full recipient name for logistics snapshot */
+  function formatRecipientName(addr) {
+    var a = cloneShippingAddress(addr);
+    return (a.lastName + a.firstName).trim();
+  }
+
+  var ECPAY_RECIPIENT_MESSAGE =
+    '收件人姓名不符合綠界物流格式（僅中英文、不可含 - 或空格）。請改用中文姓名，例如「陳柏榮」。';
+
+  /** 綠界 B2C ReceiverName 規則（與後端 EcpayReceiverNameRules 對齊） */
+  function validateEcpayRecipientName(name) {
+    var trimmed = String(name || '').trim();
+    if (!trimmed) {
+      return { ok: false, message: '請填寫收件人姓名' };
+    }
+    if (!/^[\u4e00-\u9fffA-Za-z]+$/.test(trimmed)) {
+      return { ok: false, message: ECPAY_RECIPIENT_MESSAGE };
+    }
+
+    var chineseCount = 0;
+    for (var i = 0; i < trimmed.length; ) {
+      var codePoint = trimmed.codePointAt(i);
+      if (codePoint >= 0x4e00 && codePoint <= 0x9fff) {
+        chineseCount++;
+      }
+      i += codePoint > 0xffff ? 2 : 1;
+    }
+    var totalChars = Array.from(trimmed).length;
+    var englishCount = totalChars - chineseCount;
+    if (chineseCount > 0 && englishCount > 0) {
+      return { ok: false, message: ECPAY_RECIPIENT_MESSAGE };
+    }
+    if (chineseCount > 0) {
+      return chineseCount >= 2 && chineseCount <= 5
+        ? { ok: true }
+        : { ok: false, message: ECPAY_RECIPIENT_MESSAGE };
+    }
+    return englishCount >= 4 && englishCount <= 10
+      ? { ok: true }
+      : { ok: false, message: ECPAY_RECIPIENT_MESSAGE };
+  }
+
+  /** 收件人摘要：姓名、手機、Email（三配送方式共用） */
+  function formatRecipientSummaryDisplay(addr) {
+    if (isShippingAddressEmpty(addr)) {
+      return '<span class="shippingAddressEmpty">尚未設定</span>';
+    }
+    var a = cloneShippingAddress(addr);
+    var name = escapeHtml(a.lastName + a.firstName);
+    var contactParts = [];
+    if (a.phone) contactParts.push(escapeHtml(formatPhoneDisplay(a.phone)));
+    if (a.email) contactParts.push(escapeHtml(a.email));
+    var contact = contactParts.join(' · ');
+    return (
+      '<div class="shippingAddressLines">' +
+        (name ? '<div class="shippingAddressName">' + name + '</div>' : '') +
+        (contact ? '<div class="shippingAddressContact">' + contact + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /** 宅配送達地址（不含姓名／聯絡方式） */
+  function formatDeliveryAddressDisplay(addr) {
+    if (isShippingAddressEmpty(addr)) {
+      return '<span class="shippingAddressEmpty">尚未設定</span>';
+    }
+    var a = cloneShippingAddress(addr);
+    if (!a.city && !a.addressLine1) {
+      return '<span class="shippingAddressEmpty">尚未設定</span>';
+    }
+    var line1 = escapeHtml(formatAddressLine(a));
+    var line2 = a.addressLine2 ? escapeHtml(a.addressLine2) : '';
+    return (
+      '<div class="shippingAddressLines">' +
+        (line1 ? '<div class="shippingAddressLine">' + line1 + '</div>' : '') +
+        (line2 ? '<div class="shippingAddressLine">' + line2 + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /** 超商／門市取貨：只驗收件人聯絡欄位，不要求結構化地址 */
+  function validateRecipientContact(addr) {
+    var fieldErrors = {};
+    var a = cloneShippingAddress(addr);
+
+    if (!a.lastName) fieldErrors.shipLastName = '請填寫姓';
+    if (!a.firstName) fieldErrors.shipFirstName = '請填寫名字';
+    if (!a.phone) {
+      fieldErrors.shipPhone = '請填寫手機';
+    } else if (typeof window.isValidMobile === 'function' && !window.isValidMobile(a.phone)) {
+      fieldErrors.shipPhone = '手機須為 09 開頭的 10 碼數字（例：0988744144）';
+    }
+    if (!a.email) {
+      fieldErrors.shipEmail = '請填寫電子郵件';
+    } else if (typeof window.isValidEmail === 'function' && !window.isValidEmail(a.email)) {
+      fieldErrors.shipEmail = '電子郵件格式不正確';
+    }
+
+    var errorList = Object.keys(fieldErrors).map(function (key) {
+      return fieldErrors[key];
+    });
+    return { ok: errorList.length === 0, fieldErrors: fieldErrors, errors: errorList };
+  }
+
   /** 展開區顯示用 HTML：姓名粗體、地址、電話 · Email */
   function formatShippingAddressDisplay(addr) {
     if (isShippingAddressEmpty(addr)) {
@@ -187,6 +291,12 @@
     equal: shippingAddressEqual,
     validate: validateShippingAddress,
     formatDisplay: formatShippingAddressDisplay,
+    formatRecipientName: formatRecipientName,
+    formatRecipientSummary: formatRecipientSummaryDisplay,
+    formatDeliveryAddress: formatDeliveryAddressDisplay,
+    validateRecipientContact: validateRecipientContact,
+    validateEcpayRecipientName: validateEcpayRecipientName,
+    ecpayRecipientMessage: ECPAY_RECIPIENT_MESSAGE,
     formatAddressLine: formatAddressLine,
     formatPhoneDisplay: formatPhoneDisplay,
     normalizeCity: normalizeTwCityName,

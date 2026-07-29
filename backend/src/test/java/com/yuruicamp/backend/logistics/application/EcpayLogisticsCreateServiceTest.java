@@ -142,19 +142,6 @@ class EcpayLogisticsCreateServiceTest {
 	}
 
 	@Test
-	void invalidRecipientNameBlocksShipBeforeGateway() {
-		Order order = deliveryOrder("O1", "Po-Jung Chen", "0912345678", "台北市信義區信義路五段7號");
-		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
-
-		assertThatThrownBy(() -> service.createShipment("O1"))
-				.isInstanceOf(BusinessException.class)
-				.hasMessageContaining("綠界物流格式");
-
-		verify(logisticsGateway, never()).createHomeOrder(any());
-		verify(logisticsGateway, never()).createCvsOrder(any());
-	}
-
-	@Test
 	void homeFieldsUseConfiguredTcatSubType() {
 		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
@@ -172,6 +159,19 @@ class EcpayLogisticsCreateServiceTest {
 				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
 				eq("王小明"), eq("0912345678"), eq("台北市信義區信義路五段7號"), subTypeCaptor.capture());
 		assertThat(subTypeCaptor.getValue()).isEqualTo("TCAT");
+	}
+
+	@Test
+	void cvsOrderRejectsInvalidRecipientBeforeGateway() {
+		Order order = cvsOrder("O1", "006598");
+		order.updateShipping("Po-Jung Chen", "0912345678", order.getShippingAddress(),
+				ShippingMethod.cvs, null, order.getCvsStoreId(), order.getCvsStoreName(), order.getCvsSubType());
+		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.createShipment("O1"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessageContaining("綠界物流格式");
+		verify(logisticsGateway, never()).createCvsOrder(any());
 	}
 
 	private static Order deliveryOrder(String id, String name, String phone, String address) {

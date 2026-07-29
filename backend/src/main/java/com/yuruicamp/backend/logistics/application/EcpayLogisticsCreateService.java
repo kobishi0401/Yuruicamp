@@ -73,7 +73,7 @@ public class EcpayLogisticsCreateService {
 		if (order.getCvsStoreId() == null || order.getCvsStoreId().isBlank()) {
 			throw new BusinessException(ErrorCode.CONFLICT, "CVS store is not selected for this order");
 		}
-		validateEcpayRecipientName(order);
+		EcpayReceiverNameRules.validateOrThrow(order.getRecipientName());
 
 		YuruicampProperties.EcpayLogistics cfg = properties.getEcpayLogistics();
 		CreateContext ctx = buildCreateContext(order, cfg);
@@ -101,7 +101,7 @@ public class EcpayLogisticsCreateService {
 			return existing;
 		}
 		validateDeliveryAddress(order);
-		validateEcpayRecipientName(order);
+		EcpayReceiverNameRules.validateOrThrow(order.getRecipientName());
 
 		YuruicampProperties.EcpayLogistics cfg = properties.getEcpayLogistics();
 		CreateContext ctx = buildCreateContext(order, cfg);
@@ -136,10 +136,6 @@ public class EcpayLogisticsCreateService {
 				|| isIncompleteSnapshot(order.getShippingAddress())) {
 			throw new BusinessException(ErrorCode.CONFLICT, "Shipping address is incomplete for home delivery");
 		}
-	}
-
-	private static void validateEcpayRecipientName(Order order) {
-		EcpayReceiverNameRules.validateOrThrow(order.getRecipientName());
 	}
 
 	private static boolean isIncompleteSnapshot(String value) {
