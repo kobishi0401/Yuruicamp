@@ -24,6 +24,7 @@ public final class EcpayTcatAddressFormatter {
 			throw new BusinessException(ErrorCode.CONFLICT,
 					"Shipping address must include postal code and street address for home delivery");
 		}
+		EcpayTaiwanDistrictZip.validateZipMatchesDistrict(parsed.zipCode(), parsed.streetAddress());
 		String receiverAddress = compactAddress(parsed.streetAddress());
 		if (receiverAddress.length() < MIN_RECEIVER_ADDRESS_LENGTH
 				|| receiverAddress.length() > MAX_RECEIVER_ADDRESS_LENGTH) {

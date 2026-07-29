@@ -17,11 +17,10 @@ class EcpayTcatAddressFormatterTest {
 	}
 
 	@Test
-	void doesNotChangeZipWhenMismatchWithDistrict() {
-		var formatted = EcpayTcatAddressFormatter.format("403 臺中市 南屯區 公益路190號");
-
-		assertThat(formatted.zipCode()).isEqualTo("403");
-		assertThat(formatted.receiverAddress()).isEqualTo("台中市南屯區公益路190號");
+	void throwsConflictWhenZipMismatchWithDistrict() {
+		assertThatThrownBy(() -> EcpayTcatAddressFormatter.format("403 臺中市 南屯區 公益路190號"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessageContaining("expected 408");
 	}
 
 	@Test

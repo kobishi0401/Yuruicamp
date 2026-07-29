@@ -46,9 +46,33 @@ class EcpayLogisticsGatewayImplTest {
 		assertThat(fields.get("ReceiverCellPhone")).isEqualTo("0911222333");
 		assertThat(fields.get("ScheduledPickupTime")).isEqualTo("4");
 		assertThat(fields.get("ScheduledDeliveryTime")).isEqualTo("4");
+		assertThat(fields.get("IsCollection")).isEqualTo("N");
+		assertThat(fields.get("Temperature")).isEqualTo("0001");
+		assertThat(fields.get("Specification")).isEqualTo("0001");
+		assertThat(fields.get("Distance")).isEqualTo("00");
 		assertThat(fields).doesNotContainKey("ReceiverStoreID");
 		assertThat(fields.get("ServerReplyURL")).isEqualTo("https://example.ngrok.app/api/logistics/ecpay/notify");
 		assertThat(fields.get("CheckMacValue")).isNotBlank();
+	}
+
+	@Test
+	void buildCreateHomeFieldsInfersCrossCityDistanceForTcat() {
+		var fields = gateway.buildCreateHomeFields(
+				"ORD0001123456",
+				"2026/07/29 12:00:00",
+				500,
+				"Yuruicamp商品",
+				"Yuruicamp",
+				"0912345678",
+				"100",
+				"台北市中正區忠孝西路一段50號",
+				"王小明",
+				"0911222333",
+				"408",
+				"台中市南屯區公益路190號",
+				"TCAT");
+
+		assertThat(fields.get("Distance")).isEqualTo("01");
 	}
 
 	@Test

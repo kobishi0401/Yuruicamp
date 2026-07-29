@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.yuruicamp.backend.config.YuruicampProperties;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
+
+	private static final Pattern ADMIN_CITY = Pattern.compile("^(.+?[市縣])");
 
 	private final YuruicampProperties.Ecpay ecpay;
 	private final YuruicampProperties.EcpayLogistics logistics;
@@ -86,6 +90,12 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 		// Source: developers.ecpay.com.tw/7414.md — TCAT 固定帶入 4（不限時）
 		params.put("ScheduledPickupTime", "4");
 		params.put("ScheduledDeliveryTime", "4");
+		if (isTcatSubType(logisticsSubType)) {
+			params.put("IsCollection", "N");
+			params.put("Temperature", "0001");
+			params.put("Specification", "0001");
+			params.put("Distance", inferTcatDistance(senderAddress, receiverAddress));
+		}
 		params.put("ServerReplyURL", publicApiBase() + "/logistics/ecpay/notify");
 		sign(params);
 		return params;
@@ -217,5 +227,38 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 						+ "="
 						+ URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
 				.collect(Collectors.joining("&"));
+	}
+
+	private static boolean isTcatSubType(String logisticsSubType) {
+		return logisticsSubType != null && "TCAT".equalsIgnoreCase(logisticsSubType.trim());
+	}
+
+	/** 7414 Distance：00 同縣市、01 外縣市、02 離島。 */
+	static String inferTcatDistance(String senderAddress, String receiverAddress) {
+		String receiverCity = extractAdminCity(receiverAddress);
+		if (isOffshoreAdminCity(receiverCity)) {
+			return "02";
+		}
+		String senderCity = extractAdminCity(senderAddress);
+		if (senderCity.isBlank() || receiverCity.isBlank()) {
+			return "01";
+		}
+		return normalizeAdminCity(senderCity).equals(normalizeAdminCity(receiverCity)) ? "00" : "01";
+	}
+
+	private static String extractAdminCity(String compactAddress) {
+		if (compactAddress == null || compactAddress.isBlank()) {
+			return "";
+		}
+		Matcher matcher = ADMIN_CITY.matcher(compactAddress.trim());
+		return matcher.find() ? matcher.group(1) : "";
+	}
+
+	private static boolean isOffshoreAdminCity(String city) {
+		return city.contains("澎湖") || city.contains("金門") || city.contains("連江");
+	}
+
+	private static String normalizeAdminCity(String city) {
+		return city.replace('臺', '台');
 	}
 }
