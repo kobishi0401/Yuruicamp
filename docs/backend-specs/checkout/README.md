@@ -4,9 +4,10 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | C-2～C-8、商城優惠券、Checkout Read 與 COD Confirm 已實作 |
-| **更新日期** | 2026-07-26 |
+| **狀態** | C-2～C-8、商城優惠券、Checkout Read、COD Confirm、ECPay Launch、CVS 電子地圖已實作 |
+| **更新日期** | 2026-07-30 |
 | **Commerce UX** | 顯示編號、B3 鎖庫、M2 一次 ECPay → [`commerce/display-numbers-and-checkout-ux.md`](../commerce/display-numbers-and-checkout-ux.md) |
+| **物流** | `shipping.method=cvs` + `POST …/ecpay/cvs-map`；真沙箱見 [`logistics/ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md) |
 | **文件定位** | Checkout C-2～C-8 唯一流程與驗收文件 |
 | **持久化策略** | D1.A：待付款 `orders` + `order_items` + `product_stock_reservations` |
 | **保留時間** | 15 分鐘 |
@@ -24,8 +25,10 @@ Checkout 負責在會員進入結帳時建立待付款訂單、由資料庫價�
 | `PATCH` | `/api/checkout/sessions/{orderId}` | 更新本人 Checkout 的收件資料與付款方式 |
 | `POST` | `/api/checkout/sessions/{orderId}/cancel` | 取消本人未付款 Checkout 並釋放保留 |
 | `POST` | `/api/checkout/sessions/{orderId}/confirm-cod` | 確認貨到付款成立並移除 Checkout 期限 |
+| `POST` | `/api/checkout/sessions/{orderId}/ecpay` | 取得綠界**付款**表單（見 Payment） |
+| `POST` | `/api/checkout/sessions/{orderId}/ecpay/cvs-map` | 取得綠界**超商電子地圖**表單（物流選店） |
 
-`ecpay` 仍屬 Payment 工作，不應從契約存在誤判為已實作。
+金流與物流真沙箱（2026-07-30）已手動過關；本機預設仍 `stub=true`。契約見 [`checkout-api-contract.md`](../../api/checkout-api-contract.md) v0.15。
 
 ## 2. 完整流程
 
@@ -118,8 +121,9 @@ COD 確認
 
 - 只能更新目前登入會員自己的 Checkout。
 - 只能更新 `payment_status=unpaid`、未取消且未逾時的 Checkout。
-- `shipping.recipientName`、`phone`、`address` 與 `paymentMethod` 採部分更新；未提供欄位保留原值。
-- 支援 `ecpay-credit`、`ecpay-atm`、`ecpay-cvs`、`ecpay-other`、`cod`。
+- `shipping.recipientName`、`phone`、`address`、`method`、`pickupBranchId`、`cvsStore*` 與 `paymentMethod` 採部分更新；未提供欄位保留原值。
+- 支援配送：`delivery`、`pickup`、`cvs`（`cvs` 須已有 `cvsStoreId`；見契約 v0.15）。
+- 支援付款：`ecpay-credit`、`ecpay-atm`、`ecpay-cvs`、`ecpay-other`、`cod`。
 - 不可在 PATCH 修改商品明細；需要改商品時先取消再建立。
 - 非空 `couponClaimId` 會驗證 claim 所有人、狀態、券效期、資格與最低消費，再由後端重算折扣。
 - 同訂單重送相同 claim 時保留原快照並回傳成功；只有切換成另一張券時才先刪除舊快照、Flush，再新增快照。
@@ -579,4 +583,5 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 - ~~**CK-5** ECPay stub 付款閉環~~ → **已完成**（2026-07-25；見 [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) CK-5 與 [`backend-implementation-checklist.md`](../../../plans/backend-implementation-checklist.md) I-7）。
 - 前端／本機「建立 Checkout 失敗」追蹤（先記錄）：**CK-1～CK-3**（[`post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md)）。
 - ~~**I-8**~~ → **已完成**（2026-07-25 瀏覽器 Firebase 手動：商城 ECPay／COD、預約 ECPay）
-- **下一步 B**：真實綠界沙箱 — 見 [`docs/backend-specs/payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md)
+- ~~**真實綠界沙箱（金流＋物流）**~~ → **已完成**（2026-07-30 商城；見 [`payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md)、[`logistics/ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md)）
+- 可選：預約真沙箱 Notify；部署前真實退款 HTTP；物流 notify 回寫履約（Phase 3）

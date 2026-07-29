@@ -13,7 +13,7 @@
 
 ### 訂單操作
 - POST `/api/admin/orders/{orderId}/ship`
-    - 執行出貨狀態轉換，可包含物流資料。
+    - `unshipped` → `shipped`；對 `cvs`／`delivery` 同交易呼叫綠界建物流單並寫入 `ecpay_logistics_id`；`pickup` 不呼叫綠界。
 - POST `/api/admin/orders/{orderId}/complete`
     - 完成訂單。
 - PATCH `/api/admin/orders/{orderId}/internal-note`
@@ -23,3 +23,4 @@
 ### 注意
 - 狀態轉換必須由後端驗證，不可只改前端 cache。
 - 正式模式不與 Mock orders 合併。
+- 出貨失敗常見原因：CVS 未選店、收件人姓名不符綠界格式、宅配 zip／地址錯誤（見 logistics 驗收文件）。

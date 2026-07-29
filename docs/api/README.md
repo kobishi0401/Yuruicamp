@@ -3,7 +3,7 @@
 | 欄位         | 內容                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------- |
 | **狀態**     | Active                                                                                         |
-| **日期**     | 2026-07-26                                                                                     |
+| **日期**     | 2026-07-30                                                                                     |
 | **欄位策略** | **甲**：對齊 DB／架構決策的精簡契約；舊 Mock 胖欄位不當真相                                    |
 | **實作清單** | [`plans/backend-implementation-checklist.md`](../../plans/backend-implementation-checklist.md) |
 | **ENUM**     | [`docs/schema-enums.md`](../schema-enums.md)                                                   |
@@ -26,12 +26,12 @@
 | P0   | [`product-api-contract.md`](./product-api-contract.md)                                 | B    | Locked v0.8（商品公開讀、評分、equipment_tags 新品／熱銷標籤已完成）                              |
 | P0   | [`branch-api-contract.md`](./branch-api-contract.md)                                   | B    | Locked v0.1（B-7 已完成）                                                                       |
 | P0   | [`brand-api-contract.md`](./brand-api-contract.md)                                     | B    | Implemented v0.1（首頁合作品牌公開讀取）                                                        |
-| P0   | [`checkout-api-contract.md`](./checkout-api-contract.md)                               | C/F  | Locked v0.13（ECPay Launch、COD 消耗、取消 revoked、逾時 expired）                                |
-| P0   | [`order-api-contract.md`](./order-api-contract.md)                                     | C    | Locked v0.1（待實作）                                                                           |
-| P0   | [`payment-api-contract.md`](./payment-api-contract.md)                                 | D    | Implemented v0.3（D-1～D-6＋W3 全額退款 port；COD claim 消耗完成）                              |
+| P0   | [`checkout-api-contract.md`](./checkout-api-contract.md)                               | C/F/L | Implemented v0.15（ECPay Launch、CVS 地圖、`shipping.method=cvs`、COD／券生命週期）              |
+| P0   | [`order-api-contract.md`](./order-api-contract.md)                                     | C    | Implemented v0.3（會員唯讀；文件對齊 cvs／物流出貨說明）                                         |
+| P0   | [`payment-api-contract.md`](./payment-api-contract.md)                                 | D    | Implemented v0.3（D-1～D-6＋W3 全額退款 port；商城真沙箱 ✅ 2026-07-30）                         |
 | P1   | [`booking-api-contract.md`](./booking-api-contract.md)                                 | E    | Locked v1.0（公開營區含環境／設施標籤；E-1～E-7 已實作，ECPay、優惠券分別延後至 D、F）           |
 | P1   | [`coupon-api-contract.md`](./coupon-api-contract.md)                                   | F    | Partially Implemented v0.4（商城套券、消耗與取消失效完成；Booking Schema 待決定）                 |
-| P1   | [`admin-api-contract.md`](./admin-api-contract.md)                                     | G    | Locked v0.23+（G＋W1～W4＋Analytics `categoryBreakdown`）                                         |
+| P1   | [`admin-api-contract.md`](./admin-api-contract.md)                                     | G    | Locked v0.27（G＋W1～W4＋Analytics；`ship` 綠界物流建單）                                       |
 | P2   | [`member-review-api-contract.md`](./member-review-api-contract.md)、[`product-review-api-contract.md`](./product-review-api-contract.md) | H | Implemented（會員本人 GET／POST、商品公開分頁讀取與評分統計） |
 
 ### 刻意延後（P2，本輪不寫死）

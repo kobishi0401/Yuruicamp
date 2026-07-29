@@ -2,12 +2,13 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Implemented（D-1～D-6）；W3 Admin 全額退款 port（stub）；COD claim 消耗完成 |
-| **日期** | 2026-07-25 |
+| **狀態** | Implemented（D-1～D-6）；W3 Admin 全額退款 port（stub）；COD claim 消耗完成；**商城真沙箱** ✅（2026-07-30） |
+| **日期** | 2026-07-30 |
 | **版本** | 0.3 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **DB** | `payment_method`／`payment_status` ENUM、`payment_notifications`、`orders`、`bookings` |
 | **ENUM** | [`schema-enums.md`](../schema-enums.md) |
+| **真沙箱驗收** | [`../backend-specs/payment/ecpay-sandbox-validation.md`](../backend-specs/payment/ecpay-sandbox-validation.md) |
 
 ---
 
@@ -56,6 +57,8 @@
 **不**在此回應宣告 `paymentStatus=paid`。
 
 本機 `yuruicamp.ecpay.stub=true` 時：`actionUrl` = `/api/payments/ecpay/stub/aio-checkout`。
+
+> **物流不是付款：** 超商選店用 `POST /api/checkout/sessions/{orderId}/ecpay/cvs-map`；Admin 出貨才建物流單。見 Checkout 契約 v0.15 與 logistics 驗收文件。`ecpay-cvs` 付款方式 ≠ `shipping.method=cvs`。
 
 ---
 
@@ -175,5 +178,6 @@
 | 版本 | 日期 | 說明 |
 |------|------|------|
 | 0.3 | 2026-07-25 | W3：Admin 全額退款 port／錯誤碼；stub 退款；合併 COD claim 消耗語意 |
+| 0.3a | 2026-07-30 | 文件：商城真沙箱（ngrok）驗收完成；與物流 Phase 2 交叉連結 |
 | 0.2 | 2026-07-24 | COD 成立時消耗 claim；D-2／D-4 端點；stub aio-checkout |
 | 0.1 | 2026-07-20 | ECPay 真相在 Notify；COD 僅商城 |

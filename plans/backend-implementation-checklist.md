@@ -3,7 +3,7 @@
 | 欄位             | 內容                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
 | **狀態**         | Active                                                                                |
-| **日期**         | 2026-07-26                                                                            |
+| **日期**         | 2026-07-30                                                                            |
 | **對齊**         | [`java-backend-architecture-proposal.md`](./java-backend-architecture-proposal.md) §8 |
 | **API 契約索引** | [`docs/api/README.md`](../docs/api/README.md)（P0+P1 已寫死，欄位策略甲）             |
 | **商品契約**     | [`docs/api/product-api-contract.md`](../docs/api/product-api-contract.md)             |
@@ -21,7 +21,8 @@
 | **A**    | 骨架（Security／Session／Envelope／OpenAPI） | ✅                                                  |
 | **B**    | Catalog 公開讀（商品）                       | ✅ B-1～B-7 已實作（B-5b 可售庫存、B-7 公開門市）     |
 | **C**    | Checkout + 庫存保留 + 15 分排程              | ✅ C-1～C-8 已驗收（C-4 商城優惠券套用已完成）        |
-| **D**    | Payment（ECPay + COD）                       | ✅ D-1～D-6 stub 驗收完成（2026-07-25）             |
+| **D**    | Payment（ECPay + COD）                       | ✅ D-1～D-6 stub ✅；商城真沙箱 ✅（2026-07-29／30）   |
+| **D-L**  | Logistics（ECPay CVS + HOME/TCAT）           | ✅ Phase 1 stub ✅；Phase 2 真沙箱 ✅（2026-07-30） |
 | **E**    | Booking（營位 + 租借）                       | ✅ E-0～E-7 已完成；Notify 入帳由線 D 負責           |
 | **F**    | Coupon 三種規則                              | 🔄 商城 F-2 ✅；Booking 套券待 Schema（仍拒非 null）  |
 | **G**    | Admin 細 RBAC + 後台 CRUD                    | ✅ G-1～G-6 正式接線與整合驗收完成                  |
@@ -38,6 +39,7 @@
 - [x] `bookings` 付款欄位、禁 COD
 - [x] `bookings` Checkout 冪等 key、request hash、會員範圍唯一約束（E-3 Service 已完成回放與 payload 衝突判斷）
 - [x] `checkout_expires_at`、`payment_notifications`
+- [x] `shipping_method` 含 `cvs`；`cvs_store_*`／`ecpay_logistics_id`／map sessions（物流）
 - [x] Docker 整檔重建可跑
 
 ---
@@ -117,7 +119,23 @@
 - [x] D-6 預約禁止 COD（Booking checkout／launch 拒 `cod`；DB `ck_bookings_no_cod`）
 
 > D-1～D-6（2026-07-25 文件對齊）：Notify 回純文字 `1|OK`；驗簽失敗回 `0|CheckMacValueInvalid`。本機預設 `yuruicamp.ecpay.stub=true`。  
-> 取消／退款規則見 [`payment-api-contract.md`](../docs/api/payment-api-contract.md) §7；**綠界退款 HTTP 屬 Admin W3**（[`ADM-W3-00`](./admin-post-g6/w3/ADM-W3-00-payment-gate.md) Gate ✅，可開工 W3-01～03）。
+> **2026-07-30：** 商城 `YURUICAMP_ECPAY_STUB=false` + ngrok 真沙箱手動過關（`payment_notifications` success）；預約同 Notify 路徑可選補驗。見 [`ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)。  
+> 取消／退款規則見 [`payment-api-contract.md`](../docs/api/payment-api-contract.md) §7；**綠界退款 HTTP 屬 Admin W3**（[`ADM-W3-00`](./admin-post-g6/w3/ADM-W3-00-payment-gate.md) Gate ✅，可開工 W3-01～03）；**真實綠界退款**仍待部署前任務。
+
+---
+
+## 線 D-L — Logistics（ECPay 國內物流）
+
+- [x] Schema：`shipping_method=cvs`、`cvs_store_*`、`ecpay_logistics_id`、`ecpay_logistics_map_sessions`（`latest_schema.sql`；舊庫 patch `093`）
+- [x] Checkout：`POST …/ecpay/cvs-map`、map-result callback、選店前不寫 `method=cvs`
+- [x] Admin `ship` → `EcpayLogisticsCreateService`：`cvs`→FAMI、`delivery`→HOME/TCAT、`pickup` no-op
+- [x] 收件人／宅配地址：`EcpayReceiverNameRules`、`EcpayTcatAddressFormatter`（ADR 0003／0004）
+- [x] Logistics notify：MD5 驗簽 + log + `1|OK`（**不**改訂單狀態）
+- [x] Phase 1 stub 驗收文件
+- [x] Phase 2 真沙箱（ngrok + 雙 stub false）：Round 1 CVS + Round 2 TCAT（2026-07-30）
+
+> 驗收：[`ecpay-cvs-sandbox-validation.md`](../docs/backend-specs/logistics/ecpay-cvs-sandbox-validation.md)、[`ecpay-real-sandbox-validation.md`](../docs/backend-specs/logistics/ecpay-real-sandbox-validation.md)。  
+> Out of scope：notify 自動 completed、多超商、物流代收。
 
 ---
 
@@ -210,7 +228,8 @@
 - [x] I-8 商城 Checkout 前端整合驗收與文件（2026-07-25 Firebase 登入：商城 ECPay stub→`paid`、COD `confirm-cod`→`completed`+`unpaid`、預約 ECPay→`paid`+`pending`；成功頁以 `GET` session／booking 確認）
 
 > **2026-07-25 I-7 驗收**：`EcpayLaunchReturnPostgreSqlIntegrationTest`（launch／stub aio-checkout→paid／Return 不標 paid／COD confirm）、`PaymentNotifyPostgreSqlIntegrationTest`（Notify 冪等／商城 fulfilled／預約 paid+pending）、`CheckoutPostgreSqlIntegrationTest`、`BookingCheckoutIntegrationTest`；live 後端 `POST /api/payments/ecpay/stub/simulate-paid` 通過。  
-> **2026-07-25 I-8 驗收**：瀏覽器手動（Firebase Google 登入）— 商城 ECPay、商城 COD、預約 ECPay 三條路徑通過；下一步見 [`post-firebase-roadmap-checklist.md`](./post-firebase-roadmap-checklist.md) §5 真實綠界沙箱。
+> **2026-07-25 I-8 驗收**：瀏覽器手動（Firebase Google 登入）— 商城 ECPay、商城 COD、預約 ECPay 三條路徑通過；下一步見 [`post-firebase-roadmap-checklist.md`](./post-firebase-roadmap-checklist.md) §5。  
+> **2026-07-30：** 商城金流＋物流真沙箱（ngrok）已手動過關；見 payment／logistics 驗收文件。
 
 > **責任邊界**：I-1 是全域模式基線；I-2a～I-2b 是全前端共用 API 基礎；I-3a～I-8 只負責商城 Checkout。E-7 負責 Booking 前端接線，必須重用 I-2a／I-2b，不可另建 Token、REST、Envelope 或錯誤處理流程。
 

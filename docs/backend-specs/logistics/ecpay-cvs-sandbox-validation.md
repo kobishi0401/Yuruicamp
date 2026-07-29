@@ -2,8 +2,8 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | 第一版：全家 FAMI B2C + Admin 出貨建單 |
-| **契約** | `shipping.method=cvs` + `POST .../ecpay/cvs-map` |
+| **狀態** | **已完成**（Phase 1 stub：全家 FAMI B2C + Admin 出貨建單） |
+| **契約** | `shipping.method=cvs` + `POST .../ecpay/cvs-map`（見 [`checkout-api-contract.md`](../../api/checkout-api-contract.md) v0.15） |
 | **知識庫** | [`.ecpay-skill/guides/06-logistics-domestic.md`](../../../.ecpay-skill/guides/06-logistics-domestic.md) |
 
 ---
@@ -22,7 +22,16 @@
 
 ---
 
-## 第 1 步：套用 SQL patch（Windows）
+## 第 1 步：資料庫 Schema（CVS 欄位）
+
+### 1.0 先判斷你需不需要跑 patch
+
+| 情況 | 怎麼做 |
+|------|--------|
+| **全新** `docker compose up`（volume 空，跑 `latest_schema.sql`） | **不必**跑 093；主 schema 已含 `cvs`、`cvs_store_*`、`ecpay_logistics_*` |
+| **舊庫**（schema 建立於物流前） | 必須跑下方 **1.2** 的 `093-ecpay-cvs-logistics.sql` |
+
+後端 `ddl-auto=validate`：若缺欄位會在啟動時報 `Schema-validation: missing column …`。
 
 ### 1.1 確認 Docker 有在跑
 
@@ -40,7 +49,7 @@ docker compose up -d
 
 等 10 秒再查一次。
 
-### 1.2 執行 patch（複製貼上整行）
+### 1.2 僅舊庫：執行 patch（複製貼上整行）
 
 **PowerShell：**
 
@@ -173,9 +182,9 @@ npm run dev
 
 ### 4.6 驗收點（買家端）
 
-- [ ] checkout 有第三個選項「超商取貨（全家）」
-- [ ] 選店後門市名稱有顯示
-- [ ] 付款後訂單成功（success 頁或會員訂單列表為 paid）
+- [x] checkout 有第三個選項「超商取貨（全家）」
+- [x] 選店後門市名稱有顯示
+- [x] 付款後訂單成功（success 頁或會員訂單列表為 paid）
 
 ---
 
@@ -198,9 +207,9 @@ npm run dev
 
 ### 5.4 驗收點（Admin + 後端 log）
 
-- [ ] 出貨按鈕成功，無 CONFLICT 錯誤
-- [ ] 後端 log 無 `ECPay logistics create failed`
-- [ ] （可選）查 DB：
+- [x] 出貨按鈕成功，無 CONFLICT 錯誤
+- [x] 後端 log 無 `ECPay logistics create failed`
+- [x] （可選）查 DB：
 
 ```powershell
 docker compose exec yuruicamp-db psql -U postgres -d yuruicamp -c "SELECT id, shipping_method, cvs_store_id, ecpay_logistics_id, status, payment_status FROM orders ORDER BY created_at DESC LIMIT 3;"
@@ -210,7 +219,9 @@ docker compose exec yuruicamp-db psql -U postgres -d yuruicamp -c "SELECT id, sh
 
 ---
 
-## 第 6 步：進階 — 接真實綠界沙箱（可之後再做）
+## 第 6 步：進階 — 接真實綠界沙箱
+
+> **2026-07-30：** Phase 2 真沙箱（ngrok + 雙 stub false）已手動過關。下面步驟保留供回歸；細節見 [`ecpay-real-sandbox-validation.md`](./ecpay-real-sandbox-validation.md)。
 
 需要 **ngrok** 讓綠界能 POST 到你的本機：
 

@@ -1,10 +1,10 @@
-# Admin API Contract（v0.24）
+# Admin API Contract（v0.27）
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Locked（G-1～G-6 已實作；W1～W3；W4-01～03；W4-06 Analytics） |
-| **日期** | 2026-07-26 |
-| **版本** | 0.24 |
+| **狀態** | Locked（G-1～G-6 已實作；W1～W3；W4-01～03；W4-06 Analytics；ECPay 物流出貨） |
+| **日期** | 2026-07-30 |
+| **版本** | 0.27 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **Base** | `/api/admin` |
 | **認證** | Bearer Firebase ID Token + `admin_users` 白名單 + `active=true` |
@@ -306,7 +306,7 @@ Request：
 |------|------|------|------|
 | `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
 | `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、中文狀態歷程、`internalNote` |
-| `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped` |
+| `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped`；**同交易**對 `cvs`／`delivery` 呼叫綠界建物流單 |
 | `POST` | `/api/admin/orders/{id}/complete` | `orders.edit` | `shipped` → `completed`；COD 同交易標記 paid |
 | `POST` | `/api/admin/orders/{id}/cancel` | `orders.edit` | 未出貨取消 O1（W3-01）；已付款線上單同交易退款 O3 |
 | `PATCH` | `/api/admin/orders/{id}/internal-note` | `orders.edit` | 覆寫主檔內部備註；不改履約／付款狀態 |
@@ -314,6 +314,28 @@ Request：
 列表支援 `q`、可重複的 `status`／`paymentStatus`／`paymentMethod`、`placedFrom`／`placedTo` 與 `sort`。排序白名單為 `placedAt`、`total`、`updatedAt`。
 
 線上付款只有 `paid` 且 `refundStatus=none` 才可出貨；COD 可在 unpaid 時出貨，完成時才同步收款。Admin 不得直接改寫 ECPay 付款、退款、訂單內容或任意狀態。
+
+### 出貨與綠界物流（Orders）
+
+`POST /api/admin/orders/{id}/ship` 在狀態改為 `shipped` **之前**委派 `EcpayLogisticsCreateService.createShipment`：
+
+| `shipping_method` | 行為 |
+|-------------------|------|
+| `cvs` | 呼叫綠界 `/Express/Create`（CVS／FAMI）；寫入 `ecpay_logistics_id`（與可選 `ecpay_cvs_payment_no`） |
+| `delivery` | 呼叫綠界 HOME／TCAT；寫入 `ecpay_logistics_id`；地址經 `EcpayTcatAddressFormatter` 出站正規化（[ADR 0004](../adr/0004-ecpay-tcat-receiver-address-normalization.md)） |
+| `pickup` | **不**呼叫綠界；只改履約狀態 |
+
+規則：
+
+| 規則 | 說明 |
+|------|------|
+| 已有 `ecpay_logistics_id` | 建單冪等：不再打綠界，仍可完成 `shipped` |
+| CVS 缺門市 | `409 CONFLICT`（例：CVS store is not selected） |
+| 收件人姓名不符綠界格式 | `409 CONFLICT`（ReceiverName；[ADR 0003](../adr/0003-checkout-recipient-sync-member-address.md)） |
+| 宅配地址／寄件人設定不足 | `409 CONFLICT`（含綠界 `RtnCode`／`RtnMsg`） |
+| 物流 notify | `POST /api/logistics/ecpay/notify` 本階段只驗簽＋log，**不**自動改 `completed` |
+
+驗收：[`ecpay-cvs-sandbox-validation.md`](../backend-specs/logistics/ecpay-cvs-sandbox-validation.md)、[`ecpay-real-sandbox-validation.md`](../backend-specs/logistics/ecpay-real-sandbox-validation.md)。
 
 訂單本體欄位對齊 [`order-api-contract.md`](./order-api-contract.md) 的 `Order`。  
 狀態轉換必須走狀態機；禁止任意字串 PATCH。
@@ -1048,3 +1070,4 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | 0.24 | 2026-07-26 | Analytics summary 擴充 `categoryBreakdown[]`（商城營收／租借件數；DB 分類 FK） |
 | 0.25 | 2026-07-27 | Admin UX 03：`GET /api/admin/campgrounds/{id}/availability`；月曆 Backend 可用性；RBAC `booking-calendar.view` |
 | 0.26 | 2026-07-27 | Admin UX follow-up 02：`GET /api/admin/campgrounds/{id}/bookings-for-night`；點日占用明細 lazy load |
+| 0.27 | 2026-07-30 | Orders `ship`：文件化 CVS／HOME-TCAT 建物流單副作用、冪等與 CONFLICT；對齊真沙箱驗收 |

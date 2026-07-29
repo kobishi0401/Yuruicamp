@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Accepted |
+| **狀態** | Accepted（Implemented；真沙箱驗證通過 2026-07-30） |
 | **日期** | 2026-07-29 |
 | **決策者** | Product / Grilling（ecpay-tcat-address） |
 

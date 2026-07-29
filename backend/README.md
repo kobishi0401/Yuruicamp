@@ -109,7 +109,8 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 | **C-1 訂單／明細／庫存保留 Entity** | ✅ Hibernate `ddl-auto=validate` 已通過；見 [`C-1 驗收文件`](../docs/backend-specs/order/c1-entity-schema-validation.md)                                                                                                                                 |
 | **Order 會員唯讀 API**              | ✅ 本人列表、詳情、訂單與商品快照、他人／不存在統一 404；見 [`會員訂單文件`](../docs/backend-specs/order/member-order-read.md) 與 [`Swagger 驗證`](../docs/backend-specs/test/member-order-api-validation.md)                                                                  |
 | **C-2～C-8 Checkout**               | ✅ 建立、本人讀取、配送／取貨門市、冪等、防超賣、更新、COD 確認、取消、後端計價與 15 分鐘逾時均完成；F-2 已補齊優惠券套用；見 [`Checkout 整合文件`](../docs/backend-specs/checkout/README.md)                                                                |
-| **D Payment（ECPay + COD）**        | ✅ stub 全流程（I-7／I-8／CK-5）；真實沙箱待驗收 → [`ECPay 沙箱驗收`](../docs/backend-specs/payment/ecpay-sandbox-validation.md) |
+| **D Payment（ECPay + COD）**        | ✅ stub 全流程（I-7／I-8／CK-5）；**商城真沙箱** ngrok ✅（2026-07-30）→ [`ECPay 沙箱驗收`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)；預約 Notify 可選補驗；真實退款 HTTP 待部署前 |
+| **Logistics（ECPay CVS + TCAT）**   | ✅ Phase 1 stub + Phase 2 真沙箱（CVS 地圖／HOME-TCAT 出貨）✅（2026-07-30）→ [`物流 stub`](../docs/backend-specs/logistics/ecpay-cvs-sandbox-validation.md)、[`物流真沙箱`](../docs/backend-specs/logistics/ecpay-real-sandbox-validation.md) |
 | **F Coupon**                        | 🔄 F-1、F-3、F-4 與商城 F-2 完成；COD／ECPay Notify 已接線；Booking Coupon 尚待 F-2 Schema；見 [`Coupon 流程`](../docs/backend-specs/coupon/README.md)                                              |
 | **E-0 Booking 冪等 Schema**         | ✅ `bookings` 已具備 Checkout key、request hash 與會員範圍唯一約束；見 [`E-0 文件`](../docs/backend-specs/booking/e0-booking-idempotency-schema.md)                                                                                                      |
 | **E-1 Booking 公開讀**              | ✅ 營區（含環境／設施標籤）、有效營位、租借裝備、policy、closures；見 [`E-1 文件`](../docs/backend-specs/booking/e1-booking-public-read.md) 與 [`標籤篩選驗證`](../docs/backend-specs/test/booking-campground-tag-filter-validation.md)                   |
@@ -129,7 +130,7 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 | **G-3 Admin Inventory**             | ✅ 異動 draft／明細／過帳／作廢等當日完成；**v0.17 通用 post 改稽核＋列級 `lineNature`（ADM-W2-08 已驗收）**；conversion store→rental 仍改庫存；見 [`G-3 文件`](../docs/backend-specs/inventory/g3-admin-inventory-movements.md) |
 | **G-4 Admin Coupons／Closures**     | ✅ 優惠券與營區公休 CRUD、安全刪除、建立者紀錄、RBAC、前端 backend-first 與 PostgreSQL 整合驗收完成；見 [`Coupon`](../docs/backend-specs/coupon/g4-admin-coupons.md)／[`Closures`](../docs/backend-specs/booking/g4-admin-campground-closures.md) |
 | **G-6 Admin Runtime**               | ✅ Firebase Google／dev Session、有效權限初始化、401 Token 刷新、readiness gate 與全站 Backend 切換完成；見 [`G-6 文件`](../docs/backend-specs/admin/g6-admin-runtime.md)                                                                                |
-| 結帳／ECPay／Admin CRUD             | ✅ 線 C／D stub／G post-G6／Commerce UX polish；下一步：真實綠界沙箱、Booking Coupon Schema |
+| 結帳／ECPay／Admin CRUD             | ✅ 線 C／D／D-L／G post-G6／Commerce UX；商城金流＋物流真沙箱已過；下一步：ENG-1、真實退款 HTTP、Booking Coupon Schema |
 
 ### Schema 整合驗證
 

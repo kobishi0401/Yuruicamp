@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | Phase 2 驗收指南 |
+| **狀態** | **已完成**（Round 1 CVS + Round 2 HOME/TCAT 真沙箱，2026-07-29／30） |
 | **前提** | Phase 1 stub 已過（見 [`ecpay-cvs-sandbox-validation.md`](./ecpay-cvs-sandbox-validation.md)） |
 | **規格** | [`.scratch/ecpay-logistics-phase2/spec.md`](../../../.scratch/ecpay-logistics-phase2/spec.md) |
 | **金流文件** | [`../payment/ecpay-sandbox-validation.md`](../payment/ecpay-sandbox-validation.md) |
@@ -22,8 +22,10 @@ Phase 2 分 **兩輪**，都要在 **真綠界 stage** 跑（不是 stub）：
 兩輪都需要 **ngrok**，讓綠界伺服器能 POST callback 到你的本機。
 
 ```text
-Round 1 先跑完 → 再跑 Round 2（HOME 需後端實作 TCAT 建單）
+Round 1 先跑完 → 再跑 Round 2（HOME/TCAT 建單已實作；本文件為驗收步驟）
 ```
+
+> **2026-07-30：** 雙 stub `false` + ngrok 手動 E2E 已過（真地圖／真刷卡／Admin 出貨寫入真實 `ecpay_logistics_id`）。下方 checklist 保留供回歸重跑。
 
 ---
 
@@ -144,11 +146,11 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"
 
 ### 5.3 Network 檢查點
 
-- [ ] `POST .../auth/firebase/session` → 200
-- [ ] `PATCH .../checkout/sessions/...` → 200（選店前更新收件人）
-- [ ] `POST .../checkout/sessions/.../ecpay/cvs-map` → 200（含 map form）
-- [ ] 綠界 **server** → `POST .../logistics/ecpay/map-result`（可在 ngrok inspect 或 backend log 看到）
-- [ ] 綠界 **server** → `POST .../payments/ecpay/notify` → 訂單變 paid
+- [x] `POST .../auth/firebase/session` → 200
+- [x] `PATCH .../checkout/sessions/...` → 200（選店前更新收件人）
+- [x] `POST .../checkout/sessions/.../ecpay/cvs-map` → 200（含 map form）
+- [x] 綠界 **server** → `POST .../logistics/ecpay/map-result`（可在 ngrok inspect 或 backend log 看到）
+- [x] 綠界 **server** → `POST .../payments/ecpay/notify` → 訂單變 paid
 
 > 付款真相是 **notify**，不是瀏覽器 Return 回前端那一跳。
 
@@ -159,9 +161,9 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"
 
 **預期：**
 
-- [ ] 成功，無 CONFLICT
-- [ ] 後端 log 無 `ECPay logistics create failed`
-- [ ] DB `ecpay_logistics_id` **不是** `STUB` 開頭
+- [x] 成功，無 CONFLICT
+- [x] 後端 log 無 `ECPay logistics create failed`
+- [x] DB `ecpay_logistics_id` **不是** `STUB` 開頭
 
 ```powershell
 docker compose exec yuruicamp-db psql -U postgres -d yuruicamp -c "
@@ -171,10 +173,10 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 
 ### 5.5 Round 1 過關 Checklist
 
-- [ ] 真綠界地圖選店 + 回 checkout
-- [ ] 真刷卡 + payment notify → paid
-- [ ] Admin 出貨 + 真 logistics id
-- [ ] 後端 log 出現 `ECPay logistics notify`（見 §5.6；本階段只 log，不改狀態）
+- [x] 真綠界地圖選店 + 回 checkout
+- [x] 真刷卡 + payment notify → paid
+- [x] Admin 出貨 + 真 logistics id
+- [x] 後端 log 出現 `ECPay logistics notify`（見 §5.6；本階段只 log，不改狀態）
 
 ### 5.6 物流 notify 確認步驟（Round 1 / Round 2 共用）
 
@@ -209,9 +211,9 @@ Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api
 
 #### 快速 checklist
 
-- [ ] ngrok inspect 有 `POST .../logistics/ecpay/notify` → 200 + `1|OK`
-- [ ] backend log 含 `ECPay logistics notify` 與 `AllPayLogisticsID=...`
-- [ ] 訂單 `status` **仍維持** `shipped`（本階段刻意不 auto complete）
+- [x] ngrok inspect 有 `POST .../logistics/ecpay/notify` → 200 + `1|OK`
+- [x] backend log 含 `ECPay logistics notify` 與 `AllPayLogisticsID=...`
+- [x] 訂單 `status` **仍維持** `shipped`（本階段刻意不 auto complete）
 
 ---
 
@@ -236,9 +238,9 @@ Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api
 
 **預期：**
 
-- [ ] 成功
-- [ ] DB `shipping_method = delivery`，`ecpay_logistics_id` 有值（非 STUB）
-- [ ] `cvs_store_id` 為 null
+- [x] 成功
+- [x] DB `shipping_method = delivery`，`ecpay_logistics_id` 有值（非 STUB）
+- [x] `cvs_store_id` 為 null
 
 ```powershell
 docker compose exec yuruicamp-db psql -U postgres -d yuruicamp -c "
@@ -248,10 +250,10 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 
 ### 6.3 Round 2 過關 Checklist
 
-- [ ] delivery 訂單真刷卡 paid
-- [ ] Admin 出貨建立 HOME/TCAT 物流單
-- [ ] `ecpay_logistics_id` 為綠界真實編號
-- [ ] §5.6 物流 notify log 可追蹤（`AllPayLogisticsID` 與 DB 一致）
+- [x] delivery 訂單真刷卡 paid
+- [x] Admin 出貨建立 HOME/TCAT 物流單
+- [x] `ecpay_logistics_id` 為綠界真實編號
+- [x] §5.6 物流 notify log 可追蹤（`AllPayLogisticsID` 與 DB 一致）
 
 ---
 
