@@ -256,5 +256,6 @@ $env:YURUICAMP_ECPAY_PUBLIC_API_BASE_URL = "https://你的子網域.ngrok-free.a
 
 Stub 驗收完成後，接 **ngrok + 真綠界 stage + HOME/TCAT** 請見：
 
-- [`ecpay-real-sandbox-validation.md`](./ecpay-real-sandbox-validation.md)
-- 規格：[`.scratch/ecpay-logistics-phase2/spec.md`](../../../.scratch/ecpay-logistics-phase2/spec.md)
+- [`ecpay-real-sandbox-validation.md`](./ecpay-real-sandbox-validation.md)（Round 1 CVS + Round 2 宅配）
+- 宅配地址 zip／出站 compact： [`.scratch/ecpay-tcat-address/spec.md`](../../../.scratch/ecpay-tcat-address/spec.md)
+- Phase 2 總規格：[`.scratch/ecpay-logistics-phase2/spec.md`](../../../.scratch/ecpay-logistics-phase2/spec.md)

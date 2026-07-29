@@ -98,6 +98,11 @@ $env:DB_PASSWORD = "你的 POSTGRES_PASSWORD"
 $env:YURUICAMP_ECPAY_STUB = "false"
 $env:YURUICAMP_ECPAY_LOGISTICS_STUB = "false"
 
+$env:YURUICAMP_ECPAY_LOGISTICS_HOME_SUB_TYPE = "TCAT"
+# 宅配 TCAT 建單必填（寄件倉；官方 7414.md）
+$env:YURUICAMP_ECPAY_LOGISTICS_SENDER_ZIP = "100"
+$env:YURUICAMP_ECPAY_LOGISTICS_SENDER_ADDRESS = "台北市中正區忠孝西路一段50號"
+
 # ngrok HTTPS + /api 前綴
 $env:YURUICAMP_ECPAY_PUBLIC_API_BASE_URL = "https://abc123.ngrok-free.app/api"
 $env:YURUICAMP_FRONTEND_BASE_URL = "http://127.0.0.1:5173"
@@ -219,9 +224,10 @@ Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api
 1. Firebase 登入 → **配送地址收件人改中文** → 加購物車 → checkout
 2. 選 **宅配到府**（不是超商、不是門市自取）
 3. 在 **收件人摘要** 與 **送達地址** 完成 Modal（縣市區路號、電話 `09xxxxxxxx`）
-4. 真刷卡 → 訂單 `paid`
+4. **郵遞區號須與所選行政區一致**（UI 選區後應自動帶入 **3 碼**，例：南屯區 → `408`；勿手 key 403）
+5. 真刷卡 → 訂單 `paid`
 
-**注意：** 宅配 **不需要** 電子地圖；比 CVS 少一個 callback。
+**注意：** 宅配 **不需要** 電子地圖；比 CVS 少一個 callback。地址錯誤的已下單訂單須 **取消重下**（見 ADR 0004）。
 
 ### 6.2 Admin 出貨
 
@@ -258,6 +264,9 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | 付款完成但訂單仍 unpaid | payment notify 沒進來 | 查 ngrok inspect、`/payments/ecpay/notify` |
 | 出貨 CONFLICT 建單失敗 | MD5/欄位/地址錯 | 看 backend log 的 `RtnCode`/`RtnMsg` |
 | 出貨 `10500070` 或 CONFLICT「綠界物流格式」 | 收件人含 `-`、空格或 Firebase 英文名 | 會員中心改 **中文收件人**（如陳柏榮）後重下單 |
+| 出貨 `10500006 SenderZipCode Is Null` | 未設定寄件人郵遞區號 | 設定 `YURUICAMP_ECPAY_LOGISTICS_SENDER_ZIP` + `SENDER_ADDRESS` 並重啟 backend |
+| 出貨 `10500008 ReceiverZipCode` | 訂單地址 snapshot 缺郵遞區號 | checkout 宅配地址須含 3/5 碼郵遞區號（例：`408 臺中市 南屯區...`） |
+| 出貨 `10500057` 黑貓無法判斷地址 | zip 與行政區不符（例 403+南屯區）、或出站地址含空格／臺字 | 選區用 **3 碼 auto-fill**（南屯=408）；已下單 **取消重下**；後端 compact 見 ADR 0004 |
 | PATCH 500 `ck_orders_shipping_target` | 未選店就寫 `cvs` | 先選店；或更新至含 defer 修正的 backend |
 | `pickup` 訂單不該建綠界單 | 自家門市取貨 | 正常；只有 `cvs` 與 `delivery` 走綠界 |
 
@@ -282,4 +291,6 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | [`.scratch/ecpay-logistics-phase2/spec.md`](../../../.scratch/ecpay-logistics-phase2/spec.md) | Phase 2 完整 PRD |
 | [`.scratch/checkout-recipient-ecpay/CONTEXT.md`](../../../.scratch/checkout-recipient-ecpay/CONTEXT.md) | Buyer／Recipient／ReceiverName 詞彙 |
 | [`../../adr/0003-checkout-recipient-sync-member-address.md`](../../adr/0003-checkout-recipient-sync-member-address.md) | Checkout 收件人決策 ADR |
+| [`../../adr/0004-ecpay-tcat-receiver-address-normalization.md`](../../adr/0004-ecpay-tcat-receiver-address-normalization.md) | TCAT 收件地址出站正規化 ADR |
+| [`.scratch/ecpay-tcat-address/spec.md`](../../../.scratch/ecpay-tcat-address/spec.md) | 宅配地址 zip／compact PRD |
 | [`firebase-merge-into-main-notes.md`](../../frontend-specs/firebase-merge-into-main-notes.md) | Firebase 登入驗收 |

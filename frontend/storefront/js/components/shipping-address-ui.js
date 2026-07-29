@@ -117,6 +117,15 @@
         .join('');
   }
 
+  function applyDistrictPostalCode(city, district) {
+    var postalInput = $(FIELD_IDS.postalCode);
+    if (!postalInput || !sa()) return;
+    var zip = sa().lookupDistrictZip(city, district);
+    if (zip) {
+      postalInput.value = zip;
+    }
+  }
+
   function fillDistrictSelect(city, selectedDistrict) {
     var select = $(FIELD_IDS.district);
     if (!select || !sa()) return;
@@ -146,6 +155,9 @@
       opt.textContent = selectedDistrict + '（舊資料）';
       opt.selected = true;
       select.appendChild(opt);
+    }
+    if (selectedDistrict) {
+      applyDistrictPostalCode(city, selectedDistrict);
     }
   }
 
@@ -307,6 +319,15 @@
     if (citySelect) {
       citySelect.addEventListener('change', function () {
         fillDistrictSelect(citySelect.value, '');
+        var postalInput = $(FIELD_IDS.postalCode);
+        if (postalInput) postalInput.value = '';
+      });
+    }
+
+    var districtSelect = $(FIELD_IDS.district);
+    if (districtSelect) {
+      districtSelect.addEventListener('change', function () {
+        applyDistrictPostalCode(citySelect && citySelect.value, districtSelect.value);
       });
     }
 

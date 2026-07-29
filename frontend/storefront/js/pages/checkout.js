@@ -1194,7 +1194,9 @@ function _validateCheckoutForm(data) {
   const sa = window.YuruiShippingAddress;
   let addrResult;
   if (selectedShippingMethod === 'delivery') {
-    addrResult = sa?.validate(data.shippingAddress);
+    addrResult = sa?.validateEcpayHomeAddress
+      ? sa.validateEcpayHomeAddress(data.shippingAddress)
+      : sa?.validate(data.shippingAddress);
   } else {
     addrResult = sa?.validateRecipientContact(data.shippingAddress);
   }

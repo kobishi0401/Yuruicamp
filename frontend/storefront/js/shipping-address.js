@@ -35,6 +35,26 @@
     return String(city || '').trim().replace(/^台/, '臺');
   }
 
+  /** 3 碼郵遞區號 lookup（縣市 + 行政區）/ 3-digit zip by city + district */
+  function lookupDistrictZip(city, district) {
+    var table = window.TW_DISTRICT_ZIP || {};
+    var cityKey = normalizeTwCityName(city);
+    var districtKey = String(district || '').trim();
+    if (!cityKey || !districtKey || !table[cityKey]) {
+      return '';
+    }
+    return table[cityKey][districtKey] || '';
+  }
+
+  /** 5 碼郵遞區號比對時取前 3 碼 / Compare first 3 digits when postal is 5-digit */
+  function normalizePostalCodeForDistrictMatch(postalCode) {
+    var value = String(postalCode || '').trim();
+    if (/^\d{5}$/.test(value)) {
+      return value.substring(0, 3);
+    }
+    return value;
+  }
+
   function normalizePhoneValue(phone) {
     return String(phone || '').replace(/[\s\-()]/g, '').trim();
   }
@@ -262,6 +282,33 @@
     return { ok: errorList.length === 0, fieldErrors: fieldErrors, errors: errorList };
   }
 
+  /**
+   * 宅配專用：完整地址 + 郵遞區號須與所選行政區一致（綠界 TCAT）。
+   * Home delivery: full address + postal code must match selected district.
+   */
+  function validateEcpayHomeAddress(addr) {
+    var result = validateShippingAddress(addr);
+    if (!result.ok) {
+      return result;
+    }
+    var a = cloneShippingAddress(addr);
+    var expectedZip = lookupDistrictZip(a.city, a.district);
+    if (expectedZip) {
+      var actualZip = normalizePostalCodeForDistrictMatch(a.postalCode);
+      if (actualZip !== expectedZip) {
+        var fieldErrors = Object.assign({}, result.fieldErrors, {
+          shipPostalCode: '郵遞區號與所選區域不符（' + a.district + ' 應為 ' + expectedZip + '）',
+        });
+        return {
+          ok: false,
+          fieldErrors: fieldErrors,
+          errors: Object.keys(fieldErrors).map(function (key) { return fieldErrors[key]; }),
+        };
+      }
+    }
+    return result;
+  }
+
   /** 從舊版單行 address 字串遷移（相容 yurui_profile.address） */
   function migrateLegacyAddressString(text) {
     var value = String(text || '').trim();
@@ -285,11 +332,14 @@
 
   window.YuruiShippingAddress = {
     TW_CITY_DISTRICTS: TW_CITY_DISTRICTS,
+    TW_DISTRICT_ZIP: window.TW_DISTRICT_ZIP || {},
     clone: cloneShippingAddress,
     empty: emptyShippingAddress,
     isEmpty: isShippingAddressEmpty,
     equal: shippingAddressEqual,
     validate: validateShippingAddress,
+    validateEcpayHomeAddress: validateEcpayHomeAddress,
+    lookupDistrictZip: lookupDistrictZip,
     formatDisplay: formatShippingAddressDisplay,
     formatRecipientName: formatRecipientName,
     formatRecipientSummary: formatRecipientSummaryDisplay,

@@ -26,12 +26,13 @@ import com.yuruicamp.backend.order.infrastructure.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class EcpayLogisticsCreateServiceTest {
+
+	private static final String DELIVERY_ADDRESS = "408 臺中市 南屯區 公益路190號";
 
 	@Mock
 	private OrderRepository orders;
@@ -53,11 +54,11 @@ class EcpayLogisticsCreateServiceTest {
 
 	@Test
 	void deliveryOrderCreatesHomeShipmentWithAddressSnapshot() {
-		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
+		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
 		when(logisticsGateway.buildCreateHomeFields(
 				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-				anyString(), anyString(), anyString(), eq("TCAT")))
+				anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), eq("TCAT")))
 				.thenReturn(Map.of("LogisticsType", "HOME"));
 		when(logisticsGateway.createHomeOrder(any()))
 				.thenReturn(new EcpayLogisticsCreateResult(true, "1", "OK", "LG123", null, "ORD0001123456"));
@@ -79,6 +80,16 @@ class EcpayLogisticsCreateServiceTest {
 		assertThatThrownBy(() -> service.createShipment("O1"))
 				.isInstanceOf(BusinessException.class)
 				.hasMessageContaining("Shipping address is incomplete");
+	}
+
+	@Test
+	void deliveryOrderWithoutPostalCodeCannotShip() {
+		Order order = deliveryOrder("O1", "王小明", "0912345678", "臺中市 南屯區 公益路190號");
+		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.createShipment("O1"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessageContaining("postal code");
 	}
 
 	@Test
@@ -113,7 +124,7 @@ class EcpayLogisticsCreateServiceTest {
 
 	@Test
 	void alreadyCreatedLogisticsIsIdempotent() {
-		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
+		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
 		order.assignEcpayLogistics("EXISTING123", null);
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
 
@@ -127,11 +138,11 @@ class EcpayLogisticsCreateServiceTest {
 
 	@Test
 	void homeCreateFailureThrowsConflict() {
-		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
+		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
 		when(logisticsGateway.buildCreateHomeFields(
 				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-				anyString(), anyString(), anyString(), anyString()))
+				anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
 				.thenReturn(Map.of("LogisticsType", "HOME"));
 		when(logisticsGateway.createHomeOrder(any()))
 				.thenReturn(EcpayLogisticsCreateResult.failed("10500040", "ReceiverAddress invalid"));
@@ -142,23 +153,22 @@ class EcpayLogisticsCreateServiceTest {
 	}
 
 	@Test
-	void homeFieldsUseConfiguredTcatSubType() {
-		Order order = deliveryOrder("O1", "王小明", "0912345678", "台北市信義區信義路五段7號");
+	void homeFieldsParseReceiverZipAndUseConfiguredSender() {
+		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
 		when(logisticsGateway.buildCreateHomeFields(
 				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-				anyString(), anyString(), anyString(), eq("TCAT")))
+				anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), eq("TCAT")))
 				.thenReturn(Map.of("LogisticsType", "HOME"));
 		when(logisticsGateway.createHomeOrder(any()))
 				.thenReturn(new EcpayLogisticsCreateResult(true, "1", "OK", "LG123", null, "ORD0001123456"));
 
 		service.createShipment("O1");
 
-		ArgumentCaptor<String> subTypeCaptor = ArgumentCaptor.forClass(String.class);
 		verify(logisticsGateway).buildCreateHomeFields(
 				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-				eq("王小明"), eq("0912345678"), eq("台北市信義區信義路五段7號"), subTypeCaptor.capture());
-		assertThat(subTypeCaptor.getValue()).isEqualTo("TCAT");
+				eq("100"), eq("台北市中正區忠孝西路一段50號"),
+				eq("王小明"), eq("0912345678"), eq("408"), eq("台中市南屯區公益路190號"), eq("TCAT"));
 	}
 
 	@Test

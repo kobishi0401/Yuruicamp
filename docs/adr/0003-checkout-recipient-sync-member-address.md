@@ -34,3 +34,4 @@
 
 - [`.scratch/checkout-recipient-ecpay/CONTEXT.md`](../../.scratch/checkout-recipient-ecpay/CONTEXT.md)
 - [`ecpay-real-sandbox-validation.md`](../backend-specs/logistics/ecpay-real-sandbox-validation.md)
+- [ADR 0004：ECPay TCAT 收件地址出站正規化](./0004-ecpay-tcat-receiver-address-normalization.md)

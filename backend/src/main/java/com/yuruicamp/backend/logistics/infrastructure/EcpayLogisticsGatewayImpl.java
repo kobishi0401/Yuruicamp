@@ -60,8 +60,11 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 			String goodsName,
 			String senderName,
 			String senderCellPhone,
+			String senderZipCode,
+			String senderAddress,
 			String receiverName,
 			String receiverCellPhone,
+			String receiverZipCode,
 			String receiverAddress,
 			String logisticsSubType) {
 		Map<String, String> params = new LinkedHashMap<>();
@@ -74,9 +77,15 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 		params.put("GoodsName", goodsName);
 		params.put("SenderName", senderName);
 		params.put("SenderCellPhone", senderCellPhone);
+		params.put("SenderZipCode", senderZipCode);
+		params.put("SenderAddress", senderAddress);
 		params.put("ReceiverName", receiverName);
 		params.put("ReceiverCellPhone", receiverCellPhone);
+		params.put("ReceiverZipCode", receiverZipCode);
 		params.put("ReceiverAddress", receiverAddress);
+		// Source: developers.ecpay.com.tw/7414.md — TCAT 固定帶入 4（不限時）
+		params.put("ScheduledPickupTime", "4");
+		params.put("ScheduledDeliveryTime", "4");
 		params.put("ServerReplyURL", publicApiBase() + "/logistics/ecpay/notify");
 		sign(params);
 		return params;

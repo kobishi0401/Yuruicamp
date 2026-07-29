@@ -32,8 +32,11 @@ public interface EcpayLogisticsGateway {
 			String goodsName,
 			String senderName,
 			String senderCellPhone,
+			String senderZipCode,
+			String senderAddress,
 			String receiverName,
 			String receiverCellPhone,
+			String receiverZipCode,
 			String receiverAddress,
 			String logisticsSubType);
 

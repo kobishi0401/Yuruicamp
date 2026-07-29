@@ -210,6 +210,10 @@ public class YuruicampProperties {
 		private String homeLogisticsSubType = "TCAT";
 		private String senderName = "Yuruicamp";
 		private String senderCellPhone = "0912345678";
+		/** 宅配 TCAT 必填：寄件人郵遞區號（3 或 5 碼）。 */
+		private String senderZipCode = "100";
+		/** 宅配 TCAT 必填：寄件人完整地址（>6 字元）。 */
+		private String senderAddress = "台北市中正區忠孝西路一段50號";
 		private String goodsName = "Yuruicamp商品";
 
 		public boolean isStub() {
@@ -282,6 +286,22 @@ public class YuruicampProperties {
 
 		public void setSenderCellPhone(String senderCellPhone) {
 			this.senderCellPhone = senderCellPhone;
+		}
+
+		public String getSenderZipCode() {
+			return senderZipCode;
+		}
+
+		public void setSenderZipCode(String senderZipCode) {
+			this.senderZipCode = senderZipCode;
+		}
+
+		public String getSenderAddress() {
+			return senderAddress;
+		}
+
+		public void setSenderAddress(String senderAddress) {
+			this.senderAddress = senderAddress;
 		}
 
 		public String getGoodsName() {

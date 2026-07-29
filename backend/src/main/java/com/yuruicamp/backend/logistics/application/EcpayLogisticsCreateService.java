@@ -11,6 +11,7 @@ import com.yuruicamp.backend.common.exception.ErrorCode;
 import com.yuruicamp.backend.config.YuruicampProperties;
 import com.yuruicamp.backend.logistics.domain.EcpayLogisticsCreateResult;
 import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
+import com.yuruicamp.backend.logistics.domain.EcpayTcatAddressFormatter;
 import com.yuruicamp.backend.logistics.infrastructure.EcpayLogisticsGateway;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.ShippingMethod;
@@ -100,10 +101,11 @@ public class EcpayLogisticsCreateService {
 		if (existing != null) {
 			return existing;
 		}
-		validateDeliveryAddress(order);
+		EcpayTcatAddressFormatter.TcatReceiverAddress receiverAddress = requireTcatReceiverAddress(order);
 		EcpayReceiverNameRules.validateOrThrow(order.getRecipientName());
 
 		YuruicampProperties.EcpayLogistics cfg = properties.getEcpayLogistics();
+		validateSenderConfig(cfg);
 		CreateContext ctx = buildCreateContext(order, cfg);
 
 		Map<String, String> fields = logisticsGateway.buildCreateHomeFields(
@@ -113,9 +115,12 @@ public class EcpayLogisticsCreateService {
 				cfg.getGoodsName(),
 				cfg.getSenderName(),
 				cfg.getSenderCellPhone(),
+				cfg.getSenderZipCode().trim(),
+				EcpayTcatAddressFormatter.compactAddress(cfg.getSenderAddress().trim()),
 				order.getRecipientName(),
 				order.getShippingPhone(),
-				order.getShippingAddress(),
+				receiverAddress.zipCode(),
+				receiverAddress.receiverAddress(),
 				cfg.getHomeLogisticsSubType());
 
 		return persistCreateResult(order, logisticsGateway.createHomeOrder(fields));
@@ -130,11 +135,20 @@ public class EcpayLogisticsCreateService {
 				order.getEcpayCvsPaymentNo(), order.getDisplayNo());
 	}
 
-	private static void validateDeliveryAddress(Order order) {
+	private static EcpayTcatAddressFormatter.TcatReceiverAddress requireTcatReceiverAddress(Order order) {
 		if (isIncompleteSnapshot(order.getRecipientName())
 				|| isIncompleteSnapshot(order.getShippingPhone())
 				|| isIncompleteSnapshot(order.getShippingAddress())) {
 			throw new BusinessException(ErrorCode.CONFLICT, "Shipping address is incomplete for home delivery");
+		}
+		return EcpayTcatAddressFormatter.format(order.getShippingAddress());
+	}
+
+	private static void validateSenderConfig(YuruicampProperties.EcpayLogistics cfg) {
+		if (cfg.getSenderZipCode() == null || cfg.getSenderZipCode().isBlank()
+				|| cfg.getSenderAddress() == null || cfg.getSenderAddress().isBlank()) {
+			throw new BusinessException(ErrorCode.CONFLICT,
+					"ECPay logistics sender zip/address is not configured (YURUICAMP_ECPAY_LOGISTICS_SENDER_ZIP / _SENDER_ADDRESS)");
 		}
 	}
 
