@@ -309,6 +309,26 @@ class CheckoutServiceTest {
 				org.mockito.ArgumentMatchers.any(Instant.class));
 	}
 
+	// 選「超商取貨」但尚未選店時，不可寫 shipping_method=cvs（DB 約束要求 cvs_store_id NOT NULL）。
+	@Test
+	void updateDefersCvsShippingUntilStoreIsSelected() {
+		Order order = editableOrder(Instant.now().plusSeconds(300));
+		when(orders.findForCustomerForUpdate("O-C4", "C001"))
+				.thenReturn(Optional.of(order));
+		CheckoutUpdateRequest request = new CheckoutUpdateRequest(
+				new CheckoutUpdateRequest.Shipping("cvs", "陳柏榮", "0988777666", null, null, null, null, "FAMI"),
+				"ecpay-credit",
+				null);
+
+		CheckoutSessionResponse response = service.update("C001", "O-C4", request);
+
+		assertThat(order.getShippingMethod()).isEqualTo(com.yuruicamp.backend.order.domain.ShippingMethod.delivery);
+		assertThat(order.getCvsStoreId()).isNull();
+		assertThat(response.shipping().method()).isEqualTo("delivery");
+		assertThat(response.shipping().recipientName()).isEqualTo("陳柏榮");
+		assertThat(response.checkoutStep()).isEqualTo("draft");
+	}
+
 	// 不支援的付款方式應回傳驗證錯誤。
 	@Test
 	void updateRejectsUnsupportedPaymentMethod() {

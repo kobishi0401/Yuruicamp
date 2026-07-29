@@ -1015,6 +1015,19 @@ const _assertMockCheckoutActive = (record) => {
 /**
  * Mock Checkout adapter 回傳與 Spring Boot 完全相同的 CheckoutSession 形狀。
  */
+function _mockCheckoutStepAfterShipping(shipping, session) {
+  const merged = { ...(session?.shipping || {}), ...(shipping || {}) };
+  const pending = MOCK_CHECKOUT_PENDING;
+  if (!merged.recipientName || merged.recipientName === pending
+      || !merged.phone || merged.phone === pending) {
+    return 'draft';
+  }
+  if (merged.method === 'cvs') {
+    return merged.cvsStoreId ? 'ready_to_pay' : 'draft';
+  }
+  return merged.address && merged.address !== pending ? 'ready_to_pay' : 'draft';
+}
+
 const checkoutMockAdapter = {
   createSession: async (request) => {
     const idempotencyKey = String(request?.idempotencyKey || '').trim();
@@ -1116,7 +1129,8 @@ const checkoutMockAdapter = {
     }
 
     const shipping = request?.shipping;
-    const hasShipping = shipping && ['recipientName', 'phone', 'address']
+    const hasShipping = shipping && ['recipientName', 'phone', 'address', 'method', 'pickupBranchId',
+      'cvsStoreId', 'cvsStoreName', 'cvsSubType']
       .some((field) => shipping[field] != null);
     const hasPaymentMethod = request?.paymentMethod != null;
     if (!hasShipping && !hasPaymentMethod) {
@@ -1136,13 +1150,14 @@ const checkoutMockAdapter = {
     }
 
     if (hasShipping) {
-      ['recipientName', 'phone', 'address'].forEach((field) => {
+      ['recipientName', 'phone', 'address', 'method', 'pickupBranchId',
+        'cvsStoreId', 'cvsStoreName', 'cvsSubType'].forEach((field) => {
         if (shipping[field] == null) {
           return;
         }
 
         const value = String(shipping[field]).trim();
-        if (!value) {
+        if (!value && field !== 'pickupBranchId') {
           throw _checkoutMockError('VALIDATION_ERROR', `${field} must not be blank`, 400);
         }
 
@@ -1150,10 +1165,7 @@ const checkoutMockAdapter = {
       });
     }
 
-    next.checkoutStep = ['recipientName', 'phone', 'address'].map(field => next.shipping[field])
-      .every((value) => value && value !== MOCK_CHECKOUT_PENDING)
-      ? 'ready_to_pay'
-      : 'draft';
+    next.checkoutStep = _mockCheckoutStepAfterShipping(next.shipping, result.record.session);
     const nextRecord = { ...result.record, session: next };
     _replaceMockCheckoutRecord(result.records, nextRecord);
 
@@ -1198,6 +1210,27 @@ const checkoutMockAdapter = {
       'ECPay form creation waits for Payment line D',
       501
     );
+  },
+
+  createCvsMapForm: async (orderId) => {
+    const result = _findMockCheckoutRecord(orderId);
+    _assertMockCheckoutActive(result.record);
+    const session = result.record.session;
+    const shipping = {
+      ...(session.shipping || {}),
+      method: 'cvs',
+      cvsStoreId: '006598',
+      cvsStoreName: 'Mock全家測試店',
+      cvsSubType: 'FAMI',
+      address: '全家便利商店 Mock全家測試店',
+    };
+    const next = {
+      ...session,
+      shipping,
+      checkoutStep: _mockCheckoutStepAfterShipping(shipping, session),
+    };
+    _replaceMockCheckoutRecord(result.records, { ...result.record, session: next });
+    return { mockCvsApplied: true, checkoutSession: _copyCheckoutSession(next) };
   },
 };
 
@@ -1443,6 +1476,16 @@ window.API = {
         ? checkoutMockAdapter.createEcpayForm(orderId)
         : _checkoutRestRequest(
           `${_checkoutOrderPath(orderId)}/ecpay`,
+          { method: 'POST' }
+        )
+    )),
+
+    // 綠界 CVS 電子地圖選店（全家 FAMI）。
+    createCvsMapForm: async (orderId) => _runCheckoutAction(() => (
+      _useMockApi()
+        ? checkoutMockAdapter.createCvsMapForm(orderId)
+        : _checkoutRestRequest(
+          `${_checkoutOrderPath(orderId)}/ecpay/cvs-map`,
           { method: 'POST' }
         )
     )),

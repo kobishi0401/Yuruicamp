@@ -77,6 +77,10 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/payments/ecpay/return").permitAll()
 						// 本機 stub 模擬付款（stub=false 時 Controller 會拒絕）。
 						.requestMatchers("/api/payments/ecpay/stub/**").permitAll()
+						// 綠界物流：地圖選店結果 + 物流狀態 notify（CMV-MD5）。
+						.requestMatchers(HttpMethod.POST, "/api/logistics/ecpay/map-result").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/logistics/ecpay/notify").permitAll()
+						.requestMatchers("/api/logistics/ecpay/stub/**").permitAll()
 						// 管理員先通過白名單身分，再由 Controller 的方法權限檢查細項權限。
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						// Other /api/** still require customer auth until more public GETs are added

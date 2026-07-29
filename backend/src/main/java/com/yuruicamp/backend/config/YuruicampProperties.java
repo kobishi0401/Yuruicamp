@@ -15,6 +15,7 @@ public class YuruicampProperties {
 	private final Cors cors = new Cors();
 	private final Firebase firebase = new Firebase();
 	private final Ecpay ecpay = new Ecpay();
+	private final EcpayLogistics ecpayLogistics = new EcpayLogistics();
 
 	public Cors getCors() {
 		return cors;
@@ -26,6 +27,10 @@ public class YuruicampProperties {
 
 	public Ecpay getEcpay() {
 		return ecpay;
+	}
+
+	public EcpayLogistics getEcpayLogistics() {
+		return ecpayLogistics;
 	}
 
 	public static class Cors {
@@ -187,6 +192,104 @@ public class YuruicampProperties {
 
 		public void setBookingFailurePath(String bookingFailurePath) {
 			this.bookingFailurePath = bookingFailurePath;
+		}
+	}
+
+	/**
+	 * ECPay 國內物流（B2C CVS FAMI）。帳號與 AIO 金流不同；CheckMacValue 用 MD5。
+	 */
+	public static class EcpayLogistics {
+		/** true：地圖／建單走本機 stub，不連 logistics-stage。 */
+		private boolean stub = true;
+		private String merchantId = "2000132";
+		private String hashKey = "5294y06JbISpM5x9";
+		private String hashIv = "v77hoKGq4kWxNNIS";
+		private String apiBaseUrl = "https://logistics-stage.ecpay.com.tw";
+		private String logisticsSubType = "FAMI";
+		/** 宅配 HOME 子類型（與 CVS FAMI 分開，避免 TCAT/FAMI 搞混）。 */
+		private String homeLogisticsSubType = "TCAT";
+		private String senderName = "Yuruicamp";
+		private String senderCellPhone = "0912345678";
+		private String goodsName = "Yuruicamp商品";
+
+		public boolean isStub() {
+			return stub;
+		}
+
+		public void setStub(boolean stub) {
+			this.stub = stub;
+		}
+
+		public String getMerchantId() {
+			return merchantId;
+		}
+
+		public void setMerchantId(String merchantId) {
+			this.merchantId = merchantId;
+		}
+
+		public String getHashKey() {
+			return hashKey;
+		}
+
+		public void setHashKey(String hashKey) {
+			this.hashKey = hashKey;
+		}
+
+		public String getHashIv() {
+			return hashIv;
+		}
+
+		public void setHashIv(String hashIv) {
+			this.hashIv = hashIv;
+		}
+
+		public String getApiBaseUrl() {
+			return apiBaseUrl;
+		}
+
+		public void setApiBaseUrl(String apiBaseUrl) {
+			this.apiBaseUrl = apiBaseUrl;
+		}
+
+		public String getLogisticsSubType() {
+			return logisticsSubType;
+		}
+
+		public void setLogisticsSubType(String logisticsSubType) {
+			this.logisticsSubType = logisticsSubType;
+		}
+
+		public String getHomeLogisticsSubType() {
+			return homeLogisticsSubType;
+		}
+
+		public void setHomeLogisticsSubType(String homeLogisticsSubType) {
+			this.homeLogisticsSubType = homeLogisticsSubType;
+		}
+
+		public String getSenderName() {
+			return senderName;
+		}
+
+		public void setSenderName(String senderName) {
+			this.senderName = senderName;
+		}
+
+		public String getSenderCellPhone() {
+			return senderCellPhone;
+		}
+
+		public void setSenderCellPhone(String senderCellPhone) {
+			this.senderCellPhone = senderCellPhone;
+		}
+
+		public String getGoodsName() {
+			return goodsName;
+		}
+
+		public void setGoodsName(String goodsName) {
+			this.goodsName = goodsName;
 		}
 	}
 }

@@ -48,6 +48,16 @@ public record CheckoutCreateRequest(
 			@Size(max = 500)
 			String address,
 			@Size(max = 32)
-			String pickupBranchId) {
+			String pickupBranchId,
+			@Size(max = 10)
+			String cvsStoreId,
+			@Size(max = 100)
+			String cvsStoreName,
+			@Size(max = 20)
+			String cvsSubType) {
+
+		public Shipping(String method, String recipientName, String phone, String address, String pickupBranchId) {
+			this(method, recipientName, phone, address, pickupBranchId, null, null, null);
+		}
 	}
 }

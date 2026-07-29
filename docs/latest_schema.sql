@@ -208,7 +208,8 @@ CREATE TYPE public.refund_status AS ENUM (
 
 CREATE TYPE public.shipping_method AS ENUM (
     'delivery',
-    'pickup'
+    'pickup',
+    'cvs'
 );
 
 
@@ -1448,6 +1449,11 @@ CREATE TABLE public.orders (
     shipping_phone_snapshot character varying(32) NOT NULL,
     shipping_method public.shipping_method DEFAULT 'delivery'::public.shipping_method NOT NULL,
     pickup_branch_id character varying(32),
+    cvs_store_id character varying(10),
+    cvs_store_name character varying(100),
+    cvs_sub_type character varying(20),
+    ecpay_logistics_id character varying(20),
+    ecpay_cvs_payment_no character varying(20),
     subtotal numeric(14,2) NOT NULL,
     shipping_fee numeric(12,2) NOT NULL,
     discount numeric(14,2) NOT NULL,
@@ -1468,7 +1474,23 @@ CREATE TABLE public.orders (
     CONSTRAINT uq_orders_display_no UNIQUE (display_no),
     CONSTRAINT uq_orders_customer_checkout_idempotency UNIQUE (customer_id, checkout_idempotency_key),
 
-    CONSTRAINT ck_orders_shipping_target CHECK ((((shipping_method = 'delivery'::public.shipping_method) AND (pickup_branch_id IS NULL)) OR ((shipping_method = 'pickup'::public.shipping_method) AND (pickup_branch_id IS NOT NULL)))),
+    CONSTRAINT ck_orders_shipping_target CHECK (
+        (
+            (shipping_method = 'delivery'::public.shipping_method)
+            AND (pickup_branch_id IS NULL)
+            AND (cvs_store_id IS NULL)
+        )
+        OR (
+            (shipping_method = 'pickup'::public.shipping_method)
+            AND (pickup_branch_id IS NOT NULL)
+            AND (cvs_store_id IS NULL)
+        )
+        OR (
+            (shipping_method = 'cvs'::public.shipping_method)
+            AND (pickup_branch_id IS NULL)
+            AND (cvs_store_id IS NOT NULL)
+        )
+    ),
 
     CONSTRAINT fk_orders_customer_id FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_orders_pickup_branch_id FOREIGN KEY (pickup_branch_id) REFERENCES public.branches(id) ON UPDATE CASCADE ON DELETE RESTRICT
@@ -1520,6 +1542,19 @@ COMMENT ON COLUMN public.orders.checkout_idempotency_key IS 'Client key for idem
 --
 
 COMMENT ON COLUMN public.orders.checkout_request_hash IS 'SHA-256 fingerprint of normalized checkout creation input; detects key reuse with a different payload.';
+
+
+--
+-- Name: ecpay_logistics_map_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ecpay_logistics_map_sessions (
+    merchant_trade_no character varying(20) NOT NULL,
+    order_id character varying(32) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT pk_ecpay_logistics_map_sessions PRIMARY KEY (merchant_trade_no),
+    CONSTRAINT fk_ecpay_logistics_map_sessions_order FOREIGN KEY (order_id) REFERENCES public.orders(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
 
 
 --

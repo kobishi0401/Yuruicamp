@@ -63,6 +63,22 @@ public class Order {
 	@Column(name = "pickup_branch_id", length = 32)
 	private String pickupBranchId;
 
+	/** 綠界超商門市代碼（ReceiverStoreID）。 */
+	@Column(name = "cvs_store_id", length = 10)
+	private String cvsStoreId;
+
+	@Column(name = "cvs_store_name", length = 100)
+	private String cvsStoreName;
+
+	@Column(name = "cvs_sub_type", length = 20)
+	private String cvsSubType;
+
+	@Column(name = "ecpay_logistics_id", length = 20)
+	private String ecpayLogisticsId;
+
+	@Column(name = "ecpay_cvs_payment_no", length = 20)
+	private String ecpayCvsPaymentNo;
+
 	@Column(nullable = false)
 	private BigDecimal subtotal;
 
@@ -176,6 +192,26 @@ public class Order {
 		return pickupBranchId;
 	}
 
+	public String getCvsStoreId() {
+		return cvsStoreId;
+	}
+
+	public String getCvsStoreName() {
+		return cvsStoreName;
+	}
+
+	public String getCvsSubType() {
+		return cvsSubType;
+	}
+
+	public String getEcpayLogisticsId() {
+		return ecpayLogisticsId;
+	}
+
+	public String getEcpayCvsPaymentNo() {
+		return ecpayCvsPaymentNo;
+	}
+
 	public BigDecimal getSubtotal() {
 		return subtotal;
 	}
@@ -221,6 +257,30 @@ public class Order {
 			PaymentMethod paymentMethod,
 			Instant now,
 			Instant expiresAt) {
+		initialize(id, displayNo, customerId, checkoutIdempotencyKey, checkoutRequestHash,
+				buyerName, buyerEmail, recipientName, shippingAddress, shippingPhone,
+				shippingMethod, pickupBranchId, null, null, null, paymentMethod, now, expiresAt);
+	}
+
+	public void initialize(
+			String id,
+			String displayNo,
+			String customerId,
+			String checkoutIdempotencyKey,
+			String checkoutRequestHash,
+			String buyerName,
+			String buyerEmail,
+			String recipientName,
+			String shippingAddress,
+			String shippingPhone,
+			ShippingMethod shippingMethod,
+			String pickupBranchId,
+			String cvsStoreId,
+			String cvsStoreName,
+			String cvsSubType,
+			PaymentMethod paymentMethod,
+			Instant now,
+			Instant expiresAt) {
 		this.id = id;
 		this.displayNo = displayNo;
 		this.customerId = customerId;
@@ -233,6 +293,9 @@ public class Order {
 		this.shippingPhone = shippingPhone;
 		this.shippingMethod = shippingMethod;
 		this.pickupBranchId = pickupBranchId;
+		this.cvsStoreId = cvsStoreId;
+		this.cvsStoreName = cvsStoreName;
+		this.cvsSubType = cvsSubType;
 		this.paymentMethod = paymentMethod;
 		this.paymentStatus = PaymentStatus.unpaid;
 		this.refundStatus = RefundStatus.none;
@@ -290,12 +353,47 @@ public class Order {
 
 	// 更新 Checkout 的收件快照。
 	public void updateShipping(String recipientName, String phone, String address,
-			ShippingMethod shippingMethod, String pickupBranchId) {
+			ShippingMethod shippingMethod, String pickupBranchId,
+			String cvsStoreId, String cvsStoreName, String cvsSubType) {
 		this.recipientName = recipientName;
 		this.shippingPhone = phone;
 		this.shippingAddress = address;
 		this.shippingMethod = shippingMethod;
 		this.pickupBranchId = pickupBranchId;
+		this.cvsStoreId = cvsStoreId;
+		this.cvsStoreName = cvsStoreName;
+		this.cvsSubType = cvsSubType;
+	}
+
+	/** 電子地圖選店 callback 寫入超商快照並切換為 cvs 配送。 */
+	public void applyCvsStoreSelection(String storeId, String storeName, String storeAddress, String subType) {
+		this.shippingMethod = ShippingMethod.cvs;
+		this.pickupBranchId = null;
+		this.cvsStoreId = storeId;
+		this.cvsStoreName = storeName;
+		this.cvsSubType = subType;
+		this.shippingAddress = formatCvsAddress(storeName, storeAddress);
+	}
+
+	/** Admin 出貨成功後保存綠界物流編號。 */
+	public void assignEcpayLogistics(String logisticsId, String cvsPaymentNo) {
+		this.ecpayLogisticsId = logisticsId;
+		this.ecpayCvsPaymentNo = cvsPaymentNo;
+	}
+
+	private static String formatCvsAddress(String storeName, String storeAddress) {
+		String name = storeName == null ? "" : storeName.trim();
+		String address = storeAddress == null ? "" : storeAddress.trim();
+		if (name.isEmpty() && address.isEmpty()) {
+			return "PENDING_CHECKOUT";
+		}
+		if (name.isEmpty()) {
+			return address;
+		}
+		if (address.isEmpty()) {
+			return "全家便利商店 " + name;
+		}
+		return "全家便利商店 " + name + "｜" + address;
 	}
 
 	// 貨到付款確認後取消 Checkout 倒數，但訂單仍維持未付款。

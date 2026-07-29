@@ -17,6 +17,7 @@ import com.yuruicamp.backend.order.api.AdminOrderListResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,14 +37,17 @@ public class AdminOrderService {
 	private final AdminOrderReadRepository readRepository;
 	private final AdminOrderCommandRepository commandRepository;
 	private final PaymentRefundService paymentRefundService;
+	private final EcpayLogisticsCreateService logisticsCreateService;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
 			AdminOrderCommandRepository commandRepository,
-			PaymentRefundService paymentRefundService) {
+			PaymentRefundService paymentRefundService,
+			EcpayLogisticsCreateService logisticsCreateService) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
 		this.paymentRefundService = paymentRefundService;
+		this.logisticsCreateService = logisticsCreateService;
 	}
 
 	@Transactional(readOnly = true)
@@ -92,6 +96,7 @@ public class AdminOrderService {
 		if (!paidOnline && !unpaidCod) {
 			throw conflict("Order payment state does not allow shipping");
 		}
+		logisticsCreateService.createShipment(id);
 		Instant now = Instant.now();
 		commandRepository.updateStatus(id, "shipped", now);
 		commandRepository.addHistory(id, "shipped", now, actorId, cleanNote(note, "Order shipped by admin"));

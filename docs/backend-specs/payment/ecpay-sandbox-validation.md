@@ -214,3 +214,4 @@ Notify 成功時後端 log 不應出現 `CheckMacValue invalid`；response body 
 | [`backend/src/main/resources/application.properties`](../../../backend/src/main/resources/application.properties) | 預設 stub=true、stage URL |
 | [`.env.example`](../../../.env.example) | 本機 env 範本 |
 | [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) §5 步驟 10 | 路線圖索引 |
+| [`../logistics/ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md) | Phase 2 物流真沙箱（CVS + HOME/TCAT，需 ngrok + 雙 stub false） |

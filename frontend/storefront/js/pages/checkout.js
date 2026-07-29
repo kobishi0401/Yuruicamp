@@ -103,7 +103,9 @@ window.initCheckoutPage = async () => {
   _initFillProfileBtn();
   _initConfirmOrderBtn();
   _initCheckoutSessionActions();
+  _initCheckoutCvsMap();
   _initCheckoutCoupon();
+  await _handleCvsMapReturnFromEcpay();
   _initSharedComponents();
 };
 
@@ -336,6 +338,8 @@ function _syncDeliveryAddressState() {
   if (section) section.hidden = selectedShippingMethod !== 'delivery';
   const pickupSection = document.getElementById('pickupBranchSection');
   if (pickupSection) pickupSection.hidden = selectedShippingMethod !== 'pickup';
+  const cvsSection = document.getElementById('cvsStoreSection');
+  if (cvsSection) cvsSection.hidden = selectedShippingMethod !== 'cvs';
 }
 
 // 從共用 API facade 載入可選門市，不在頁面直接發送後端請求。
@@ -1239,6 +1243,17 @@ function _validateCheckoutForm(data) {
     pickupBranch?.focus();
     return false;
   }
+  if (selectedShippingMethod === 'cvs') {
+    const session = _getStoredCheckoutSession();
+    const hasCvsStore = Boolean(session?.shipping?.cvsStoreId);
+    if (!hasCvsStore) {
+      document.getElementById('checkoutCvsStoreDisplay')?.classList.add('isInvalid');
+      _openCheckoutPanel('panelShipping');
+      window.showToast('請先選擇超商取貨門市', 'error');
+      document.getElementById('checkoutCvsMapBtn')?.focus();
+      return false;
+    }
+  }
   if (!data.paymentMethod) {
     document.getElementById('panelPayment')?.classList.add('isInvalid');
     _openCheckoutPanel('panelPayment');
@@ -1265,15 +1280,35 @@ function _setConfirmButtonLoading(button, isLoading) {
     : _getConfirmButtonLabel(_getStoredCheckoutSession());
 }
 
+// 超商尚未選店時，後端 ck_orders_shipping_target 不允許 shipping.method=cvs；維持 Session 既有方式。
+function _resolveCheckoutShippingMethodForPatch() {
+  const session = _getStoredCheckoutSession();
+  const hasCvsStore = Boolean(session?.shipping?.cvsStoreId);
+  if (selectedShippingMethod === 'cvs' && !hasCvsStore) {
+    return session?.shipping?.method || 'delivery';
+  }
+  return selectedShippingMethod;
+}
+
 // 草稿 PATCH 只送後端允許修改的收件資料與付款方式。
 function _buildCheckoutUpdateRequest(formData) {
+  const session = _getStoredCheckoutSession();
+  const hasCvsStore = Boolean(session?.shipping?.cvsStoreId);
+  const shippingMethod = _resolveCheckoutShippingMethodForPatch();
   const request = {
     shipping: {
-      method: selectedShippingMethod,
+      method: shippingMethod,
       recipientName: formData.buyerName,
       phone: formData.buyerPhone,
-      address: selectedShippingMethod === 'delivery' ? formData.deliveryAddress : null,
-      pickupBranchId: selectedShippingMethod === 'pickup' ? formData.pickupBranchId : null,
+      address: shippingMethod === 'delivery' ? formData.deliveryAddress : null,
+      pickupBranchId: shippingMethod === 'pickup' ? formData.pickupBranchId : null,
+      cvsStoreId: selectedShippingMethod === 'cvs' && hasCvsStore
+        ? session.shipping.cvsStoreId
+        : null,
+      cvsStoreName: selectedShippingMethod === 'cvs' && hasCvsStore
+        ? session.shipping.cvsStoreName
+        : null,
+      cvsSubType: selectedShippingMethod === 'cvs' && hasCvsStore ? 'FAMI' : null,
     },
     paymentMethod: _getSelectedPaymentCode(),
   };
@@ -1342,6 +1377,7 @@ function _getStoredCheckoutSession() {
 // 依後端 checkoutStep 呈現 Draft 或 Ready to pay。
 function _renderCheckoutSessionState(checkoutSession, confirmBtn) {
   _applyCheckoutSessionPricing(checkoutSession.pricing);
+  _applyCheckoutShippingFromSession(checkoutSession.shipping);
   _toggleCheckoutSessionButtons({ cart: false });
 
   if (checkoutSession.checkoutStep === 'draft') {
@@ -1699,6 +1735,98 @@ function _clearCheckoutIdempotencyState() {
   sessionStorage.removeItem(CHECKOUT_COMPLETED_ORDER_ID_KEY);
   sessionStorage.removeItem(CHECKOUT_LAST_SESSION_STORAGE_KEY);
   _clearCheckoutFormDraft();
+}
+
+// 從 Session 還原配送方式與 CVS 門市顯示。
+function _applyCheckoutShippingFromSession(shipping) {
+  if (!shipping?.method) return;
+  selectedShippingMethod = shipping.method;
+  const radio = document.querySelector(`input[name="shippingMethod"][value="${shipping.method}"]`);
+  if (radio) radio.checked = true;
+  _syncRadioGroupState('shippingMethod');
+  _syncDeliveryAddressState();
+  if (shipping.method === 'cvs') {
+    _renderCvsStoreDisplay(shipping.cvsStoreName, shipping.address);
+  }
+}
+
+function _renderCvsStoreDisplay(storeName, address) {
+  const display = document.getElementById('checkoutCvsStoreDisplay');
+  if (!display) return;
+  display.classList.remove('isInvalid');
+  display.removeAttribute('aria-invalid');
+  if (!storeName && !address) {
+    display.innerHTML = '<span class="shippingAddressEmpty">尚未選擇門市</span>';
+    return;
+  }
+  const lines = [storeName, address].filter(Boolean);
+  display.textContent = lines.join('｜');
+}
+
+// 綠界選店回來後刷新 Session（URL: ?cvsMap=ok&orderId=...）。
+async function _handleCvsMapReturnFromEcpay() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('cvsMap') !== 'ok') return;
+  const orderId = params.get('orderId');
+  if (!orderId) return;
+
+  try {
+    await _waitForCheckoutAuthReady();
+    const checkoutSession = await window.API.checkout.getSession(orderId);
+    _saveCheckoutSession(checkoutSession);
+    _renderCheckoutSessionState(checkoutSession, document.getElementById('confirmOrderBtn'));
+    window.showToast('超商門市已更新', 'success');
+  } catch (error) {
+    console.error('Failed to refresh checkout after CVS map', error);
+    window.showToast('門市已選取，但同步 Checkout 失敗，請重新整理', 'warning');
+  }
+
+  params.delete('cvsMap');
+  params.delete('orderId');
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+  window.history.replaceState({}, '', nextUrl);
+}
+
+function _initCheckoutCvsMap() {
+  document.getElementById('checkoutCvsMapBtn')?.addEventListener('click', async () => {
+    const session = _getStoredCheckoutSession();
+    if (!session?.orderId) {
+      window.showToast('Checkout 尚未建立，請稍候', 'warning');
+      return;
+    }
+    const formData = _readCheckoutFormData();
+    if (!formData.buyerName || !formData.buyerPhone) {
+      window.showToast('請先填寫收件人姓名與電話', 'warning');
+      _openCheckoutPanel('panelBuyer');
+      return;
+    }
+
+    selectedShippingMethod = 'cvs';
+    _syncRadioGroupState('shippingMethod');
+    _syncDeliveryAddressState();
+
+    try {
+      // 選店前先只 PATCH 收件人／電話；shipping.method=cvs 需等 map callback 寫入門市後才能存。
+      await window.API.checkout.updateSession(session.orderId, {
+        shipping: {
+          recipientName: formData.buyerName,
+          phone: formData.buyerPhone,
+        },
+        paymentMethod: _getSelectedPaymentCode(),
+      });
+      const launch = await window.API.checkout.createCvsMapForm(session.orderId);
+      if (launch?.mockCvsApplied && launch.checkoutSession) {
+        _saveCheckoutSession(launch.checkoutSession);
+        _renderCheckoutSessionState(launch.checkoutSession, document.getElementById('confirmOrderBtn'));
+        window.showToast('超商門市已選擇（Mock）', 'success');
+        return;
+      }
+      _submitEcpayForm(launch);
+    } catch (error) {
+      _handleCheckoutError(error, document.getElementById('confirmOrderBtn'));
+    }
+  });
 }
 
 // 提供 facade 在取消成功或收到逾時錯誤時清除 Checkout 狀態。

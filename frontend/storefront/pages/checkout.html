@@ -197,6 +197,20 @@
                     <span class="checkoutChoiceMeta isFreeShipping">免運費</span>
                   </span>
                 </label>
+                <label class="checkoutChoice">
+                  <input
+                    class="checkoutRadio"
+                    type="radio"
+                    name="shippingMethod"
+                    value="cvs"
+                    id="shippingCvs"
+                  />
+                  <span class="checkoutChoiceBody">
+                    <span class="checkoutChoiceTitle">超商取貨（全家）</span>
+                    <span class="checkoutChoiceDesc">綠界物流 B2C，選擇全家便利商店取貨</span>
+                    <span class="checkoutChoiceMeta">運費 NT$60（滿 NT$3000 免運）</span>
+                  </span>
+                </label>
               </fieldset>
 
               <div class="checkoutField checkoutAddressField" id="deliveryAddressSection">
@@ -232,6 +246,19 @@
                 </select>
                 <p class="checkoutFieldHint" id="checkoutPickupBranchHint" aria-live="polite">
                   選擇門市取貨後，訂單會保存門市資料快照。
+                </p>
+              </div>
+
+              <div class="checkoutField checkoutCvsField" id="cvsStoreSection" hidden>
+                <span class="checkoutLabel">超商取貨門市 <span class="requiredMark">*</span></span>
+                <div id="checkoutCvsStoreDisplay" class="shippingAddressDisplay" aria-live="polite">
+                  <span class="shippingAddressEmpty">尚未選擇門市</span>
+                </div>
+                <button type="button" class="btn btn-outline-primary mt-2" id="checkoutCvsMapBtn">
+                  選擇全家門市
+                </button>
+                <p class="checkoutFieldHint" id="checkoutCvsStoreHint" aria-live="polite">
+                  將開啟綠界電子地圖；選完後會回到本頁並更新門市資訊。
                 </p>
               </div>
             </div>
