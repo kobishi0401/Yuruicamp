@@ -47,6 +47,7 @@ import com.yuruicamp.backend.order.domain.OrderStatusHistory;
 import com.yuruicamp.backend.order.domain.PaymentMethod;
 import com.yuruicamp.backend.order.domain.PaymentStatus;
 import com.yuruicamp.backend.order.domain.ShippingMethod;
+import com.yuruicamp.backend.logistics.domain.EcpayReceiverNameRules;
 import com.yuruicamp.backend.order.infrastructure.OrderRepository;
 import com.yuruicamp.backend.order.infrastructure.OrderStatusHistoryRepository;
 
@@ -109,13 +110,15 @@ public class CheckoutService {
 		Instant expires = now.plus(HOLD);
 		CheckoutCreateRequest.Shipping shipping = request.shipping();
 		ShippingSnapshot shippingSnapshot = resolveCreateShipping(shipping);
-		String recipient = firstNonBlank(shipping == null ? null : shipping.recipientName(), customer.getName(), PENDING);
+		String recipient = resolveRecipientName(shipping == null ? null : shipping.recipientName(), shippingSnapshot.method());
 		String phone = firstNonBlank(shipping == null ? null : shipping.phone(), customer.getPhone(), PENDING);
 		Order order = new Order();
 		order.initialize(newOrderId(), displayNoService.nextOrderDisplayNo(), customerId, idempotencyKey, requestHash,
 				firstNonBlank(customer.getName(), PENDING), firstNonBlank(customer.getEmail(), PENDING),
 				recipient, shippingSnapshot.address(), phone, shippingSnapshot.method(),
-				shippingSnapshot.pickupBranchId(), paymentMethod, now, expires);
+				shippingSnapshot.pickupBranchId(),
+				shippingSnapshot.cvsStoreId(), shippingSnapshot.cvsStoreName(), shippingSnapshot.cvsSubType(),
+				paymentMethod, now, expires);
 		BigDecimal subtotal = BigDecimal.ZERO;
 		List<ReservationDraft> reserveDrafts = new ArrayList<>();
 
@@ -192,10 +195,13 @@ public class CheckoutService {
 		CheckoutUpdateRequest.Shipping shipping = request.shipping();
 		if (shipping != null) {
 			ShippingSnapshot shippingSnapshot = resolveUpdateShipping(shipping, order);
+			String recipientName = updatedValue(shipping.recipientName(), order.getRecipientName());
+			validateRecipientForMethod(shippingSnapshot.method(), recipientName);
 			order.updateShipping(
-					updatedValue(shipping.recipientName(), order.getRecipientName()),
+					recipientName,
 					updatedValue(shipping.phone(), order.getShippingPhone()),
-					shippingSnapshot.address(), shippingSnapshot.method(), shippingSnapshot.pickupBranchId());
+					shippingSnapshot.address(), shippingSnapshot.method(), shippingSnapshot.pickupBranchId(),
+					shippingSnapshot.cvsStoreId(), shippingSnapshot.cvsStoreName(), shippingSnapshot.cvsSubType());
 		}
 		if (request.paymentMethod() != null) {
 			order.changePaymentMethod(parsePaymentMethod(request.paymentMethod()));
@@ -310,7 +316,10 @@ public class CheckoutService {
 						|| request.shipping().phone() != null
 						|| request.shipping().address() != null
 						|| request.shipping().method() != null
-						|| request.shipping().pickupBranchId() != null);
+						|| request.shipping().pickupBranchId() != null
+						|| request.shipping().cvsStoreId() != null
+						|| request.shipping().cvsStoreName() != null
+						|| request.shipping().cvsSubType() != null);
 		boolean hasPaymentUpdate = request.paymentMethod() != null;
 		// 空的更新內容視為清除目前優惠券，讓 couponClaimId=null 能完成清除操作。
 		if (hasPaymentUpdate && request.paymentMethod().isBlank()) {
@@ -362,6 +371,29 @@ public class CheckoutService {
 		return requested;
 	}
 
+	// recipient 只來自配送地址；不再 fallback Firebase／customer 顯示名。
+	private static String resolveRecipientName(String requestedRecipient, ShippingMethod method) {
+		String recipient = requestedRecipient != null && !requestedRecipient.isBlank()
+				? requestedRecipient.trim()
+				: PENDING;
+		if (!PENDING.equals(recipient)) {
+			validateRecipientForMethod(method, recipient);
+		}
+		return recipient;
+	}
+
+	private static void validateRecipientForMethod(ShippingMethod method, String recipient) {
+		if (PENDING.equals(recipient) || recipient.isBlank()) {
+			return;
+		}
+		if (method == ShippingMethod.pickup) {
+			return;
+		}
+		if (method == ShippingMethod.cvs || method == ShippingMethod.delivery) {
+			EcpayReceiverNameRules.validateOrThrow(recipient);
+		}
+	}
+
 	// 取得第一個有內容的文字，全部空白時使用草稿佔位文字。
 	private static String firstNonBlank(String... values) {
 		for (String value : values) {
@@ -382,6 +414,9 @@ public class CheckoutService {
 		appendCanonical(canonical, shipping == null ? null : shipping.address());
 		appendCanonical(canonical, shipping == null ? null : shipping.method());
 		appendCanonical(canonical, shipping == null ? null : shipping.pickupBranchId());
+		appendCanonical(canonical, shipping == null ? null : shipping.cvsStoreId());
+		appendCanonical(canonical, shipping == null ? null : shipping.cvsStoreName());
+		appendCanonical(canonical, shipping == null ? null : shipping.cvsSubType());
 		appendCanonical(canonical, couponClaimId == null ? null : couponClaimId.toString());
 		items.forEach((variantId, quantity) -> {
 			appendCanonical(canonical, variantId);
@@ -438,7 +473,8 @@ public class CheckoutService {
 				: branches.findById(order.getPickupBranchId()).map(Branch::getName).orElse(null);
 		var shipping = new CheckoutSessionResponse.Shipping(order.getShippingMethod().name(),
 				order.getRecipientName(), order.getShippingPhone(), order.getShippingAddress(),
-				order.getPickupBranchId(), branchName);
+				order.getPickupBranchId(), branchName,
+				order.getCvsStoreId(), order.getCvsStoreName(), order.getCvsSubType());
 		var pricing = new CheckoutSessionResponse.Pricing(money(order.getSubtotal()),
 				money(order.getShippingFee()), money(order.getDiscount()), money(order.getTotal()));
 		boolean ready = hasCompleteShipping(order);
@@ -458,8 +494,12 @@ public class CheckoutService {
 		if (method == ShippingMethod.pickup) {
 			return pickupSnapshot(shipping == null ? null : shipping.pickupBranchId());
 		}
+		if (method == ShippingMethod.cvs) {
+			return cvsSnapshot(shipping);
+		}
 		return new ShippingSnapshot(method,
-				firstNonBlank(shipping == null ? null : shipping.address(), PENDING), null);
+				firstNonBlank(shipping == null ? null : shipping.address(), PENDING),
+				null, null, null, null);
 	}
 
 	// 更新時未提供配送欄位就沿用原值；改為門市取貨時由門市主檔取得地址。
@@ -471,8 +511,12 @@ public class CheckoutService {
 					? order.getPickupBranchId() : shipping.pickupBranchId();
 			return pickupSnapshot(branchId);
 		}
+		if (method == ShippingMethod.cvs) {
+			return cvsSnapshotForUpdate(shipping, order);
+		}
 		return new ShippingSnapshot(method,
-				updatedValue(shipping.address(), order.getShippingAddress()), null);
+				updatedValue(shipping.address(), order.getShippingAddress()),
+				null, null, null, null);
 	}
 
 	private ShippingSnapshot pickupSnapshot(String branchId) {
@@ -483,7 +527,60 @@ public class CheckoutService {
 		Branch branch = branches.findById(branchId.trim())
 				.orElseThrow(() -> new BusinessException(ErrorCode.VALIDATION_ERROR,
 						"Pickup branch not found: " + branchId));
-		return new ShippingSnapshot(ShippingMethod.pickup, branch.getAddress(), branch.getId());
+		return new ShippingSnapshot(ShippingMethod.pickup, branch.getAddress(), branch.getId(), null, null, null);
+	}
+
+	private static ShippingSnapshot cvsSnapshot(CheckoutCreateRequest.Shipping shipping) {
+		String storeId = shipping == null ? null : shipping.cvsStoreId();
+		String storeName = shipping == null ? null : shipping.cvsStoreName();
+		String subType = shipping == null ? null : shipping.cvsSubType();
+		// 尚未選店時不可寫入 shipping_method=cvs（ck_orders_shipping_target 要求 cvs_store_id NOT NULL）。
+		if (!hasCvsStoreId(storeId)) {
+			return new ShippingSnapshot(ShippingMethod.delivery, PENDING, null, null, null, null);
+		}
+		String address = formatCvsAddress(storeName, shipping == null ? null : shipping.address());
+		return new ShippingSnapshot(ShippingMethod.cvs, address, null, trimToNull(storeId), trimToNull(storeName),
+				trimToNull(subType));
+	}
+
+	private static ShippingSnapshot cvsSnapshotForUpdate(CheckoutUpdateRequest.Shipping shipping, Order order) {
+		String storeId = shipping.cvsStoreId() == null ? order.getCvsStoreId() : shipping.cvsStoreId();
+		String storeName = shipping.cvsStoreName() == null ? order.getCvsStoreName() : shipping.cvsStoreName();
+		String subType = shipping.cvsSubType() == null ? order.getCvsSubType() : shipping.cvsSubType();
+		// 使用者已選「超商取貨」但尚未完成電子地圖選店：先保留原配送方式，等 map callback 再切 cvs。
+		if (!hasCvsStoreId(storeId)) {
+			return deferredCvsShippingSnapshot(order);
+		}
+		String address = formatCvsAddress(storeName,
+				shipping.address() == null ? order.getShippingAddress() : shipping.address());
+		return new ShippingSnapshot(ShippingMethod.cvs, address, null, trimToNull(storeId), trimToNull(storeName),
+				trimToNull(subType));
+	}
+
+	private static ShippingSnapshot deferredCvsShippingSnapshot(Order order) {
+		ShippingMethod method = order.getShippingMethod() == ShippingMethod.cvs
+				? ShippingMethod.delivery
+				: order.getShippingMethod();
+		String pickupBranchId = method == ShippingMethod.pickup ? order.getPickupBranchId() : null;
+		return new ShippingSnapshot(method, order.getShippingAddress(), pickupBranchId, null, null, null);
+	}
+
+	private static boolean hasCvsStoreId(String storeId) {
+		return storeId != null && !storeId.isBlank();
+	}
+
+	private static String formatCvsAddress(String storeName, String fallbackAddress) {
+		if (storeName != null && !storeName.isBlank()) {
+			return "全家便利商店 " + storeName.trim();
+		}
+		return firstNonBlank(fallbackAddress, PENDING);
+	}
+
+	private static String trimToNull(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return value.trim();
 	}
 
 	private static ShippingMethod parseShippingMethod(String raw) {
@@ -497,15 +594,27 @@ public class CheckoutService {
 	}
 
 	private static boolean hasCompleteShipping(Order order) {
-		return !PENDING.equals(order.getRecipientName())
-				&& !PENDING.equals(order.getShippingPhone())
-				&& !PENDING.equals(order.getShippingAddress());
+		if (PENDING.equals(order.getRecipientName()) || PENDING.equals(order.getShippingPhone())) {
+			return false;
+		}
+		if (order.getShippingMethod() == ShippingMethod.cvs) {
+			return order.getCvsStoreId() != null
+					&& !order.getCvsStoreId().isBlank()
+					&& !PENDING.equals(order.getShippingAddress());
+		}
+		return !PENDING.equals(order.getShippingAddress());
 	}
 
 	// 暫存建立庫存保留紀錄需要的資料。
 	private record ReservationDraft(String variantId, String locationId, int quantity) {
 	}
 
-	private record ShippingSnapshot(ShippingMethod method, String address, String pickupBranchId) {
+	private record ShippingSnapshot(
+			ShippingMethod method,
+			String address,
+			String pickupBranchId,
+			String cvsStoreId,
+			String cvsStoreName,
+			String cvsSubType) {
 	}
 }

@@ -2,10 +2,11 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | 待驗收（stub ✅；真實沙箱 ⬜） |
-| **日期** | 2026-07-25 |
+| **狀態** | **已完成**（stub ✅；商城真實沙箱 ✅，2026-07-29／30） |
+| **日期** | 2026-07-30（驗收完成）；原稿 2026-07-25 |
 | **前提** | I-7／I-8／CK-5 stub 已完成（本機假付款頁） |
 | **契約** | [`docs/api/payment-api-contract.md`](../../api/payment-api-contract.md) |
+| **物流真沙箱** | [`../logistics/ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md)（Phase 2 同步完成） |
 | **綠界知識庫** | [`.ecpay-skill/SKILL.md`](../../../.ecpay-skill/SKILL.md)、[`guides/00-getting-started.md`](../../../.ecpay-skill/guides/00-getting-started.md)、[`guides/24-local-development.md`](../../../.ecpay-skill/guides/24-local-development.md) |
 
 ---
@@ -198,12 +199,14 @@ Notify 成功時後端 log 不應出現 `CheckMacValue invalid`；response body 
 
 ## 8. 完成標準（勾選後可更新 checklist）
 
-- [ ] ngrok（或 Cloudflare Tunnel）公網 HTTPS → 8080 通
-- [ ] `YURUICAMP_ECPAY_STUB=false` 重啟後端
-- [ ] 商城：綠界 stage 真刷卡 → `paymentStatus=paid`
-- [ ] 預約：同上 → `paid` + `pending`
-- [ ] `payment_notifications` 有 `result=success` 列
+- [x] ngrok（或 Cloudflare Tunnel）公網 HTTPS → 8080 通（2026-07-29／30 手動）
+- [x] `YURUICAMP_ECPAY_STUB=false` 重啟後端
+- [x] 商城：綠界 stage 真刷卡 → `paymentStatus=paid`（例：`O3aa85274…`，`payment_notifications.result=success`）
+- [ ] 預約：同上 → `paid` + `pending`（與商城共用 Notify；可選補驗）
+- [x] `payment_notifications` 有 `result=success` 列
 - [ ] （部署前）真實綠界退款 HTTP — 目前非 stub 時 Admin 退款 port 仍回失敗，另開任務
+
+> **2026-07-30：** 商城金流真沙箱＋物流 Phase 2（ngrok）已手動過關。預約走同一 `POST /api/payments/ecpay/notify`，未另開一輪時視為可選。
 
 ---
 
@@ -214,3 +217,4 @@ Notify 成功時後端 log 不應出現 `CheckMacValue invalid`；response body 
 | [`backend/src/main/resources/application.properties`](../../../backend/src/main/resources/application.properties) | 預設 stub=true、stage URL |
 | [`.env.example`](../../../.env.example) | 本機 env 範本 |
 | [`plans/post-firebase-roadmap-checklist.md`](../../../plans/post-firebase-roadmap-checklist.md) §5 步驟 10 | 路線圖索引 |
+| [`../logistics/ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md) | Phase 2 物流真沙箱（CVS + HOME/TCAT，需 ngrok + 雙 stub false） |

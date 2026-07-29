@@ -117,6 +117,15 @@
         .join('');
   }
 
+  function applyDistrictPostalCode(city, district) {
+    var postalInput = $(FIELD_IDS.postalCode);
+    if (!postalInput || !sa()) return;
+    var zip = sa().lookupDistrictZip(city, district);
+    if (zip) {
+      postalInput.value = zip;
+    }
+  }
+
   function fillDistrictSelect(city, selectedDistrict) {
     var select = $(FIELD_IDS.district);
     if (!select || !sa()) return;
@@ -146,6 +155,9 @@
       opt.textContent = selectedDistrict + '（舊資料）';
       opt.selected = true;
       select.appendChild(opt);
+    }
+    if (selectedDistrict) {
+      applyDistrictPostalCode(city, selectedDistrict);
     }
   }
 
@@ -182,12 +194,18 @@
     fillDistrictSelect(addr.city, addr.district);
   }
 
+  function renderInstanceDisplay(inst) {
+    if (!inst.displayEl) return;
+    var addr = typeof inst.getAddress === 'function' ? inst.getAddress() : currentAddress;
+    if (typeof inst.formatDisplay === 'function') {
+      inst.displayEl.innerHTML = inst.formatDisplay(addr);
+      return;
+    }
+    inst.displayEl.innerHTML = sa() ? sa().formatDisplay(addr) : '尚未設定';
+  }
+
   function renderAllDisplays() {
-    instances.forEach(function (inst) {
-      if (!inst.displayEl) return;
-      var addr = typeof inst.getAddress === 'function' ? inst.getAddress() : currentAddress;
-      inst.displayEl.innerHTML = sa() ? sa().formatDisplay(addr) : '尚未設定';
-    });
+    instances.forEach(renderInstanceDisplay);
   }
 
   function openModal(addr) {
@@ -301,6 +319,15 @@
     if (citySelect) {
       citySelect.addEventListener('change', function () {
         fillDistrictSelect(citySelect.value, '');
+        var postalInput = $(FIELD_IDS.postalCode);
+        if (postalInput) postalInput.value = '';
+      });
+    }
+
+    var districtSelect = $(FIELD_IDS.district);
+    if (districtSelect) {
+      districtSelect.addEventListener('change', function () {
+        applyDistrictPostalCode(citySelect && citySelect.value, districtSelect.value);
       });
     }
 
@@ -347,6 +374,7 @@
       getAddress: options.getAddress,
       onSave: options.onSave,
       persist: Boolean(options.persist),
+      formatDisplay: options.formatDisplay,
     };
 
     if (options.initialAddress) {

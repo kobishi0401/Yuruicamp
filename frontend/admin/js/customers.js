@@ -750,6 +750,25 @@ function getTwCityNames() {
   });
 }
 
+/** 3 碼郵遞區號 lookup（共用 storefront TW_DISTRICT_ZIP）/ 3-digit zip by city + district */
+function lookupDistrictZip(city, district) {
+  var table = window.TW_DISTRICT_ZIP || {};
+  var cityKey = normalizeTwCityName(city);
+  var districtKey = String(district || '').trim();
+  if (!cityKey || !districtKey || !table[cityKey]) {
+    return '';
+  }
+  return table[cityKey][districtKey] || '';
+}
+
+/** 依所選行政區帶入郵遞區號 / Auto-fill postal code when district is selected */
+function applyShippingDistrictPostalCode(city, district) {
+  var zip = lookupDistrictZip(city, district);
+  if (zip) {
+    $('#shipPostalCode').val(zip);
+  }
+}
+
 /** 填入 #shipCity / Fill city select */
 function fillShippingCitySelect(selectedCity) {
   selectedCity = normalizeTwCityName(selectedCity);
@@ -790,6 +809,10 @@ function fillShippingDistrictSelect(city, selectedDistrict) {
       '<option value="' + escapeCustomerHtml(selectedDistrict) + '" selected>' +
       escapeCustomerHtml(selectedDistrict) + '（舊資料）</option>'
     );
+  }
+
+  if (selectedDistrict) {
+    applyShippingDistrictPostalCode(city, selectedDistrict);
   }
 }
 
@@ -2002,7 +2025,12 @@ window.initCustomers = function () {
   });
 
   $(document).on('change.customers', '#shipCity', function () {
+    $('#shipPostalCode').val('');
     fillShippingDistrictSelect($(this).val(), '');
+  });
+
+  $(document).on('change.customers', '#shipDistrict', function () {
+    applyShippingDistrictPostalCode($('#shipCity').val(), $(this).val());
   });
 
   $(document).on('hidden.bs.modal.customers', '#customerShippingAddressModal', function () {

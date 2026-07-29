@@ -50,14 +50,14 @@
 - Booking 線 E 的 E-5 已完成：會員可分頁查看自己的預約列表、完整詳情與 Checkout 快照；後端不接受任意 customerId，讀取他人與不存在的預約都回 404。
 - Booking 線 E 的 E-6 已完成：會員可主動取消 pending／unpaid 預約；排程每分鐘處理逾時 Checkout，同交易恢復營位占用、釋放 active 租借保留並寫入狀態歷程，E-1～E-6 共 46 項 PostgreSQL 回歸測試通過。
 - Booking 線 E 的 E-7 已完成：`BookingAPI` 在 Backend 模式統一呼叫 `/api/booking/**`，可用性、價格、`displayNo`、本人列表／詳情／取消與 15 分鐘倒數都使用後端結果。**B3（ADR 0002）**：`booking-cart.html` 僅 soft 驗量、不建 Session；進 `booking-checkout.html` 登入後才 `createBooking` 並開始 15 分鐘 hard lock；ECPay launch 帶 contact 快照（O2）。Payment stub／Notify 由線 D 負責（2026-07-25 ✅）。
-- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨與 COD／ECPay：**B3** — `cart.html` 僅 soft 驗量，進 `checkout.html` 才 `createSession` 並鎖庫 15 分鐘；**M2** — ECPay 按「結帳並前往付款」一次跳轉綠界；確認背包與結帳頁採節點式流程列；COD 按「確認結帳」直接成立。
+- 商城 Checkout 已完成確認背包、宅配／資料庫門市取貨／**超商取貨（CVS）**與 COD／ECPay：**B3** — `cart.html` 僅 soft 驗量，進 `checkout.html` 才 `createSession` 並鎖庫 15 分鐘；**M2** — ECPay 按「結帳並前往付款」一次跳轉綠界；確認背包與結帳頁採節點式流程列；COD 按「確認結帳」直接成立。**金流＋物流真沙箱**（ngrok）已於 2026-07-30 手動過關。
 - 商城取消訂單入口已移至會員中心：待出貨且未付款的商品訂單可在訂單明細最下方取消；COD 成立頁會提示前往會員中心，購物車 Drawer 的圖層亦高於 Toast，避免提示遮住操作。
 - 商品詳情頁的「立即購買」會以商品 ID 與 variant ID 檢查購物車；相同品項已存在時保留原數量並直接前往確認背包，只有「加入購物車」會繼續累加數量。
 - 商品訂單的 canonical `cancelled` 狀態已與預約訂單對齊，會員中心及後台商品訂單列表、詳情與篩選器統一顯示「已取消」。
 - Booking 線 E 的後端與前端人工驗證已整合至 [`公開／會員 API 驗證`](./docs/backend-specs/test/public-member-api-validation.md) 與 [`商城 Checkout 與 Booking 驗證`](./docs/frontend-specs/test/commerce-booking-validation.md)。
 - Admin 線 G 的 G-1、G-5 已完成：後端依角色預設與個人覆寫計算細權限，每次 Admin API 都重新驗證啟用狀態、Firebase UID 與 authority；管理員建立、列表、詳情、更新及權限覆寫 API 已接入正式 Admin Session。
 - Admin 線 G 的 G-2a Customers 已完成並通過 PostgreSQL 整合驗收：提供後台會員分頁查詢、篩選、詳情、基本資料更新、停權／恢復與 `customers.view`／`customers.edit`；消費總額與等級採資料庫 View，Customers 頁保留 Mock／Backend 雙模式。
-- Admin 線 G 的 G-2b Orders／Bookings 已完成並通過 PostgreSQL 整合測試與 Swagger 驗收：提供分頁查詢、詳情、狀態歷程、訂單出貨／完成及預約確認／完成；Admin 不得人工改寫 ECPay 付款或退款結果。
+- Admin 線 G 的 G-2b Orders／Bookings 已完成並通過 PostgreSQL 整合測試與 Swagger 驗收：提供分頁查詢、詳情、狀態歷程、訂單出貨／完成及預約確認／完成；出貨時對 CVS／宅配呼叫綠界建物流單；Admin 不得人工改寫 ECPay 付款或退款結果。
 - Admin 線 G 的 G-2c Products 已完成並通過 PostgreSQL 整合驗收：商品、規格與圖片以單一交易同步，庫存只讀且交由 G-3 異動；前端 Backend 模式只送契約欄位，API 成功後才更新 cache。
 - G-2c 前端驗收於 2026-07-22 完成 API、Mock UI、資料庫與 build 實測；G-6 之後由正式 Admin Runtime 自動啟用 Backend，不再需要 DevTools 手動切換。
 - Admin 線 G 的 G-3 Inventory 已完成並通過 PostgreSQL 併發驗收：商城與租借庫存只能透過 draft 異動單過帳，支援入庫、出庫／損耗與同領域調撥；固定順序悲觀鎖、active 保留下限與重複過帳冪等會防止負庫存及重複加減。

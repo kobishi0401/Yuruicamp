@@ -15,6 +15,7 @@ import com.yuruicamp.backend.common.security.CustomerPrincipal;
 import com.yuruicamp.backend.config.OpenApiConfig;
 import com.yuruicamp.backend.payment.api.EcpayLaunchResponse;
 import com.yuruicamp.backend.payment.application.EcpayLaunchService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsMapService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,10 +32,15 @@ public class CheckoutController {
 
 	private final CheckoutService service;
 	private final EcpayLaunchService ecpayLaunchService;
+	private final EcpayLogisticsMapService logisticsMapService;
 
-	public CheckoutController(CheckoutService service, EcpayLaunchService ecpayLaunchService) {
+	public CheckoutController(
+			CheckoutService service,
+			EcpayLaunchService ecpayLaunchService,
+			EcpayLogisticsMapService logisticsMapService) {
 		this.service = service;
 		this.ecpayLaunchService = ecpayLaunchService;
+		this.logisticsMapService = logisticsMapService;
 	}
 
 	@PostMapping
@@ -79,5 +85,13 @@ public class CheckoutController {
 			@AuthenticationPrincipal CustomerPrincipal principal,
 			@PathVariable String orderId) {
 		return ApiResponse.ok(ecpayLaunchService.launchForOrder(principal.customerId(), orderId));
+	}
+
+	/** 綠界電子地圖選店（CVS FAMI）；回傳 auto-submit 表單欄位。 */
+	@PostMapping("/{orderId}/ecpay/cvs-map")
+	public ApiResponse<EcpayLaunchResponse> cvsMap(
+			@AuthenticationPrincipal CustomerPrincipal principal,
+			@PathVariable String orderId) {
+		return ApiResponse.ok(logisticsMapService.launchMap(principal.customerId(), orderId));
 	}
 }

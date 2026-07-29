@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **狀態** | 生效中（2026-07-26） |
+| **狀態** | 生效中（2026-07-30） |
 | **Firebase 主線** | **已完成**（見下方「已完成」） |
 | **定位** | 登入／Auth 之後的業務債與加固；**不是**再重做 Firebase 接線 |
 | **相關** | [`docs/frontend-specs/firebase-merge-into-main-notes.md`](../docs/frontend-specs/firebase-merge-into-main-notes.md) |
@@ -70,7 +70,7 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 | ID | 項目 | 狀態 | 說明 |
 |----|------|------|------|
 | **CK-4** | 優惠券套用（後端 F-2） | **已完成** | Backend UI 以券碼取得會員 claim，PATCH `couponClaimId`，成交金額只採後端 `pricing`；支援空 PATCH 移除 |
-| **CK-5** | 付款後續（ECPay／confirm-cod 等） | **已完成** | 2026-07-25 stub 全流程 IT：`launch`→`stub/aio-checkout`→Notify→`paid`；COD `confirm-cod`；預約 Notify 後 `paid`＋`pending`；IT 類別見 [`backend-implementation-checklist.md`](./backend-implementation-checklist.md) I-7 備註；瀏覽器 Firebase 手動可選補驗 |
+| **CK-5** | 付款後續（ECPay／confirm-cod 等） | **已完成** | stub 全流程 IT（2026-07-25）；**商城真沙箱** ngrok＋`stub=false`（2026-07-29／30）；見 [`ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md) |
 
 ---
 
@@ -110,9 +110,10 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 7. ~~**CK-5**（ECPay stub 付款閉環）~~ → **已完成**（2026-07-25 IT）  
 8. ~~**I-8** 瀏覽器手動（Firebase 登入＋商城 COD／ECPay＋預約 ECPay）~~ → **已完成**（2026-07-25）  
 9. ~~**Commerce UX**（displayNo、B3 鎖庫、M2 一次 ECPay、庫存 UI）~~ → **已完成**（2026-07-26；見 [`.scratch/commerce-ux-display-checkout/spec.md`](../.scratch/commerce-ux-display-checkout/spec.md)、[`storefront-member-rental-ux`](../.scratch/storefront-member-rental-ux/spec.md)、[`admin-storefront-polish`](../.scratch/admin-storefront-polish/spec.md)）  
-10. **真實綠界沙箱**（`stub=false`＋公網 Notify URL）← **下一步 B** — 見 [`docs/backend-specs/payment/ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)  
+10. ~~**真實綠界沙箱**（金流＋物流，`stub=false`＋ngrok）~~ → **已完成**（2026-07-30 商城；預約 Notify 可選補驗）— [`ecpay-sandbox-validation.md`](../docs/backend-specs/payment/ecpay-sandbox-validation.md)、[`ecpay-real-sandbox-validation.md`](../docs/backend-specs/logistics/ecpay-real-sandbox-validation.md)  
 11. **ENG-1**（commit／PR）  
-12. **FA-1**、**FA-3**（可平行）
+12. **FA-1**、**FA-3**（可平行）  
+13. （部署前）真實綠界**退款** HTTP；物流 notify 回寫履約狀態（Phase 3／另開）
 
 ---
 
@@ -134,4 +135,5 @@ Checkout／預約「建立訂單失敗」＝ 業務／種子／庫存問題（�
 
 | 日期 | 說明 |
 |------|------|
+| 2026-07-30 | 商城金流＋物流 Phase 2 真沙箱（ngrok）標 **已完成**；下一步改為 ENG-1／退款 HTTP／物流 notify 回寫 |
 | 2026-07-26 | Commerce UX／storefront polish／member-rental-ux 標 **已完成**；BK 診斷改「可略」；ENG-2 勾完；下一步 B 仍為真實綠界沙箱 |

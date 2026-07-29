@@ -15,6 +15,7 @@ import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,11 +34,14 @@ class AdminOrderServiceTest {
 	@Mock
 	private PaymentRefundService paymentRefundService;
 
+	@Mock
+	private EcpayLogisticsCreateService logisticsCreateService;
+
 	private AdminOrderService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new AdminOrderService(readRepository, commandRepository, paymentRefundService);
+		service = new AdminOrderService(readRepository, commandRepository, paymentRefundService, logisticsCreateService);
 	}
 
 	@Test
@@ -47,6 +51,7 @@ class AdminOrderServiceTest {
 
 		service.ship("O1", "A1", null);
 
+		verify(logisticsCreateService).createShipment("O1");
 		verify(commandRepository).updateStatus(eq("O1"), eq("shipped"), any(Instant.class));
 		verify(commandRepository).addHistory(eq("O1"), eq("shipped"), any(Instant.class), eq("A1"), any());
 	}

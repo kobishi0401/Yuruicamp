@@ -29,7 +29,7 @@
             </li>
             <li class="checkoutStepItem isSelected" aria-current="step">
               <span>2</span>
-              填寫資料
+              配送與付款
             </li>
             <li class="checkoutStepItem">
               <span>3</span>
@@ -70,86 +70,6 @@
             </div>
           </section>
 
-          <section class="checkoutPanel isOpen" id="panelBuyer" aria-labelledby="panelBuyerTitle">
-            <button
-              class="checkoutPanelTrigger"
-              type="button"
-              data-panel-trigger
-              aria-expanded="true"
-              aria-controls="panelBuyerBody"
-            >
-              <span class="checkoutPanelHeading">
-                <span class="checkoutStepNumber">1</span>
-                <span class="checkoutPanelTitle" id="panelBuyerTitle">買家資訊</span>
-              </span>
-              <span class="checkoutPanelArrow" aria-hidden="true"></span>
-            </button>
-
-            <div class="checkoutPanelBody" id="panelBuyerBody">
-              <fieldset class="checkoutFieldset">
-                <legend class="checkoutLegend">聯絡資訊</legend>
-                <div class="checkoutFormGrid">
-                  <div class="checkoutField">
-                    <label class="checkoutLabel" for="buyerName"
-                      >姓名 <span class="requiredMark">*</span></label
-                    >
-                    <input
-                      class="checkoutInput"
-                      type="text"
-                      id="buyerName"
-                      name="buyerName"
-                      placeholder="王小明"
-                      required
-                    />
-                  </div>
-                  <div class="checkoutField">
-                    <label class="checkoutLabel" for="buyerPhone"
-                      >手機 <span class="requiredMark">*</span></label
-                    >
-                    <input
-                      class="checkoutInput"
-                      type="tel"
-                      id="buyerPhone"
-                      name="buyerPhone"
-                      placeholder="0988744144"
-                      maxlength="10"
-                      inputmode="numeric"
-                      pattern="09\d{8}"
-                      title="請輸入 09 開頭的 10 碼手機（例：0988744144）"
-                      required
-                    />
-                  </div>
-                </div>
-                <div class="checkoutField">
-                  <label class="checkoutLabel" for="buyerEmail"
-                    >Email <span class="requiredMark">*</span></label
-                  >
-                  <input
-                    class="checkoutInput"
-                    type="email"
-                    id="buyerEmail"
-                    name="buyerEmail"
-                    placeholder="your@email.com"
-                    required
-                  />
-                </div>
-                <div class="checkoutField">
-                  <label class="checkoutLabel" for="buyerNote">備註（選填）</label>
-                  <textarea
-                    class="checkoutTextarea"
-                    id="buyerNote"
-                    name="buyerNote"
-                    placeholder="有什麼需要告知賣家的嗎？"
-                    rows="2"
-                  ></textarea>
-                </div>
-              </fieldset>
-              <button id="fillProfileBtn" type="button" class="btn btnSecondary checkoutSecondaryAction">
-                帶入會員資料
-              </button>
-            </div>
-          </section>
-
           <section class="checkoutPanel isOpen" id="panelShipping" aria-labelledby="panelShippingTitle">
             <button
               class="checkoutPanelTrigger"
@@ -159,8 +79,8 @@
               aria-controls="panelShippingBody"
             >
               <span class="checkoutPanelHeading">
-                <span class="checkoutStepNumber">2</span>
-                <span class="checkoutPanelTitle" id="panelShippingTitle">物流選擇</span>
+                <span class="checkoutStepNumber">1</span>
+                <span class="checkoutPanelTitle" id="panelShippingTitle">配送資訊</span>
               </span>
               <span class="checkoutPanelArrow" aria-hidden="true"></span>
             </button>
@@ -197,7 +117,45 @@
                     <span class="checkoutChoiceMeta isFreeShipping">免運費</span>
                   </span>
                 </label>
+                <label class="checkoutChoice">
+                  <input
+                    class="checkoutRadio"
+                    type="radio"
+                    name="shippingMethod"
+                    value="cvs"
+                    id="shippingCvs"
+                  />
+                  <span class="checkoutChoiceBody">
+                    <span class="checkoutChoiceTitle">超商取貨（全家）</span>
+                    <span class="checkoutChoiceDesc">綠界物流 B2C，選擇全家便利商店取貨</span>
+                    <span class="checkoutChoiceMeta">運費 NT$60（滿 NT$3000 免運）</span>
+                  </span>
+                </label>
               </fieldset>
+
+              <div class="checkoutField checkoutRecipientField">
+                <div class="shippingAddressBlock">
+                  <span class="shippingAddressLabel">收件人 <span class="requiredMark">*</span></span>
+                  <div class="shippingAddressMain">
+                    <div
+                      id="checkoutRecipientDisplay"
+                      class="shippingAddressDisplay"
+                      aria-live="polite"
+                    >
+                      <span class="shippingAddressEmpty">尚未設定</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="shippingAddressEditBtn"
+                      id="checkoutRecipientEditBtn"
+                      aria-label="編輯收件人"
+                      title="編輯收件人"
+                    >
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div class="checkoutField checkoutAddressField" id="deliveryAddressSection">
                 <div class="shippingAddressBlock">
@@ -234,6 +192,19 @@
                   選擇門市取貨後，訂單會保存門市資料快照。
                 </p>
               </div>
+
+              <div class="checkoutField checkoutCvsField" id="cvsStoreSection" hidden>
+                <span class="checkoutLabel">超商取貨門市 <span class="requiredMark">*</span></span>
+                <div id="checkoutCvsStoreDisplay" class="shippingAddressDisplay" aria-live="polite">
+                  <span class="shippingAddressEmpty">尚未選擇門市</span>
+                </div>
+                <button type="button" class="btn btn-outline-primary mt-2" id="checkoutCvsMapBtn">
+                  選擇全家門市
+                </button>
+                <p class="checkoutFieldHint" id="checkoutCvsStoreHint" aria-live="polite">
+                  將開啟綠界電子地圖；選完後會回到本頁並更新門市資訊。
+                </p>
+              </div>
             </div>
           </section>
 
@@ -246,7 +217,7 @@
               aria-controls="panelPaymentBody"
             >
               <span class="checkoutPanelHeading">
-                <span class="checkoutStepNumber">3</span>
+                <span class="checkoutStepNumber">2</span>
                 <span class="checkoutPanelTitle" id="panelPaymentTitle">付款方式</span>
               </span>
               <span class="checkoutPanelArrow" aria-hidden="true"></span>
@@ -378,6 +349,7 @@
     <script src="/storefront/js/storage.js" defer></script>
     <script src="/storefront/js/state.js" defer></script>
     <script src="/storefront/js/formatters.js" defer></script>
+    <script src="/storefront/js/tw-district-zip.js" defer></script>
     <script src="/storefront/js/shipping-address.js" defer></script>
     <script src="/storefront/js/validators.js" defer></script>
     <script src="/storefront/js/cart-service.js" defer></script>

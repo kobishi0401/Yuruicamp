@@ -1,10 +1,10 @@
-# Order API Contract（v0.2）
+# Order API Contract（v0.3）
 
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Implemented（會員列表與詳情已完成） |
-| **日期** | 2026-07-20 |
-| **版本** | 0.2 |
+| **日期** | 2026-07-30 |
+| **版本** | 0.3 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **相關** | [`checkout-api-contract.md`](./checkout-api-contract.md) |
 | **DB** | `orders`、`order_items`、`order_coupons`、`order_status_history` |
@@ -43,7 +43,7 @@
 | `buyerName` | string | `buyer_name_snapshot` |
 | `buyerEmail` | string | `buyer_email_snapshot` |
 | `recipientName` | string | `recipient_name_snapshot` |
-| `shippingAddress` | string | `shipping_address_snapshot` |
+| `shippingAddress` | string | `shipping_address_snapshot`（宅配地址或超商門市地址字串） |
 | `shippingPhone` | string | `shipping_phone_snapshot` |
 | `subtotal` | string | `subtotal` |
 | `shippingFee` | string | `shipping_fee` |
@@ -137,9 +137,11 @@
 | `returned` | 退貨 |
 | `cancelled` | 取消（含結帳逾時） |
 
-會員 API **不可**任意 PATCH 狀態；出貨／完成走後台。
+會員 API **不可**任意 PATCH 狀態；出貨／完成走後台。Admin 出貨對 `cvs`／`delivery` 會建立綠界物流單（寫 `ecpay_logistics_id`）；見 Admin 契約。DB `shipping_method` 含 `delivery`／`pickup`／`cvs`（見 [`schema-enums.md`](../schema-enums.md)）；會員 Order 回應目前以地址／門市字串呈現，Checkout Session 才回完整 `shipping.method`／`cvsStore*`。
 
 付款狀態見 Payment 契約：`unpaid` → `paid`／`refunded`。
+
+> **勿混淆：** 付款方式 `ecpay-cvs` ≠ 配送方式 `cvs`（超商取貨）。
 
 ---
 
@@ -160,3 +162,4 @@
 |------|------|------|
 | 0.1 | 2026-07-20 | 會員唯讀訂單；對齊 orders／order_items 快照 |
 | 0.2 | 2026-07-22 | 完成會員本人列表、詳情、統一 404 與 PostgreSQL 驗收 |
+| 0.3 | 2026-07-30 | 文件：`shippingMethod`／cvs 與 Admin 出貨物流交叉說明 |

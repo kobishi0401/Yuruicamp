@@ -4,6 +4,8 @@
 
 提供具備 `orders.view`／`orders.edit` 的管理員查詢訂單、讀取商品與歷程，以及執行出貨和完成命令。Admin 不得直接改寫 ECPay 付款或退款結果。
 
+出貨（`POST …/ship`）對 `cvs`／`delivery` 會**同交易**呼叫綠界建立物流單並寫入 `ecpay_logistics_id`；`pickup` 不呼叫綠界。細節見 [`admin-api-contract.md`](../../api/admin-api-contract.md)「出貨與綠界物流」與 [`ecpay-real-sandbox-validation.md`](../logistics/ecpay-real-sandbox-validation.md)。
+
 ## 流程
 
 ```text
@@ -12,7 +14,7 @@ Admin Token → RBAC → ID 分頁 → 載入表頭摘要
 履約命令 → 悲觀鎖 → 驗證付款／退款／狀態 → 更新訂單 + history
 ```
 
-線上付款必須是 `paid` 且 `refundStatus=none` 才能出貨。COD 可在 unpaid 時出貨，完成時於同一交易標記 paid 與 `paidAt`。重複命令採冪等回放，不重複新增歷程。
+線上付款必須是 `paid` 且 `refundStatus=none` 才能出貨。COD 可在 unpaid 時出貨，完成時於同一交易標記 paid 與 `paidAt`。重複命令採冪等回放，不重複新增歷程。CVS／宅配出貨前會驗證收件人姓名（綠界 ReceiverName）與宅配地址格式；建單失敗回 `409 CONFLICT`。
 
 W1-01：`PATCH /api/admin/orders/{id}/internal-note` 覆寫 `orders.internal_note`；詳情回傳 `internalNote`；列表省略；空白清成 null。
 

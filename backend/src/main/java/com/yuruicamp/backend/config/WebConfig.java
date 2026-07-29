@@ -62,7 +62,7 @@ public class WebConfig implements WebMvcConfigurer {
 		ecpayCors.setAllowCredentials(false);
 		ecpayCors.setMaxAge(3600L);
 		source.registerCorsConfiguration("/api/payments/ecpay/**", ecpayCors);
-
+		source.registerCorsConfiguration("/api/logistics/ecpay/**", ecpayCors);
 		source.registerCorsConfiguration("/**", config);
 		return source;
 	}
