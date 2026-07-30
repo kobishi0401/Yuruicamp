@@ -9,6 +9,8 @@ Spring Boot **4.1.0** / Java **25** / PostgreSQL 16。
 - 後端**不簽發**自家 JWT。
 - 後續 API：`Authorization: Bearer <Firebase ID Token>`。
 
+組員完整啟動（含 Firebase、金流／物流 stub 與真沙箱）：[`docs/local-dev-setup.md`](../docs/local-dev-setup.md)
+
 ## 啟動前
 
 1. 本機 Postgres（repo 根目錄）：
