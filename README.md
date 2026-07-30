@@ -92,6 +92,11 @@
 - 完整 Seed 已於 2026-07-22 使用 PostgreSQL 16 全新獨立資料庫實灌，`latest_schema.sql` 與 `010`～`070` 一次成功 `COMMIT`；同一版本也已成功套用到目前 `yuruicamp`。可重做的流程與判定標準見 [`資料庫與完整 Seed 實際驗證`](./docs/backend-specs/test/database-seed-validation.md)。
 - **Commerce UX（2026-07-26 ✅）**：`orders`／`bookings` 人類可讀 `displayNo`（`ORD-xxxx`／`BK-xxxx`）；後台預約明細 lineTotal、contact 快照、中文狀態時間軸；Analytics `categoryBreakdown` 甜甜圈；會員 Profile API；靜態驗收入口 `frontend/tests/commerce-ux-browser.mjs`。規格見 [`.scratch/commerce-ux-display-checkout/spec.md`](./.scratch/commerce-ux-display-checkout/spec.md)。
 
+### 組員本機一鍵說明（推薦先看）
+
+**Firebase + 資料庫 + 後端 + 前端，以及金流／物流 stub／真沙箱啟動步驟：**  
+[`docs/local-dev-setup.md`](./docs/local-dev-setup.md)
+
 ### 用 npm 開啟前端（推薦／日常開發請用這個）
 
 前端的 npm／Vite **根目錄是 `frontend/`**，必須先進入該資料夾再啟動。  
@@ -124,7 +129,8 @@ npm run dev          # 啟動 Vite 開發伺服器
 
 **假資料：** 檔案在 `frontend/data/`；瀏覽器執行期路徑是 `/data/**`（由 Vite 以 `frontend/` 為 root 提供）。
 
-開發者改檔對照請看 [`userguide.md`](./userguide.md)。更完整的啟動說明見下方「啟動方式」。
+開發者改檔對照請看 [`userguide.md`](./userguide.md)。  
+含 Firebase／金流／物流的完整本機啟動見 [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)；前端細部見下方「啟動方式」。
 
 ---
 
@@ -594,6 +600,8 @@ Yuruicamp/
 - 本地 Web 伺服器（避免 CORS 問題，因為有 fetch JSON 資料）
 
 ### 啟動方式
+
+> 若要一次開齊 **DB + 後端 + Firebase + 金流／物流 stub**，請先看 [`docs/local-dev-setup.md`](./docs/local-dev-setup.md)。
 
 **方式 1：npm + Vite（強烈推薦，日常請用這個）**
 
