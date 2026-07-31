@@ -241,6 +241,8 @@ $env:YURUICAMP_FRONTEND_BASE_URL = "http://127.0.0.1:5173"
 
 > ngrok 免費版 URL 每次重啟會變 → 更新 `YURUICAMP_ECPAY_PUBLIC_API_BASE_URL` 並重啟後端。
 
+**寄件地址／品名（Trade Document 中文）：** 預設在後端 `application.yml`（UTF-8）。若用環境變數覆寫 `YURUICAMP_ECPAY_LOGISTICS_SENDER_ADDRESS` 或 `YURUICAMP_ECPAY_LOGISTICS_GOODS_NAME`，PowerShell／系統環境也必須是 **UTF-8**，否則託運單寄件欄會亂碼。亂碼寫進綠界後**不會**因改設定而自動修好，須用**新出貨**驗證。
+
 ---
 
 ## 8. 相關文件

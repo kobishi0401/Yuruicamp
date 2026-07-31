@@ -1,0 +1,6 @@
+# UTF-8 YAML for CJK logistics merchant defaults (Trade Document sender / goods name).
+# Env overrides must also be UTF-8 — see docs/local-dev-setup.md.
+yuruicamp:
+  ecpay-logistics:
+    sender-address: ${YURUICAMP_ECPAY_LOGISTICS_SENDER_ADDRESS:台北市中正區忠孝西路一段50號}
+    goods-name: ${YURUICAMP_ECPAY_LOGISTICS_GOODS_NAME:Yuruicamp商品}

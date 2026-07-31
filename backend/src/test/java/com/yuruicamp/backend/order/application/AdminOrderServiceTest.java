@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,15 +15,18 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.yuruicamp.backend.common.exception.BusinessException;
+import com.yuruicamp.backend.order.api.AdminOrderDetailResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
 import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,13 +48,16 @@ class AdminOrderServiceTest {
 	@Mock
 	private EcpayLogisticsPrintService logisticsPrintService;
 
+	@Mock
+	private EntityManager entityManager;
+
 	private AdminOrderService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new AdminOrderService(
 				readRepository, commandRepository, paymentRefundService,
-				logisticsCreateService, logisticsPrintService);
+				logisticsCreateService, logisticsPrintService, entityManager);
 	}
 
 	@Test
@@ -63,6 +70,20 @@ class AdminOrderServiceTest {
 		verify(logisticsCreateService).createShipment("O1");
 		verify(commandRepository).updateStatus(eq("O1"), eq("shipped"), any(Instant.class));
 		verify(commandRepository).addHistory(eq("O1"), eq("shipped"), any(Instant.class), eq("A1"), any());
+	}
+
+	@Test
+	void shipFlushesJpaBeforeReadingDetailSoLogisticsIdIsVisible() {
+		when(commandRepository.lockById("O1")).thenReturn(Optional.of(state("unshipped", "ecpay-credit", "paid")));
+		when(readRepository.findDetail("O1")).thenReturn(Optional.of(detail("shipped")));
+
+		AdminOrderDetailResponse result = service.ship("O1", "A1", null);
+
+		assertThat(result.ecpayLogisticsId()).isEqualTo("1234567");
+		InOrder inOrder = inOrder(logisticsCreateService, entityManager, readRepository);
+		inOrder.verify(logisticsCreateService).createShipment("O1");
+		inOrder.verify(entityManager).flush();
+		inOrder.verify(readRepository).findDetail("O1");
 	}
 
 	@Test

@@ -20,6 +20,7 @@ import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,18 +42,21 @@ public class AdminOrderService {
 	private final PaymentRefundService paymentRefundService;
 	private final EcpayLogisticsCreateService logisticsCreateService;
 	private final EcpayLogisticsPrintService logisticsPrintService;
+	private final EntityManager entityManager;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
 			AdminOrderCommandRepository commandRepository,
 			PaymentRefundService paymentRefundService,
 			EcpayLogisticsCreateService logisticsCreateService,
-			EcpayLogisticsPrintService logisticsPrintService) {
+			EcpayLogisticsPrintService logisticsPrintService,
+			EntityManager entityManager) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
 		this.paymentRefundService = paymentRefundService;
 		this.logisticsCreateService = logisticsCreateService;
 		this.logisticsPrintService = logisticsPrintService;
+		this.entityManager = entityManager;
 	}
 
 	@Transactional(readOnly = true)
@@ -113,6 +117,8 @@ public class AdminOrderService {
 		Instant now = Instant.now();
 		commandRepository.updateStatus(id, "shipped", now);
 		commandRepository.addHistory(id, "shipped", now, actorId, cleanNote(note, "Order shipped by admin"));
+		// JPA may have written ecpay_logistics_id; flush so JDBC Admin read model sees it in this response
+		entityManager.flush();
 
 		return get(id);
 	}

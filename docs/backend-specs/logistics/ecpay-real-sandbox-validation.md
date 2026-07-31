@@ -281,6 +281,8 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 
 > **Create 回應格式：** 幕後 `/Express/Create` 成功為 `1|MerchantID=…&AllPayLogisticsID=…&…`（兩段），**不是** `1|OK|fields`。解析錯會導致已建單卻沒寫入 `ecpay_logistics_id`、列印按鈕不出現。
 
+> **Trade Document 中文：** 寄件地址／品名來自商家設定（`application.yml` 預設；env 覆寫須 UTF-8）。收件人來自訂單。Create 時寫進綠界的文字之後再印也不會改；舊亂碼單不回修，用新出貨驗證。出貨成功後列表應立刻出現「列印託運單」（不必 F5）。
+
 ---
 
 ## 7. 常見錯誤
@@ -291,6 +293,8 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | 選店後沒回 checkout | ngrok URL 錯或未開 | 重查 `PUBLIC_API_BASE_URL` 與 ngrok Forwarding |
 | 付款完成但訂單仍 unpaid | payment notify 沒進來 | 查 ngrok inspect、`/payments/ecpay/notify` |
 | 出貨 CONFLICT 建單失敗 | MD5/欄位/地址錯 | 看 backend log 的 `RtnCode`/`RtnMsg` |
+| 託運單寄件／品名亂碼、收件正常 | 設定中文編碼壞掉（env 非 UTF-8） | 用 yml 預設或 UTF-8 env；**新單**重出貨驗證 |
+| 出貨後要 F5 才有列印按鈕 | 舊後端未 flush JPA→JDBC | 升級後重啟；Ship 回應應帶 `ecpayLogisticsId` |
 | 出貨 `10500070` 或 CONFLICT「綠界物流格式」 | 收件人含 `-`、空格或 Firebase 英文名 | 會員中心改 **中文收件人**（如陳柏榮）後重下單 |
 | 出貨 `10500006 SenderZipCode Is Null` | 未設定寄件人郵遞區號 | 設定 `YURUICAMP_ECPAY_LOGISTICS_SENDER_ZIP` + `SENDER_ADDRESS` 並重啟 backend |
 | 出貨 `10500008 ReceiverZipCode` | 訂單地址 snapshot 缺郵遞區號 | checkout 宅配地址須含 3/5 碼郵遞區號（例：`408 臺中市 南屯區...`） |
