@@ -15,5 +15,8 @@ public interface CustomerSessionMapper {
 	@Mapping(target = "firebaseUid", source = "customer.firebaseUid")
 	@Mapping(target = "status", expression = "java(customer.getStatus().name())")
 	@Mapping(target = "created", source = "created")
+	@Mapping(
+			target = "lineBound",
+			expression = "java(customer.getLineUserId() != null && !customer.getLineUserId().isBlank())")
 	CustomerSessionResponse toResponse(Customer customer, boolean created);
 }

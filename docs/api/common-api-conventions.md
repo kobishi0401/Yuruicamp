@@ -95,6 +95,8 @@
 | `ADMIN_NOT_WHITELISTED` | 403 | 後台 email 不在白名單 |
 | `ADMIN_INACTIVE` | 403 | 後台 `active=false` |
 | `CUSTOMER_SUSPENDED` | 403 | 會員停權 |
+| `LINE_USER_ID_CONFLICT` | 409 | 此 LINE User ID 已綁其他會員（session／綁定） |
+| `LINE_NOT_LINKED` | 404 | n8n：LINE User ID 尚未綁定會員（訂單查詢） |
 | `INTERNAL_ERROR` | 500 | 未預期錯誤（不回堆疊） |
 
 業務契約可再補領域 code（例如 `STOCK_INSUFFICIENT`），但須寫進該契約 Changelog。
@@ -109,14 +111,16 @@
 | 後台 | 同上 | 另查 `admin_users` 白名單 + `active` |
 | 公開 GET | 無 | 如商品列表 |
 | ECPay Notify | **無**使用者 Token | 改驗綠界簽章 |
+| **n8n 客服整合** | **`X-Api-Key: <shared secret>`** | 僅 `/api/integrations/n8n/**`；**不是** Firebase Bearer。契約見 [`n8n-cs-api-contract.md`](./n8n-cs-api-contract.md) |
 
 本機 Dev stub（`FIREBASE_ENABLED=false`）：
 
 ```text
-dev:<uid>:<email>:<provider>:<displayName>
+dev:<uid>:<email>:<provider>[:displayName[:lineUserId]]
 ```
 
-`provider` ∈ `google` \| `facebook` \| `line`。
+`provider` ∈ `google` \| `facebook` \| `line`。  
+可選第六段 `lineUserId`（如 `U…`）供測試寫入 `customers.line_user_id`；舊的 4～5 段格式仍可用。
 
 ---
 
@@ -176,3 +180,4 @@ dev:<uid>:<email>:<provider>:<displayName>
 | 版本 | 日期 | 說明 |
 |------|------|------|
 | 0.1 | 2026-07-20 | 初版：Envelope／錯誤／認證／金額／分頁 |
+| 0.2 | 2026-07-31 | 補 n8n `X-Api-Key`、Dev token 可選 LINE User ID、`LINE_*` 錯誤碼 |

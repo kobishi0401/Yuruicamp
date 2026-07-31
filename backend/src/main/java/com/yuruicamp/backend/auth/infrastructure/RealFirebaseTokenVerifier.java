@@ -3,6 +3,7 @@ package com.yuruicamp.backend.auth.infrastructure;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 
@@ -113,7 +114,8 @@ public class RealFirebaseTokenVerifier implements FirebaseTokenVerifier {
 					email.toLowerCase(Locale.ROOT),
 					name,
 					provider,
-					decoded.getPicture());
+					decoded.getPicture(),
+					extractLineUserId(decoded));
 		}
 		catch (FirebaseAuthException ex) {
 			// Log real cause for ops/debug; do not put token or full stack detail into API body
@@ -145,5 +147,59 @@ public class RealFirebaseTokenVerifier implements FirebaseTokenVerifier {
 			}
 		}
 		return "google";
+	}
+
+	/**
+	 * LINE User ID from Firebase {@code identities} (e.g. {@code oidc.line: ["U…"]}).
+	 * Works for pure LINE login and Account Linking onto Google (same claim map).
+	 */
+	private static String extractLineUserId(FirebaseToken decoded) {
+		Object firebaseClaim = decoded.getClaims().get("firebase");
+		if (!(firebaseClaim instanceof Map<?, ?> map)) {
+			return null;
+		}
+		Object identities = map.get("identities");
+		if (!(identities instanceof Map<?, ?> idMap)) {
+			return null;
+		}
+		for (Map.Entry<?, ?> entry : idMap.entrySet()) {
+			if (entry.getKey() == null) {
+				continue;
+			}
+			String key = entry.getKey().toString().toLowerCase(Locale.ROOT);
+			if (!key.contains("line")) {
+				continue;
+			}
+			String first = firstIdentityValue(entry.getValue());
+			if (first != null) {
+				return first;
+			}
+		}
+		return null;
+	}
+
+	private static String firstIdentityValue(Object value) {
+		if (value instanceof Collection<?> collection) {
+			for (Object item : collection) {
+				if (item != null) {
+					String text = item.toString().trim();
+					if (!text.isEmpty()) {
+						return text;
+					}
+				}
+			}
+			return null;
+		}
+		if (value instanceof Object[] array) {
+			for (Object item : array) {
+				if (item != null) {
+					String text = item.toString().trim();
+					if (!text.isEmpty()) {
+						return text;
+					}
+				}
+			}
+		}
+		return null;
 	}
 }

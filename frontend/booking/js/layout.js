@@ -17,11 +17,10 @@ function initFloatingActions() {
     </button>
     <a
       class="floatingLineBtn"
-      href="https://lin.ee/NkgGfc4"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="LINE 聯絡"
-      title="LINE 聯絡"
+      href="#"
+      role="button"
+      aria-label="聯繫客服（LINE）"
+      title="聯繫客服"
     >
       <span class="floatingLineLabel">LINE 客服</span>
       <span class="floatingLineIcon" aria-hidden="true">
@@ -31,6 +30,18 @@ function initFloatingActions() {
   `;
 
   document.body.appendChild(floatingActions);
+
+  const lineButton = floatingActions.querySelector('.floatingLineBtn');
+  if (window.YuruiContactCs && typeof window.YuruiContactCs.bindContactCsControl === 'function') {
+    window.YuruiContactCs.bindContactCsControl(lineButton);
+  } else if (lineButton) {
+    lineButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      if (typeof window.showToast === 'function') {
+        window.showToast('客服模組載入中，請稍候再試', 'error');
+      }
+    });
+  }
 
   const topButton = floatingActions.querySelector('.floatingTopBtn');
 
@@ -173,7 +184,16 @@ function loadBookingHeaderScript() {
       return loadScriptOnce('/storefront/js/components/auth.js', '__yuruiAuthScriptLoaded');
     })
     .then(function () {
+      return loadScriptOnce('/storefront/js/components/contact-cs.js', '__yuruiContactCsScriptLoaded');
+    })
+    .then(function () {
       window.initModalListeners?.();
+      // Re-bind floating LINE button now that YuruiContactCs exists
+      var lineBtn = document.querySelector('.floatingLineBtn');
+      if (lineBtn && window.YuruiContactCs) {
+        delete lineBtn.dataset.contactCsBound;
+        window.YuruiContactCs.bindContactCsControl(lineBtn);
+      }
       return loadScriptOnce('/booking/js/booking-header.js', '__bookingHeaderScriptLoaded');
     })
     .catch(function (error) {

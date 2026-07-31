@@ -3,7 +3,7 @@
 | 欄位         | 內容                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------- |
 | **狀態**     | Active                                                                                         |
-| **日期**     | 2026-07-30                                                                                     |
+| **日期**     | 2026-07-31                                                                                     |
 | **欄位策略** | **甲**：對齊 DB／架構決策的精簡契約；舊 Mock 胖欄位不當真相                                    |
 | **實作清單** | [`plans/backend-implementation-checklist.md`](../../plans/backend-implementation-checklist.md) |
 | **ENUM**     | [`docs/schema-enums.md`](../schema-enums.md)                                                   |
@@ -33,6 +33,7 @@
 | P1   | [`coupon-api-contract.md`](./coupon-api-contract.md)                                   | F    | Partially Implemented v0.4（商城套券、消耗與取消失效完成；Booking Schema 待決定）                 |
 | P1   | [`admin-api-contract.md`](./admin-api-contract.md)                                     | G    | Locked v0.27（G＋W1～W4＋Analytics；`ship` 綠界物流建單）                                       |
 | P2   | [`member-review-api-contract.md`](./member-review-api-contract.md)、[`product-review-api-contract.md`](./product-review-api-contract.md) | H | Implemented（會員本人 GET／POST、商品公開分頁讀取與評分統計） |
+| P2   | [`n8n-cs-api-contract.md`](./n8n-cs-api-contract.md) | LINE CS | Implemented v1.0（n8n `X-Api-Key` 唯讀訂單／綁定查詢；整合見 [`../backend-specs/integration/n8n-line-customer-service.md`](../backend-specs/integration/n8n-line-customer-service.md)） |
 
 ### 刻意延後（P2，本輪不寫死）
 
@@ -51,6 +52,7 @@
 2. `auth-api-contract.md` + `product-api-contract.md`（已能打通的範例）
 3. `checkout` → `order` → `payment`（商城能買）
 4. `booking` → `coupon` → `admin`
+5. 接 LINE 客服機器人：`n8n-cs-api-contract.md` + [`n8n-line-customer-service.md`](../backend-specs/integration/n8n-line-customer-service.md)
 
 ---
 

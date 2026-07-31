@@ -16,6 +16,10 @@ public enum ErrorCode {
 	ADMIN_NOT_WHITELISTED(HttpStatus.FORBIDDEN),
 	CUSTOMER_SUSPENDED(HttpStatus.FORBIDDEN),
 	CONFLICT(HttpStatus.CONFLICT),
+	/** LINE User ID already bound to a different Customer (no steal). */
+	LINE_USER_ID_CONFLICT(HttpStatus.CONFLICT),
+	/** n8n lookup: LINE User ID has no linked Customer. */
+	LINE_NOT_LINKED(HttpStatus.NOT_FOUND),
 	BOOKING_DATE_INVALID(HttpStatus.BAD_REQUEST),
 	BOOKING_WINDOW_EXCEEDED(HttpStatus.BAD_REQUEST),
 	ZONE_UNAVAILABLE(HttpStatus.CONFLICT),

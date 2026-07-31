@@ -33,6 +33,8 @@ public class CustomerAuthService {
 
 	/**
 	 * Verify Firebase ID Token, upsert {@code customers}, return profile (no JWT issued).
+	 * When the verified token includes a LINE User ID, persist it on the Customer
+	 * (reject if already bound to a different Customer).
 	 */
 	@Transactional
 	public CustomerSessionResponse establishSession(String idToken) {
@@ -44,6 +46,7 @@ public class CustomerAuthService {
 			Customer existing = byUid.get();
 			assertUsable(existing);
 			touchProfile(existing, verified, now);
+			bindLineUserId(existing, verified);
 			return customerSessionMapper.toResponse(customerRepository.save(existing), false);
 		}
 
@@ -56,6 +59,7 @@ public class CustomerAuthService {
 			}
 			existing.setFirebaseUid(verified.uid());
 			touchProfile(existing, verified, now);
+			bindLineUserId(existing, verified);
 			return customerSessionMapper.toResponse(customerRepository.save(existing), false);
 		}
 
@@ -72,6 +76,7 @@ public class CustomerAuthService {
 		created.setStatus(CustomerStatus.active);
 		created.setCreatedAt(now);
 		created.setUpdatedAt(now);
+		bindLineUserId(created, verified);
 		return customerSessionMapper.toResponse(customerRepository.save(created), true);
 	}
 
@@ -93,6 +98,25 @@ public class CustomerAuthService {
 		}
 		customer.setAuthProvider(verified.authProvider());
 		customer.setUpdatedAt(now);
+	}
+
+	/**
+	 * Persist LINE User ID only from verified token claims.
+	 * Does not clear an existing binding when the token has no LINE identity.
+	 */
+	private void bindLineUserId(Customer customer, VerifiedFirebaseToken verified) {
+		String lineUserId = verified.lineUserId();
+		if (lineUserId == null || lineUserId.isBlank()) {
+			return;
+		}
+		String normalized = lineUserId.trim();
+		var owner = customerRepository.findByLineUserId(normalized);
+		if (owner.isPresent() && !owner.get().getId().equals(customer.getId())) {
+			throw new BusinessException(
+					ErrorCode.LINE_USER_ID_CONFLICT,
+					"This LINE account is already linked to another member");
+		}
+		customer.setLineUserId(normalized);
 	}
 
 	private static String newCustomerId() {

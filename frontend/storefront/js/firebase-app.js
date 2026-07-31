@@ -14,6 +14,7 @@ import {
   FacebookAuthProvider,
   OAuthProvider,
   signInWithPopup,
+  linkWithPopup,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -57,6 +58,14 @@ function lineProviderId() {
 
 var config = readFirebaseConfig();
 var missing = missingConfigKeys(config);
+
+// Optional OA chat URL from Vite env → AppConfig (聯繫客服；不含身分參數)
+(function applyLineOaChatUrlFromEnv() {
+  var oa = String(import.meta.env.VITE_LINE_OA_CHAT_URL || '').trim();
+  if (!oa || !window.AppConfig) return;
+  window.AppConfig.LINE = window.AppConfig.LINE || {};
+  window.AppConfig.LINE.OA_CHAT_URL = oa;
+})();
 
 var app = null;
 var auth = null;
@@ -221,6 +230,47 @@ window.YuruiFirebase = {
   /** 步驟 3-2 */
   signInWithLine: async function signInWithLine() {
     return window.YuruiFirebase.signInWithProvider('line');
+  },
+
+  /**
+   * Firebase Account Linking：把 LINE 掛到目前已登入的使用者（同一 firebase_uid）。
+   * Used by 「聯繫客服」 when Google (etc.) is signed in but LINE is not linked yet.
+   * @param {'line'} [providerKey]
+   */
+  linkWithProvider: async function linkWithProvider(providerKey) {
+    var key = String(providerKey || 'line').toLowerCase();
+    if (key !== 'line') {
+      throw new Error('目前僅支援 link LINE（聯繫客服）');
+    }
+    var firebaseAuth = window.YuruiFirebase.getAuth();
+    if (!firebaseAuth.currentUser) {
+      throw new Error('請先登入後再綁定 LINE');
+    }
+    var label = 'LINE';
+    try {
+      var result = await linkWithPopup(firebaseAuth.currentUser, buildAuthProvider(key));
+      // forceRefresh so ID token identities include the newly linked LINE subject
+      var idToken = await result.user.getIdToken(true);
+      return {
+        idToken: idToken,
+        uid: result.user.uid,
+        email: result.user.email || null,
+        displayName: result.user.displayName || null,
+        provider: key,
+      };
+    } catch (error) {
+      rethrowPopupError(error, label + ' 綁定');
+    }
+  },
+
+  /** Whether current Firebase user already has a LINE identity in providerData. */
+  hasLineProvider: function hasLineProvider() {
+    if (!ready || !auth || !auth.currentUser) return false;
+    var providerId = lineProviderId().toLowerCase();
+    return (auth.currentUser.providerData || []).some(function (entry) {
+      var id = String((entry && entry.providerId) || '').toLowerCase();
+      return id === providerId || id.indexOf('line') >= 0;
+    });
   },
 
   signOut: async function signOutFirebase() {
