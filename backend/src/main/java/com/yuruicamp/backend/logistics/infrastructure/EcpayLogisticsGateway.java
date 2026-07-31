@@ -44,6 +44,11 @@ public interface EcpayLogisticsGateway {
 
 	String createActionUrl();
 
+	/** B2C／宅配列印託運單（printTradeDocument）表單欄位。 */
+	Map<String, String> buildPrintTradeDocumentFields(String allPayLogisticsId);
+
+	String printTradeDocumentActionUrl();
+
 	EcpayLogisticsCreateResult createCvsOrder(Map<String, String> fields);
 
 	EcpayLogisticsCreateResult createHomeOrder(Map<String, String> fields);

@@ -12,12 +12,14 @@ import com.yuruicamp.backend.common.admin.AdminStatusLabels;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
 import com.yuruicamp.backend.order.api.AdminOrderDetailResponse;
 import com.yuruicamp.backend.order.api.AdminOrderListResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,16 +40,19 @@ public class AdminOrderService {
 	private final AdminOrderCommandRepository commandRepository;
 	private final PaymentRefundService paymentRefundService;
 	private final EcpayLogisticsCreateService logisticsCreateService;
+	private final EcpayLogisticsPrintService logisticsPrintService;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
 			AdminOrderCommandRepository commandRepository,
 			PaymentRefundService paymentRefundService,
-			EcpayLogisticsCreateService logisticsCreateService) {
+			EcpayLogisticsCreateService logisticsCreateService,
+			EcpayLogisticsPrintService logisticsPrintService) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
 		this.paymentRefundService = paymentRefundService;
 		this.logisticsCreateService = logisticsCreateService;
+		this.logisticsPrintService = logisticsPrintService;
 	}
 
 	@Transactional(readOnly = true)
@@ -79,6 +84,14 @@ public class AdminOrderService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Order not found"));
 
 		return toDetail(row);
+	}
+
+	/**
+	 * Launch ECPay Trade Document print (does not mutate Order Status or history).
+	 */
+	@Transactional(readOnly = true)
+	public AdminLogisticsPrintLaunchResponse printLogisticsLabel(String id) {
+		return logisticsPrintService.launchPrintTradeDocument(id);
 	}
 
 	@Transactional
@@ -235,7 +248,9 @@ public class AdminOrderService {
 				row.paymentMethod(), row.paymentStatus(), row.refundStatus(), row.status(),
 				row.internalNote(),
 				row.placedAt(), row.paidAt(), row.updatedAt(),
-				readRepository.findItems(row.id()), history);
+				readRepository.findItems(row.id()), history,
+				row.shippingMethod(), row.ecpayLogisticsId(),
+				row.ecpayLogisticsRtnCode(), row.ecpayLogisticsRtnMsg(), row.ecpayLogisticsStatusAt());
 	}
 
 	private AdminOrderCommandRepository.OrderState lock(String id) {

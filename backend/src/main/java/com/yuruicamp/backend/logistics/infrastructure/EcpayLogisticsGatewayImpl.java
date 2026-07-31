@@ -145,6 +145,20 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 	}
 
 	@Override
+	public Map<String, String> buildPrintTradeDocumentFields(String allPayLogisticsId) {
+		Map<String, String> params = new LinkedHashMap<>();
+		params.put("MerchantID", logistics.getMerchantId());
+		params.put("AllPayLogisticsID", allPayLogisticsId);
+		sign(params);
+		return params;
+	}
+
+	@Override
+	public String printTradeDocumentActionUrl() {
+		return trimTrailingSlash(logistics.getApiBaseUrl()) + "/helper/printTradeDocument";
+	}
+
+	@Override
 	public EcpayLogisticsCreateResult createCvsOrder(Map<String, String> fields) {
 		if (logistics.isStub()) {
 			return new EcpayLogisticsCreateResult(

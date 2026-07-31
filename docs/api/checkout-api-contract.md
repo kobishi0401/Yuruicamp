@@ -220,7 +220,7 @@ Request 範例（宅配）：
 | 方法 | 路徑 | 認證 | 說明 |
 |------|------|------|------|
 | `POST` | `/api/logistics/ecpay/map-result` | 無 Bearer；綠界／stub callback | 寫入門市並導回前端 |
-| `POST` | `/api/logistics/ecpay/notify` | 無 Bearer；驗 MD5 | 物流狀態；**本階段只 log + `1\|OK`，不改訂單狀態** |
+| `POST` | `/api/logistics/ecpay/notify` | 無 Bearer；驗 MD5 | 物流狀態；覆寫 Logistics Status Snapshot + `1\|OK`；**不**改 Order Status（見 Admin 契約／ADR 0005） |
 
 建物流單（寫入 `ecpay_logistics_id`）發生在 Admin `POST /api/admin/orders/{id}/ship`，**不是**付款 Notify。見 Admin 契約。
 

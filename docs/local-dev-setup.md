@@ -144,6 +144,8 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"   # 與 frontend/.env.local 的 PROJ
 | 綠界付款 | 開本機假付款頁 `/api/payments/ecpay/stub/aio-checkout` |
 | 超商地圖 | 本機 stub 地圖 |
 | Admin 出貨建物流單 | 回傳 `STUB...` 編號（不是真綠界） |
+| 列印託運單 | stub 下會 409；需 `YURUICAMP_ECPAY_LOGISTICS_STUB=false` + 真物流 id |
+| 物流 notify 快照 | stub／無公網時可能收不到；真沙箱見 logistics 驗收 §5.7 |
 | 取貨付款 `ecpay-cvs` | 是**付款方式**，≠ 超商取貨物流 `shipping.method=cvs` |
 
 ### Terminal 3 — 前端

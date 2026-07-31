@@ -308,6 +308,10 @@
       /** W3-01／W3-02：未出貨取消（已付款線上單同交易退款） */
       cancel: function (orderId, payload) {
         return request('POST', '/orders/' + encodeURIComponent(orderId) + '/cancel', payload || {});
+      },
+      /** 列印託運單：回傳 actionUrl + fields，前端新分頁 Form POST 綠界 */
+      printLogisticsLabel: function (orderId) {
+        return request('POST', '/orders/' + encodeURIComponent(orderId) + '/print-logistics-label', {});
       }
     },
 

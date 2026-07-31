@@ -36,6 +36,11 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 	@Query("select o from Order o where o.id=:id")
 	Optional<Order> findByIdForUpdate(@Param("id") String id);
 
+	/** 物流狀態 notify：以 AllPayLogisticsID 對單並鎖定。 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select o from Order o where o.ecpayLogisticsId=:logisticsId")
+	Optional<Order> findByEcpayLogisticsIdForUpdate(@Param("logisticsId") String logisticsId);
+
 	// 使用會員與冪等鍵尋找已建立的訂單。
 	@Query("select distinct o from Order o left join fetch o.items where o.customerId=:customerId and o.checkoutIdempotencyKey=:idempotencyKey")
 	Optional<Order> findByCheckoutIdempotencyKey(@Param("customerId") String customerId,

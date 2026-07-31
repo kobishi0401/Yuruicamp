@@ -1,5 +1,6 @@
 package com.yuruicamp.backend.order.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import com.yuruicamp.backend.common.exception.BusinessException;
@@ -16,6 +18,8 @@ import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
+import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,11 +41,16 @@ class AdminOrderServiceTest {
 	@Mock
 	private EcpayLogisticsCreateService logisticsCreateService;
 
+	@Mock
+	private EcpayLogisticsPrintService logisticsPrintService;
+
 	private AdminOrderService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new AdminOrderService(readRepository, commandRepository, paymentRefundService, logisticsCreateService);
+		service = new AdminOrderService(
+				readRepository, commandRepository, paymentRefundService,
+				logisticsCreateService, logisticsPrintService);
 	}
 
 	@Test
@@ -101,6 +110,23 @@ class AdminOrderServiceTest {
 		verify(paymentRefundService, never()).refundOrderFully(any(), any());
 	}
 
+	@Test
+	void printLogisticsLabelDelegatesWithoutMutatingOrder() {
+		var launch = new AdminLogisticsPrintLaunchResponse(
+				"O1",
+				"https://logistics-stage.ecpay.com.tw/helper/printTradeDocument",
+				Map.of("MerchantID", "2000132", "AllPayLogisticsID", "1234567", "CheckMacValue", "ABC"));
+		when(logisticsPrintService.launchPrintTradeDocument("O1")).thenReturn(launch);
+
+		AdminLogisticsPrintLaunchResponse result = service.printLogisticsLabel("O1");
+
+		assertThat(result.actionUrl()).contains("printTradeDocument");
+		assertThat(result.fields()).containsEntry("AllPayLogisticsID", "1234567");
+		verify(logisticsPrintService).launchPrintTradeDocument("O1");
+		verify(commandRepository, never()).updateStatus(any(), any(), any());
+		verify(commandRepository, never()).addHistory(any(), any(), any(), any(), any());
+	}
+
 	private static AdminOrderCommandRepository.OrderState state(String status, String method, String payment) {
 		return new AdminOrderCommandRepository.OrderState(
 				"O1", "C1", status, method, payment, "none", BigDecimal.TEN);
@@ -111,6 +137,7 @@ class AdminOrderServiceTest {
 				"O1", "ORD-0001", "C1", "Customer", "active", "Buyer", "buyer@example.test",
 				"Recipient", "0900", "Address", java.math.BigDecimal.ZERO,
 				java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
-				"ecpay-credit", "paid", "none", status, null, Instant.EPOCH, Instant.EPOCH, Instant.EPOCH);
+				"ecpay-credit", "paid", "none", status, null, Instant.EPOCH, Instant.EPOCH, Instant.EPOCH,
+				"delivery", "1234567", "300", "訂單處理中", Instant.EPOCH);
 	}
 }

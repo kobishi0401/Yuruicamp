@@ -16,5 +16,10 @@ public record AdminOrderListResponse(
 		long itemCount,
 		Instant placedAt,
 		Instant paidAt,
-		Instant updatedAt) {
+		Instant updatedAt,
+		String shippingMethod,
+		String ecpayLogisticsId,
+		String ecpayLogisticsRtnCode,
+		String ecpayLogisticsRtnMsg,
+		Instant ecpayLogisticsStatusAt) {
 }

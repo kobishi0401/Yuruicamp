@@ -304,9 +304,10 @@ Request：
 
 | 方法 | 路徑 | 權限 | 說明 |
 |------|------|------|------|
-| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序；列表含 **`displayNo`**（planned） |
-| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、中文狀態歷程、`internalNote` |
+| `GET` | `/api/admin/orders` | `orders.view` | 分頁、篩選與排序；含 `displayNo`、物流欄位（見下） |
+| `GET` | `/api/admin/orders/{id}` | `orders.view` | 收件快照、商品明細、中文狀態歷程、`internalNote`、物流欄位 |
 | `POST` | `/api/admin/orders/{id}/ship` | `orders.edit` | `unshipped` → `shipped`；**同交易**對 `cvs`／`delivery` 呼叫綠界建物流單 |
+| `POST` | `/api/admin/orders/{id}/print-logistics-label` | `orders.edit` | 列印託運單 launch（`actionUrl`+`fields`）；**不**改 Order Status |
 | `POST` | `/api/admin/orders/{id}/complete` | `orders.edit` | `shipped` → `completed`；COD 同交易標記 paid |
 | `POST` | `/api/admin/orders/{id}/cancel` | `orders.edit` | 未出貨取消 O1（W3-01）；已付款線上單同交易退款 O3 |
 | `PATCH` | `/api/admin/orders/{id}/internal-note` | `orders.edit` | 覆寫主檔內部備註；不改履約／付款狀態 |
@@ -333,7 +334,55 @@ Request：
 | CVS 缺門市 | `409 CONFLICT`（例：CVS store is not selected） |
 | 收件人姓名不符綠界格式 | `409 CONFLICT`（ReceiverName；[ADR 0003](../adr/0003-checkout-recipient-sync-member-address.md)） |
 | 宅配地址／寄件人設定不足 | `409 CONFLICT`（含綠界 `RtnCode`／`RtnMsg`） |
-| 物流 notify | `POST /api/logistics/ecpay/notify` 本階段只驗簽＋log，**不**自動改 `completed` |
+| 物流 notify | 見下方「物流狀態快照」 |
+
+### 列表／明細物流欄位（Orders）
+
+List item 與 detail 皆含（可為 null）：
+
+| 欄位 | 說明 |
+|------|------|
+| `shippingMethod` | `delivery`／`pickup`／`cvs` |
+| `ecpayLogisticsId` | Logistics Order id（AllPayLogisticsID） |
+| `ecpayLogisticsRtnCode` | Logistics Status Snapshot：最新 notify `RtnCode` |
+| `ecpayLogisticsRtnMsg` | 最新 notify `RtnMsg`（Admin 物流欄顯示） |
+| `ecpayLogisticsStatusAt` | 快照最後覆寫時間（ISO-8601） |
+
+### 列印託運單（Orders）
+
+`POST /api/admin/orders/{id}/print-logistics-label`
+
+成功 `200`：
+
+```json
+{
+  "orderId": "…",
+  "actionUrl": "https://logistics-stage.ecpay.com.tw/helper/printTradeDocument",
+  "fields": {
+    "MerchantID": "2000132",
+    "AllPayLogisticsID": "1234567",
+    "CheckMacValue": "…"
+  }
+}
+```
+
+前端必須以**新分頁** Form POST（禁止 iframe）。不改 Order Status、不寫 status history。
+
+| 情況 | 回應 |
+|------|------|
+| 無 `ecpayLogisticsId` | `409 CONFLICT` |
+| `YURUICAMP_ECPAY_LOGISTICS_STUB=true` | `409 CONFLICT` |
+| id 以 `STUB` 開頭 | `409 CONFLICT` |
+
+### 物流狀態快照（notify）
+
+`POST /api/logistics/ecpay/notify`（無 Bearer；MD5）：
+
+1. 驗簽失敗 → 既有錯誤回應
+2. 以 `AllPayLogisticsID` = `orders.ecpay_logistics_id` 對單並覆寫 snapshot 三欄
+3. 相同 `RtnCode`+`RtnMsg` → 不寫 DB（冪等）
+4. 對不到訂單 → 仍回 `1|OK` + warn（避免重送風暴）
+5. **不**自動改 Order Status（[ADR 0005](../adr/0005-logistics-status-snapshot-separate-from-order-status.md)）
 
 驗收：[`ecpay-cvs-sandbox-validation.md`](../backend-specs/logistics/ecpay-cvs-sandbox-validation.md)、[`ecpay-real-sandbox-validation.md`](../backend-specs/logistics/ecpay-real-sandbox-validation.md)。
 
@@ -1071,3 +1120,4 @@ Patch：未傳欄位保留原值。`active: false`＝停用（公開列表立刻
 | 0.25 | 2026-07-27 | Admin UX 03：`GET /api/admin/campgrounds/{id}/availability`；月曆 Backend 可用性；RBAC `booking-calendar.view` |
 | 0.26 | 2026-07-27 | Admin UX follow-up 02：`GET /api/admin/campgrounds/{id}/bookings-for-night`；點日占用明細 lazy load |
 | 0.27 | 2026-07-30 | Orders `ship`：文件化 CVS／HOME-TCAT 建物流單副作用、冪等與 CONFLICT；對齊真沙箱驗收 |
+| 0.28 | 2026-07-31 | Orders 物流欄位＋`print-logistics-label`；notify 覆寫 Logistics Status Snapshot（不改 Order Status；ADR 0005） |

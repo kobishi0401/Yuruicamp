@@ -81,7 +81,9 @@ public class AdminOrderReadRepository {
 				select o.id, o.display_no, o.customer_id, c.name customer_name, o.recipient_name_snapshot,
 				       o.total, o.payment_method::text, o.payment_status::text,
 				       o.refund_status::text, o.status::text, o.placed_at, o.paid_at,
-				       o.updated_at, count(i.id) item_count
+				       o.updated_at, count(i.id) item_count,
+				       o.shipping_method::text, o.ecpay_logistics_id,
+				       o.ecpay_logistics_rtn_code, o.ecpay_logistics_rtn_msg, o.ecpay_logistics_status_at
 				from orders o
 				join customers c on c.id = o.customer_id
 				left join order_items i on i.order_id = o.id
@@ -93,7 +95,10 @@ public class AdminOrderReadRepository {
 				rs.getString("recipient_name_snapshot"), money(rs.getBigDecimal("total")),
 				rs.getString("payment_method"), rs.getString("payment_status"),
 				rs.getString("refund_status"), rs.getString("status"), rs.getLong("item_count"),
-				instant(rs, "placed_at"), nullableInstant(rs, "paid_at"), instant(rs, "updated_at")));
+				instant(rs, "placed_at"), nullableInstant(rs, "paid_at"), instant(rs, "updated_at"),
+				rs.getString("shipping_method"), rs.getString("ecpay_logistics_id"),
+				rs.getString("ecpay_logistics_rtn_code"), rs.getString("ecpay_logistics_rtn_msg"),
+				nullableInstant(rs, "ecpay_logistics_status_at")));
 	}
 
 	public Optional<DetailRow> findDetail(String id) {
@@ -111,7 +116,10 @@ public class AdminOrderReadRepository {
 				rs.getString("payment_method"), rs.getString("payment_status"),
 				rs.getString("refund_status"), rs.getString("status"),
 				rs.getString("internal_note"),
-				instant(rs, "placed_at"), nullableInstant(rs, "paid_at"), instant(rs, "updated_at")))
+				instant(rs, "placed_at"), nullableInstant(rs, "paid_at"), instant(rs, "updated_at"),
+				rs.getString("shipping_method"), rs.getString("ecpay_logistics_id"),
+				rs.getString("ecpay_logistics_rtn_code"), rs.getString("ecpay_logistics_rtn_msg"),
+				nullableInstant(rs, "ecpay_logistics_status_at")))
 				.stream()
 				.findFirst();
 	}
@@ -172,7 +180,9 @@ public class AdminOrderReadRepository {
 			String shippingAddress, BigDecimal subtotal, BigDecimal shippingFee,
 			BigDecimal discount, BigDecimal total, String paymentMethod, String paymentStatus,
 			String refundStatus, String status, String internalNote,
-			Instant placedAt, Instant paidAt, Instant updatedAt) {
+			Instant placedAt, Instant paidAt, Instant updatedAt,
+			String shippingMethod, String ecpayLogisticsId,
+			String ecpayLogisticsRtnCode, String ecpayLogisticsRtnMsg, Instant ecpayLogisticsStatusAt) {
 	}
 
 	public record HistoryEntry(

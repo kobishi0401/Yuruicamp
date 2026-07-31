@@ -176,11 +176,11 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 - [x] 真綠界地圖選店 + 回 checkout
 - [x] 真刷卡 + payment notify → paid
 - [x] Admin 出貨 + 真 logistics id
-- [x] 後端 log 出現 `ECPay logistics notify`（見 §5.6；本階段只 log，不改狀態）
+- [x] 後端 log 出現 `ECPay logistics notify`（見 §5.6；覆寫 snapshot，不改 Order Status）
 
 ### 5.6 物流 notify 確認步驟（Round 1 / Round 2 共用）
 
-Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api/logistics/ecpay/notify`。本階段後端 **只驗 MD5 + log + 回 `1|OK`**，不會改訂單狀態。
+Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api/logistics/ecpay/notify`。後端驗 MD5 後會 **覆寫** 訂單 Logistics Status Snapshot（`ecpay_logistics_rtn_*`），並回 `1|OK`。**不會**自動把 Order Status 改成 `completed`（[ADR 0005](../../adr/0005-logistics-status-snapshot-separate-from-order-status.md)）。
 
 #### 怎麼確認有收到？
 
@@ -213,7 +213,31 @@ Admin 出貨成功後，綠界會 **非同步** 推送物流狀態到 `POST /api
 
 - [x] ngrok inspect 有 `POST .../logistics/ecpay/notify` → 200 + `1|OK`
 - [x] backend log 含 `ECPay logistics notify` 與 `AllPayLogisticsID=...`
-- [x] 訂單 `status` **仍維持** `shipped`（本階段刻意不 auto complete）
+- [x] 訂單 `status` **仍維持** `shipped`（不 auto complete）
+- [ ] DB snapshot 有值（見 §5.7）
+- [ ] Admin 列表**物流欄**顯示 `RtnMsg`（重新整理列表後）
+
+### 5.7 列印託運單 + 快照 checklist（Phase 列印／追蹤）
+
+前提：雙 stub `false`、已出貨且 `ecpay_logistics_id` 非 `STUB`。
+
+1. 等 notify（或查 DB）：
+
+```powershell
+docker compose exec yuruicamp-db psql -U postgres -d yuruicamp -c "
+SELECT id, ecpay_logistics_id, ecpay_logistics_rtn_code, ecpay_logistics_rtn_msg, status
+FROM orders ORDER BY created_at DESC LIMIT 3;"
+```
+
+2. Admin 訂單列表 → **物流**欄應有狀態文字（若已收到 notify）與「列印託運單」
+3. 按 **列印託運單** → **新分頁**出現綠界託運單 HTML（可列印）
+4. 確認訂單 `status` 仍為 `shipped`（或原狀態），未被列印改掉
+
+| 檢查 | 預期 |
+|------|------|
+| stub=true 或 `STUB*` id | 列印 → 409／Toast 說明需關 logistics stub |
+| popup 被擋 | Toast 提示允許彈出視窗 |
+| 無物流 id（pickup） | 物流欄顯示「—」 |
 
 ---
 
@@ -276,11 +300,12 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 
 ## 8. 本階段刻意不做
 
-- 物流 notify 自動改訂單狀態（到店、取件 → completed）
+- 物流 notify **自動**改 Order Status（到店、取件 → completed）— 快照已做，auto-complete 不做（ADR 0005）
 - 郵局 POST、7-11、萊爾富
 - 物流代收 `IsCollection=Y`
+- 批次列印、C2C 列印、測標 CreateTestData
 
-這些留 Phase 3 或獨立 spec。
+見 [`.scratch/ecpay-print-trade-document/spec.md`](../../../.scratch/ecpay-print-trade-document/spec.md)。
 
 ---
 
@@ -294,5 +319,7 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 | [`.scratch/checkout-recipient-ecpay/CONTEXT.md`](../../../.scratch/checkout-recipient-ecpay/CONTEXT.md) | Buyer／Recipient／ReceiverName 詞彙 |
 | [`../../adr/0003-checkout-recipient-sync-member-address.md`](../../adr/0003-checkout-recipient-sync-member-address.md) | Checkout 收件人決策 ADR |
 | [`../../adr/0004-ecpay-tcat-receiver-address-normalization.md`](../../adr/0004-ecpay-tcat-receiver-address-normalization.md) | TCAT 收件地址出站正規化 ADR |
+| [`../../adr/0005-logistics-status-snapshot-separate-from-order-status.md`](../../adr/0005-logistics-status-snapshot-separate-from-order-status.md) | 物流快照 ≠ Order Status |
+| [`.scratch/ecpay-print-trade-document/spec.md`](../../../.scratch/ecpay-print-trade-document/spec.md) | 列印託運單 + 快照 PRD |
 | [`.scratch/ecpay-tcat-address/spec.md`](../../../.scratch/ecpay-tcat-address/spec.md) | 宅配地址 zip／compact PRD |
 | [`firebase-merge-into-main-notes.md`](../../frontend-specs/firebase-merge-into-main-notes.md) | Firebase 登入驗收 |
