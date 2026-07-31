@@ -161,7 +161,12 @@ public class EcpayLogisticsCreateService {
 			throw new BusinessException(ErrorCode.CONFLICT,
 					"ECPay logistics create failed: " + result.rtnCode() + " " + result.rtnMsg());
 		}
-		order.assignEcpayLogistics(result.allPayLogisticsId(), result.cvsPaymentNo());
+		String logisticsId = result.allPayLogisticsId();
+		if (logisticsId == null || logisticsId.isBlank()) {
+			throw new BusinessException(ErrorCode.CONFLICT,
+					"ECPay logistics create succeeded but AllPayLogisticsID is missing");
+		}
+		order.assignEcpayLogistics(logisticsId, result.cvsPaymentNo());
 		orders.save(order);
 		return result;
 	}

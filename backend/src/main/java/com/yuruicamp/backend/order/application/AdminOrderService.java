@@ -12,12 +12,15 @@ import com.yuruicamp.backend.common.admin.AdminStatusLabels;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
 import com.yuruicamp.backend.order.api.AdminOrderDetailResponse;
 import com.yuruicamp.backend.order.api.AdminOrderListResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,16 +41,22 @@ public class AdminOrderService {
 	private final AdminOrderCommandRepository commandRepository;
 	private final PaymentRefundService paymentRefundService;
 	private final EcpayLogisticsCreateService logisticsCreateService;
+	private final EcpayLogisticsPrintService logisticsPrintService;
+	private final EntityManager entityManager;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
 			AdminOrderCommandRepository commandRepository,
 			PaymentRefundService paymentRefundService,
-			EcpayLogisticsCreateService logisticsCreateService) {
+			EcpayLogisticsCreateService logisticsCreateService,
+			EcpayLogisticsPrintService logisticsPrintService,
+			EntityManager entityManager) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
 		this.paymentRefundService = paymentRefundService;
 		this.logisticsCreateService = logisticsCreateService;
+		this.logisticsPrintService = logisticsPrintService;
+		this.entityManager = entityManager;
 	}
 
 	@Transactional(readOnly = true)
@@ -81,6 +90,14 @@ public class AdminOrderService {
 		return toDetail(row);
 	}
 
+	/**
+	 * Launch ECPay Trade Document print (does not mutate Order Status or history).
+	 */
+	@Transactional(readOnly = true)
+	public AdminLogisticsPrintLaunchResponse printLogisticsLabel(String id) {
+		return logisticsPrintService.launchPrintTradeDocument(id);
+	}
+
 	@Transactional
 	public AdminOrderDetailResponse ship(String id, String actorId, String note) {
 		var order = lock(id);
@@ -100,6 +117,8 @@ public class AdminOrderService {
 		Instant now = Instant.now();
 		commandRepository.updateStatus(id, "shipped", now);
 		commandRepository.addHistory(id, "shipped", now, actorId, cleanNote(note, "Order shipped by admin"));
+		// JPA may have written ecpay_logistics_id; flush so JDBC Admin read model sees it in this response
+		entityManager.flush();
 
 		return get(id);
 	}
@@ -235,7 +254,9 @@ public class AdminOrderService {
 				row.paymentMethod(), row.paymentStatus(), row.refundStatus(), row.status(),
 				row.internalNote(),
 				row.placedAt(), row.paidAt(), row.updatedAt(),
-				readRepository.findItems(row.id()), history);
+				readRepository.findItems(row.id()), history,
+				row.shippingMethod(), row.ecpayLogisticsId(),
+				row.ecpayLogisticsRtnCode(), row.ecpayLogisticsRtnMsg(), row.ecpayLogisticsStatusAt());
 	}
 
 	private AdminOrderCommandRepository.OrderState lock(String id) {

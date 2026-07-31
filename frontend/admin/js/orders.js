@@ -65,6 +65,11 @@ function normalizeBackendOrder(order) {
     total: Number(detail.total || (detail.pricing && detail.pricing.total) || 0),
     payment: detail.paymentMethod,
     address: detail.shipping ? detail.shipping.address : '',
+    shippingMethod: detail.shippingMethod || null,
+    ecpayLogisticsId: detail.ecpayLogisticsId || null,
+    ecpayLogisticsRtnCode: detail.ecpayLogisticsRtnCode || null,
+    ecpayLogisticsRtnMsg: detail.ecpayLogisticsRtnMsg || null,
+    ecpayLogisticsStatusAt: detail.ecpayLogisticsStatusAt || null,
     items: (detail.items || []).map(function (item) {
       return Object.assign({}, item, {
         name: item.productName,
@@ -81,6 +86,65 @@ function normalizeBackendOrder(order) {
     }),
     backendDetailLoaded: Array.isArray(detail.items)
   });
+}
+
+/** 物流欄：無 Logistics Order →「—」；有單則顯示快照訊息 + 列印託運單 */
+function _renderLogisticsCell(order) {
+  var logisticsId = order.ecpayLogisticsId;
+  if (!logisticsId) {
+    return '<span class="text-muted">—</span>';
+  }
+  var parts = [];
+  if (order.ecpayLogisticsRtnMsg) {
+    parts.push(
+      '<div class="small text-muted mb-1" title="' +
+      _escapeHtml(order.ecpayLogisticsRtnCode || '') +
+      '">' +
+      _escapeHtml(order.ecpayLogisticsRtnMsg) +
+      '</div>'
+    );
+  }
+  parts.push(
+    '<button type="button" class="btn btn-sm btn-outline-secondary btn-print-logistics-label" ' +
+    'title="列印託運單">' +
+    '<i class="fas fa-print me-1"></i>列印託運單</button>'
+  );
+  return parts.join('');
+}
+
+function _escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * 對已開啟的 popup 送 Form POST 到綠界 printTradeDocument（官方禁止 iframe）。
+ * @returns {boolean} false 表示 launch 無效
+ */
+function _submitLogisticsPrintFormInto(popup, launch) {
+  if (!popup || !launch || !launch.actionUrl || !launch.fields || typeof launch.fields !== 'object') {
+    return false;
+  }
+  var doc = popup.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>列印託運單</title></head><body></body></html>');
+  doc.close();
+  var form = doc.createElement('form');
+  form.method = 'POST';
+  form.action = launch.actionUrl;
+  Object.keys(launch.fields).forEach(function (key) {
+    var input = doc.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = launch.fields[key] == null ? '' : String(launch.fields[key]);
+    form.appendChild(input);
+  });
+  doc.body.appendChild(form);
+  form.submit();
+  return true;
 }
 
 function loadBackendOrderDetail(order) {
@@ -348,6 +412,36 @@ window.initOrders = function () {
     window.showAdminToast('訂單 ' + window.formatOrderId(orderId) + ' 已取消（Mock）');
     applyFiltersAndSort();
     $confirmBtn.prop('disabled', false);
+  });
+
+  // ── 列印託運單（新分頁 Form POST 綠界；禁止 iframe）──
+  // 必須在 click 同步開空白頁，否則 async 後 window.open 常被瀏覽器擋。
+  $(document).on('click.orders', '.btn-print-logistics-label', function () {
+    var $btn = $(this);
+    var orderId = $btn.closest('tr').data('order-id');
+    if (!isOrderBackendEnabled()) {
+      window.showAdminToast('Mock 模式無法列印託運單', 'warning');
+      return;
+    }
+    var popup = window.open('about:blank', '_blank');
+    if (!popup) {
+      window.showAdminToast('無法開啟列印視窗，請允許此網站的彈出視窗後再試', 'warning');
+      return;
+    }
+    $btn.prop('disabled', true);
+    AdminAPI.orders.printLogisticsLabel(orderId)
+      .then(function (result) {
+        var launch = result && result.data;
+        if (!_submitLogisticsPrintFormInto(popup, launch)) {
+          popup.close();
+          window.showAdminToast('列印資料無效，請稍後再試', 'warning');
+        }
+      })
+      .catch(function (err) {
+        popup.close();
+        AdminAPI.handleError(err, '列印託運單失敗');
+      })
+      .finally(function () { $btn.prop('disabled', false); });
   });
 
   // ── 出貨按鈕 ──────────────────────────────────────
@@ -806,7 +900,7 @@ function updateFilterUI() {
 function renderOrdersTable(orders) {
   if (!orders || orders.length === 0) {
     $('#ordersTableBody').html(
-      '<tr><td colspan="7" class="text-center text-muted py-4">' +
+      '<tr><td colspan="8" class="text-center text-muted py-4">' +
       '<i class="fas fa-inbox me-2"></i>沒有符合條件的訂單' +
       '</td></tr>'
     );
@@ -856,6 +950,8 @@ function renderOrdersTable(orders) {
                   '<i class="fas fa-check-circle me-1"></i>完成</button>';
     }
 
+    var logisticsCell = _renderLogisticsCell(order);
+
     // 只取日期部分（YYYY-MM-DD），不顯示時間
     var date = (order.createdAt || '').split(/[ T]/)[0] || '';
 
@@ -888,6 +984,7 @@ function renderOrdersTable(orders) {
            '<td class="admin-cell-amount">NT$ ' + order.total.toLocaleString() + '</td>' +
            '<td>' + payBadge + '</td>' +
            '<td>' + statusBadge + '</td>' +
+           '<td class="align-middle">' + logisticsCell + '</td>' +
            '<td>' + actionBtn + '</td>' +
            '</tr>';
   }).join('');
@@ -1114,7 +1211,7 @@ function loadOrdersData() {
       .catch(function (err) {
         AdminAPI.handleError(err, '載入訂單失敗');
         $('#ordersTableBody').html(
-          '<tr><td colspan="7" class="text-center text-danger py-4">' +
+          '<tr><td colspan="8" class="text-center text-danger py-4">' +
           '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
           '</td></tr>'
         );
@@ -1132,7 +1229,7 @@ function loadOrdersData() {
     onLoadedMock(orders);
   }).fail(function () {
     $('#ordersTableBody').html(
-      '<tr><td colspan="7" class="text-center text-danger py-4">' +
+      '<tr><td colspan="8" class="text-center text-danger py-4">' +
       '<i class="fas fa-exclamation-triangle me-2"></i>載入訂單數據失敗' +
       '</td></tr>'
     );

@@ -1,24 +1,32 @@
 package com.yuruicamp.backend.order.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import com.yuruicamp.backend.common.exception.BusinessException;
+import com.yuruicamp.backend.order.api.AdminOrderDetailResponse;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderCommandRepository;
 import com.yuruicamp.backend.order.infrastructure.AdminOrderReadRepository;
 import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
+import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
+import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -37,11 +45,19 @@ class AdminOrderServiceTest {
 	@Mock
 	private EcpayLogisticsCreateService logisticsCreateService;
 
+	@Mock
+	private EcpayLogisticsPrintService logisticsPrintService;
+
+	@Mock
+	private EntityManager entityManager;
+
 	private AdminOrderService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new AdminOrderService(readRepository, commandRepository, paymentRefundService, logisticsCreateService);
+		service = new AdminOrderService(
+				readRepository, commandRepository, paymentRefundService,
+				logisticsCreateService, logisticsPrintService, entityManager);
 	}
 
 	@Test
@@ -54,6 +70,20 @@ class AdminOrderServiceTest {
 		verify(logisticsCreateService).createShipment("O1");
 		verify(commandRepository).updateStatus(eq("O1"), eq("shipped"), any(Instant.class));
 		verify(commandRepository).addHistory(eq("O1"), eq("shipped"), any(Instant.class), eq("A1"), any());
+	}
+
+	@Test
+	void shipFlushesJpaBeforeReadingDetailSoLogisticsIdIsVisible() {
+		when(commandRepository.lockById("O1")).thenReturn(Optional.of(state("unshipped", "ecpay-credit", "paid")));
+		when(readRepository.findDetail("O1")).thenReturn(Optional.of(detail("shipped")));
+
+		AdminOrderDetailResponse result = service.ship("O1", "A1", null);
+
+		assertThat(result.ecpayLogisticsId()).isEqualTo("1234567");
+		InOrder inOrder = inOrder(logisticsCreateService, entityManager, readRepository);
+		inOrder.verify(logisticsCreateService).createShipment("O1");
+		inOrder.verify(entityManager).flush();
+		inOrder.verify(readRepository).findDetail("O1");
 	}
 
 	@Test
@@ -101,6 +131,23 @@ class AdminOrderServiceTest {
 		verify(paymentRefundService, never()).refundOrderFully(any(), any());
 	}
 
+	@Test
+	void printLogisticsLabelDelegatesWithoutMutatingOrder() {
+		var launch = new AdminLogisticsPrintLaunchResponse(
+				"O1",
+				"https://logistics-stage.ecpay.com.tw/helper/printTradeDocument",
+				Map.of("MerchantID", "2000132", "AllPayLogisticsID", "1234567", "CheckMacValue", "ABC"));
+		when(logisticsPrintService.launchPrintTradeDocument("O1")).thenReturn(launch);
+
+		AdminLogisticsPrintLaunchResponse result = service.printLogisticsLabel("O1");
+
+		assertThat(result.actionUrl()).contains("printTradeDocument");
+		assertThat(result.fields()).containsEntry("AllPayLogisticsID", "1234567");
+		verify(logisticsPrintService).launchPrintTradeDocument("O1");
+		verify(commandRepository, never()).updateStatus(any(), any(), any());
+		verify(commandRepository, never()).addHistory(any(), any(), any(), any(), any());
+	}
+
 	private static AdminOrderCommandRepository.OrderState state(String status, String method, String payment) {
 		return new AdminOrderCommandRepository.OrderState(
 				"O1", "C1", status, method, payment, "none", BigDecimal.TEN);
@@ -111,6 +158,7 @@ class AdminOrderServiceTest {
 				"O1", "ORD-0001", "C1", "Customer", "active", "Buyer", "buyer@example.test",
 				"Recipient", "0900", "Address", java.math.BigDecimal.ZERO,
 				java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
-				"ecpay-credit", "paid", "none", status, null, Instant.EPOCH, Instant.EPOCH, Instant.EPOCH);
+				"ecpay-credit", "paid", "none", status, null, Instant.EPOCH, Instant.EPOCH, Instant.EPOCH,
+				"delivery", "1234567", "300", "訂單處理中", Instant.EPOCH);
 	}
 }

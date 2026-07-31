@@ -9,7 +9,10 @@ import java.util.Map;
 import com.yuruicamp.backend.logistics.domain.EcpayLogisticsCreateResult;
 
 /**
- * 解析綠界國內物流 pipe-separated 回應（例：{@code 1|OK|AllPayLogisticsID=...&CVSPaymentNo=...}）。
+ * 解析綠界國內物流幕後 Create 回應。
+ * <p>
+ * Official success: {@code 1|MerchantID=…&AllPayLogisticsID=…&…}
+ * Official error: {@code 0| ErrorMessage}
  */
 public final class EcpayLogisticsResponseParser {
 
@@ -20,34 +23,68 @@ public final class EcpayLogisticsResponseParser {
 		if (body == null || body.isBlank()) {
 			return EcpayLogisticsCreateResult.failed("", "Empty logistics response");
 		}
-		String[] parts = body.trim().split("\\|", 3);
-		String rtnCode = parts.length > 0 ? parts[0].trim() : "";
-		String rtnMsg = parts.length > 1 ? parts[1].trim() : "";
-		Map<String, String> fields = parts.length > 2 ? parseQueryLike(parts[2]) : Map.of();
-		if (!"1".equals(rtnCode)) {
-			return EcpayLogisticsCreateResult.failed(rtnCode, rtnMsg);
+		String normalized = stripWrappers(body.trim());
+		int pipe = normalized.indexOf('|');
+		if (pipe < 0) {
+			return EcpayLogisticsCreateResult.failed("", "Unexpected logistics response format");
+		}
+		String head = normalized.substring(0, pipe).trim();
+		String rest = normalized.substring(pipe + 1).trim();
+		if (!"1".equals(head)) {
+			return EcpayLogisticsCreateResult.failed(head, rest);
+		}
+		Map<String, String> fields = parseQueryLike(rest);
+		// Prefer RtnCode / RtnMsg from the query when present (official Create puts them there)
+		String rtnCode = blankToNull(fields.get("RtnCode"));
+		if (rtnCode == null) {
+			rtnCode = head;
+		}
+		String rtnMsg = blankToNull(fields.get("RtnMsg"));
+		if (rtnMsg == null) {
+			rtnMsg = "OK";
 		}
 		return new EcpayLogisticsCreateResult(
 				true,
 				rtnCode,
 				rtnMsg,
-				fields.get("AllPayLogisticsID"),
-				fields.get("CVSPaymentNo"),
-				fields.get("MerchantTradeNo"));
+				blankToNull(fields.get("AllPayLogisticsID")),
+				blankToNull(fields.get("CVSPaymentNo")),
+				blankToNull(fields.get("MerchantTradeNo")));
 	}
 
 	static Map<String, String> parseQueryLike(String raw) {
 		Map<String, String> fields = new LinkedHashMap<>();
+		if (raw == null || raw.isBlank()) {
+			return fields;
+		}
 		for (String pair : raw.split("&")) {
 			int idx = pair.indexOf('=');
 			if (idx <= 0) {
 				continue;
 			}
-			String key = decode(pair.substring(0, idx));
-			String value = decode(pair.substring(idx + 1));
-			fields.put(key, value);
+			String key = decode(pair.substring(0, idx).trim());
+			String value = decode(pair.substring(idx + 1).trim());
+			if (!key.isEmpty()) {
+				fields.put(key, value);
+			}
 		}
 		return fields;
+	}
+
+	/** Strip optional HTML wrappers from doc examples / odd gateways. */
+	private static String stripWrappers(String body) {
+		String value = body;
+		if (value.regionMatches(true, 0, "<xmp>", 0, 5)) {
+			value = value.substring(5);
+		}
+		if (value.toLowerCase().endsWith("</xmp>")) {
+			value = value.substring(0, value.length() - 6);
+		}
+		return value.trim();
+	}
+
+	private static String blankToNull(String value) {
+		return value == null || value.isBlank() ? null : value.trim();
 	}
 
 	private static String decode(String value) {

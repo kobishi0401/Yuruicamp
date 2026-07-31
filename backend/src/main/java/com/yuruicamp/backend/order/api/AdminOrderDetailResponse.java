@@ -19,7 +19,12 @@ public record AdminOrderDetailResponse(
 		Instant paidAt,
 		Instant updatedAt,
 		List<ItemSummary> items,
-		List<HistorySummary> history) {
+		List<HistorySummary> history,
+		String shippingMethod,
+		String ecpayLogisticsId,
+		String ecpayLogisticsRtnCode,
+		String ecpayLogisticsRtnMsg,
+		Instant ecpayLogisticsStatusAt) {
 
 	public record CustomerSummary(String id, String name, String status) {
 	}

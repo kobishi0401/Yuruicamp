@@ -144,6 +144,8 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"   # 與 frontend/.env.local 的 PROJ
 | 綠界付款 | 開本機假付款頁 `/api/payments/ecpay/stub/aio-checkout` |
 | 超商地圖 | 本機 stub 地圖 |
 | Admin 出貨建物流單 | 回傳 `STUB...` 編號（不是真綠界） |
+| 列印託運單 | stub 下會 409；需 `YURUICAMP_ECPAY_LOGISTICS_STUB=false` + 真物流 id |
+| 物流 notify 快照 | stub／無公網時可能收不到；真沙箱見 logistics 驗收 §5.7 |
 | 取貨付款 `ecpay-cvs` | 是**付款方式**，≠ 超商取貨物流 `shipping.method=cvs` |
 
 ### Terminal 3 — 前端
@@ -238,6 +240,8 @@ $env:YURUICAMP_FRONTEND_BASE_URL = "http://127.0.0.1:5173"
 - 物流 stub：[`docs/backend-specs/logistics/ecpay-cvs-sandbox-validation.md`](./backend-specs/logistics/ecpay-cvs-sandbox-validation.md)
 
 > ngrok 免費版 URL 每次重啟會變 → 更新 `YURUICAMP_ECPAY_PUBLIC_API_BASE_URL` 並重啟後端。
+
+**寄件地址／品名（Trade Document 中文）：** 預設在後端 `application.yml`（UTF-8）。若用環境變數覆寫 `YURUICAMP_ECPAY_LOGISTICS_SENDER_ADDRESS` 或 `YURUICAMP_ECPAY_LOGISTICS_GOODS_NAME`，PowerShell／系統環境也必須是 **UTF-8**，否則託運單寄件欄會亂碼。亂碼寫進綠界後**不會**因改設定而自動修好，須用**新出貨**驗證。
 
 ---
 

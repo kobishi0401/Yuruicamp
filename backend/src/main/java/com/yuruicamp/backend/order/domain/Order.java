@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -78,6 +79,17 @@ public class Order {
 
 	@Column(name = "ecpay_cvs_payment_no", length = 20)
 	private String ecpayCvsPaymentNo;
+
+	/** Latest ECPay logistics notify RtnCode (Logistics Status Snapshot). */
+	@Column(name = "ecpay_logistics_rtn_code", length = 20)
+	private String ecpayLogisticsRtnCode;
+
+	/** Latest ECPay logistics notify RtnMsg (Logistics Status Snapshot). */
+	@Column(name = "ecpay_logistics_rtn_msg", length = 200)
+	private String ecpayLogisticsRtnMsg;
+
+	@Column(name = "ecpay_logistics_status_at")
+	private Instant ecpayLogisticsStatusAt;
 
 	@Column(nullable = false)
 	private BigDecimal subtotal;
@@ -210,6 +222,18 @@ public class Order {
 
 	public String getEcpayCvsPaymentNo() {
 		return ecpayCvsPaymentNo;
+	}
+
+	public String getEcpayLogisticsRtnCode() {
+		return ecpayLogisticsRtnCode;
+	}
+
+	public String getEcpayLogisticsRtnMsg() {
+		return ecpayLogisticsRtnMsg;
+	}
+
+	public Instant getEcpayLogisticsStatusAt() {
+		return ecpayLogisticsStatusAt;
 	}
 
 	public BigDecimal getSubtotal() {
@@ -379,6 +403,27 @@ public class Order {
 	public void assignEcpayLogistics(String logisticsId, String cvsPaymentNo) {
 		this.ecpayLogisticsId = logisticsId;
 		this.ecpayCvsPaymentNo = cvsPaymentNo;
+	}
+
+	/**
+	 * Overwrite Logistics Status Snapshot from ECPay notify.
+	 * Does not change {@link OrderStatus}.
+	 *
+	 * @return true when code/msg changed and persistence is needed
+	 */
+	public boolean applyLogisticsStatusSnapshot(String rtnCode, String rtnMsg, Instant at) {
+		String code = rtnCode == null || rtnCode.isBlank() ? null : rtnCode.trim();
+		String msg = rtnMsg == null || rtnMsg.isBlank() ? null : rtnMsg.trim();
+		if (msg != null && msg.length() > 200) {
+			msg = msg.substring(0, 200);
+		}
+		if (Objects.equals(code, this.ecpayLogisticsRtnCode) && Objects.equals(msg, this.ecpayLogisticsRtnMsg)) {
+			return false;
+		}
+		this.ecpayLogisticsRtnCode = code;
+		this.ecpayLogisticsRtnMsg = msg;
+		this.ecpayLogisticsStatusAt = at;
+		return true;
 	}
 
 	private static String formatCvsAddress(String storeName, String storeAddress) {

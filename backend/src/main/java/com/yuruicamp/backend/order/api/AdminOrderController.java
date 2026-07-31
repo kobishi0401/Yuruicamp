@@ -7,6 +7,7 @@ import com.yuruicamp.backend.common.api.ApiResponse;
 import com.yuruicamp.backend.common.security.AdminPrincipal;
 import com.yuruicamp.backend.config.OpenApiConfig;
 import com.yuruicamp.backend.order.application.AdminOrderService;
+import com.yuruicamp.backend.order.api.AdminLogisticsPrintLaunchResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,6 +73,14 @@ public class AdminOrderController {
 			@AuthenticationPrincipal AdminPrincipal principal,
 			@Valid @RequestBody(required = false) AdminOrderTransitionRequest request) {
 		return ApiResponse.ok(service.ship(id, principal.adminUserId(), request == null ? null : request.note()));
+	}
+
+	/** 列印託運單 launch（新分頁 Form POST 綠界）；不改 Order Status。 */
+	@PostMapping("/{id}/print-logistics-label")
+	@PreAuthorize("hasAuthority('orders.edit')")
+	@Operation(summary = "列印託運單", description = "RBAC: orders.edit；回傳綠界 printTradeDocument 表單")
+	public ApiResponse<AdminLogisticsPrintLaunchResponse> printLogisticsLabel(@PathVariable String id) {
+		return ApiResponse.ok(service.printLogisticsLabel(id));
 	}
 
 	// 將已出貨訂單標記為完成，COD 會在同一交易完成收款。

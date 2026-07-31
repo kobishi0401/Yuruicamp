@@ -76,6 +76,17 @@ class EcpayLogisticsGatewayImplTest {
 	}
 
 	@Test
+	void buildPrintTradeDocumentFieldsIncludesMerchantIdLogisticsIdAndMac() {
+		var fields = gateway.buildPrintTradeDocumentFields("1717876");
+
+		assertThat(fields.get("MerchantID")).isEqualTo(properties.getEcpayLogistics().getMerchantId());
+		assertThat(fields.get("AllPayLogisticsID")).isEqualTo("1717876");
+		assertThat(fields.get("CheckMacValue")).isNotBlank();
+		assertThat(gateway.printTradeDocumentActionUrl())
+				.isEqualTo("https://logistics-stage.ecpay.com.tw/helper/printTradeDocument");
+	}
+
+	@Test
 	void buildCreateCvsFieldsStillUsesCvsAndStoreId() {
 		var fields = gateway.buildCreateCvsFields(
 				"ORD0001123456",

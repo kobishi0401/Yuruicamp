@@ -137,6 +137,24 @@ class EcpayLogisticsCreateServiceTest {
 	}
 
 	@Test
+	void homeCreateSuccessWithoutLogisticsIdThrowsConflictAndDoesNotSave() {
+		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
+		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
+		when(logisticsGateway.buildCreateHomeFields(
+				anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
+				anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
+				.thenReturn(Map.of("LogisticsType", "HOME"));
+		when(logisticsGateway.createHomeOrder(any()))
+				.thenReturn(new EcpayLogisticsCreateResult(true, "1", "OK", null, null, "ORD0229"));
+
+		assertThatThrownBy(() -> service.createShipment("O1"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessageContaining("AllPayLogisticsID is missing");
+		verify(orders, never()).save(any());
+		assertThat(order.getEcpayLogisticsId()).isNull();
+	}
+
+	@Test
 	void homeCreateFailureThrowsConflict() {
 		Order order = deliveryOrder("O1", "王小明", "0912345678", DELIVERY_ADDRESS);
 		when(orders.findByIdForUpdate("O1")).thenReturn(Optional.of(order));
