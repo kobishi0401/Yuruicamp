@@ -132,6 +132,9 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"   # 與 frontend/.env.local 的 PROJ
 # $env:YURUICAMP_ECPAY_STUB = "true"
 # $env:YURUICAMP_ECPAY_LOGISTICS_STUB = "true"
 
+# 可選：n8n 客服唯讀 API（/api/integrations/n8n/**）；空白則該路徑一律拒絕
+# $env:YURUICAMP_N8N_API_KEY = "本機自訂密鑰"
+
 .\mvnw.cmd spring-boot:run
 ```
 

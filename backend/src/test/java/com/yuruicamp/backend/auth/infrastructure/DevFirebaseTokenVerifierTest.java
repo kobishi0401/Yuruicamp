@@ -4,6 +4,7 @@ import com.yuruicamp.backend.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DevFirebaseTokenVerifierTest {
@@ -17,6 +18,15 @@ class DevFirebaseTokenVerifierTest {
 		assertEquals("amy@example.com", token.email());
 		assertEquals("google", token.authProvider());
 		assertEquals("Amy Chen", token.displayName());
+		assertNull(token.lineUserId());
+	}
+
+	@Test
+	void verifiesOptionalLineUserIdWithoutBreakingLegacyTokens() {
+		VerifiedFirebaseToken token = verifier.verify("dev:uid1:amy@example.com:line:Amy:UlineDev001");
+		assertEquals("line", token.authProvider());
+		assertEquals("Amy", token.displayName());
+		assertEquals("UlineDev001", token.lineUserId());
 	}
 
 	@Test

@@ -52,6 +52,13 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 	}
 
 	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) {
+		// n8n uses X-Api-Key + ROLE_N8N; do not reinterpret Bearer as Firebase customer
+		String path = request.getRequestURI();
+		return path != null && path.startsWith("/api/integrations/n8n/");
+	}
+
+	@Override
 	protected void doFilterInternal(
 			HttpServletRequest request,
 			HttpServletResponse response,

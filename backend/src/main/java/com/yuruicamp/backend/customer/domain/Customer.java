@@ -52,6 +52,10 @@ public class Customer {
 	@Column(name = "firebase_uid", length = 128)
 	private String firebaseUid;
 
+	/** LINE platform user id (U…); unique when non-null. Used for CS / n8n lookup. */
+	@Column(name = "line_user_id", length = 64)
+	private String lineUserId;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -163,6 +167,14 @@ public class Customer {
 
 	public void setFirebaseUid(String firebaseUid) {
 		this.firebaseUid = firebaseUid;
+	}
+
+	public String getLineUserId() {
+		return lineUserId;
+	}
+
+	public void setLineUserId(String lineUserId) {
+		this.lineUserId = lineUserId;
 	}
 
 	public Instant getCreatedAt() {

@@ -546,6 +546,7 @@ CREATE TABLE public.customers (
     first_purchase_used boolean DEFAULT false NOT NULL,
     auth_provider character varying(32) NOT NULL,
     firebase_uid character varying(128),
+    line_user_id character varying(64),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     avatar_url text,
@@ -579,6 +580,13 @@ COMMENT ON COLUMN public.customers.first_purchase_used IS '是否已用過首購
 --
 
 COMMENT ON COLUMN public.customers.firebase_uid IS 'Firebase Auth UID; NULL until first successful OAuth bind.';
+
+
+--
+-- Name: COLUMN customers.line_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.customers.line_user_id IS 'LINE platform user id (U…); shared by Login + Messaging under same Provider. Unique when set. Used for CS / n8n lookup.';
 
 
 --
@@ -3333,6 +3341,13 @@ CREATE INDEX idx_customers_auth_provider ON public.customers USING btree (auth_p
 --
 
 CREATE UNIQUE INDEX uq_customers_firebase_uid ON public.customers USING btree (firebase_uid) NULLS DISTINCT;
+
+
+--
+-- Name: uq_customers_line_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_customers_line_user_id ON public.customers USING btree (line_user_id) NULLS DISTINCT;
 
 
 --

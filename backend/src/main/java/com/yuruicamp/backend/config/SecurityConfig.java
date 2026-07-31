@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuruicamp.backend.common.api.ApiErrorBody;
 import com.yuruicamp.backend.common.exception.ErrorCode;
 import com.yuruicamp.backend.common.security.FirebaseAuthenticationFilter;
+import com.yuruicamp.backend.integration.n8n.security.N8nApiKeyAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.context.annotation.Bean;
@@ -39,6 +40,7 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
 			FirebaseAuthenticationFilter firebaseAuthenticationFilter,
+			N8nApiKeyAuthenticationFilter n8nApiKeyAuthenticationFilter,
 			ObjectMapper objectMapper) throws Exception {
 		http
 				.csrf(csrf -> csrf.disable())
@@ -53,6 +55,8 @@ public class SecurityConfig {
 						.permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/firebase/session").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/admin/auth/firebase/session").permitAll()
+						// n8n CS：獨立 API Key（ROLE_N8N），不走會員 Firebase／Admin RBAC
+						.requestMatchers("/api/integrations/n8n/**").hasRole("N8N")
 						// 線 B：商品公開讀（Product API Contract v0.1）— 不必登入
 						.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
@@ -94,6 +98,7 @@ public class SecurityConfig {
 												: "Authentication required"))
 						.accessDeniedHandler((request, response, accessDeniedException) ->
 								writeError(response, objectMapper, ErrorCode.FORBIDDEN, "Access denied")))
+				.addFilterBefore(n8nApiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}

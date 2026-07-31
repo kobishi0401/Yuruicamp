@@ -146,9 +146,29 @@
       status: data.status || null,
       registeredAt: data.registeredAt || null,
       isNewCustomer: data.created === true,
+      // Server-side flag from customers.line_user_id (safe boolean; not the raw U…)
+      lineBound: data.lineBound === true,
       preferences: data.created === true ? null : undefined,
       avatarUrl: String(name).charAt(0),
     };
+  }
+
+  /**
+   * Post Firebase ID Token to session upsert (persist LINE User ID after login / Account Linking).
+   * Returns mapped user; caller decides toast / survey (finishLogin) vs quiet persist.
+   * @param {string} idToken
+   */
+  function establishSessionWithIdToken(idToken) {
+    requireApiClient();
+    ensureAppAuthWired();
+    return window.ApiClient._restRequest('/auth/firebase/session', {
+      method: 'POST',
+      auth: 'none',
+      body: { idToken: idToken },
+    }).then(function (data) {
+      persistIdToken(idToken);
+      return mapSessionToUser(data);
+    });
   }
 
   /** Ensure AppAuth + ApiClient exist before session /me. */
@@ -177,6 +197,9 @@
   }
 
   function sessionErrorMessage(error) {
+    if (error && error.code === 'LINE_USER_ID_CONFLICT') {
+      return '此 LINE 帳號已綁定其他會員，無法重複綁定。請改用原本的帳號登入，或聯絡客服協助處理。';
+    }
     if (error && error.message) return error.message;
     return '登入失敗';
   }
@@ -231,20 +254,12 @@
 
     return window.YuruiFirebase.signInWithProvider(normalized)
       .then(function (firebaseResult) {
-        // Session 公開端點：不帶 Bearer，只送 body.idToken
-        // Public session endpoint: auth none, body carries idToken
-        ensureAppAuthWired();
-        return window.ApiClient._restRequest('/auth/firebase/session', {
-          method: 'POST',
-          auth: 'none',
-          body: { idToken: firebaseResult.idToken },
-        }).then(function (data) {
-          return { data: data, idToken: firebaseResult.idToken };
-        });
+        return establishSessionWithIdToken(firebaseResult.idToken);
       })
-      .then(function (result) {
-        persistIdToken(result.idToken);
-        var user = finishLogin(mapSessionToUser(result.data), options, label);
+      .then(function (user) {
+        return finishLogin(user, options, label);
+      })
+      .then(function (user) {
         return verifySessionWithMe().then(function () {
           return user;
         });
@@ -256,7 +271,57 @@
         if (error && error.code === 'API_NETWORK_ERROR') {
           throw new Error('無法連線伺服器，請確認後端已啟動（localhost:8080）');
         }
+        // Preserve ApiRequestError.code (e.g. LINE_USER_ID_CONFLICT) for CS UX
+        if (error && error.code === 'LINE_USER_ID_CONFLICT') {
+          var conflict = new Error(sessionErrorMessage(error));
+          conflict.code = 'LINE_USER_ID_CONFLICT';
+          throw conflict;
+        }
         throw new Error(sessionErrorMessage(error));
+      });
+  }
+
+  /**
+   * Link LINE onto the current Firebase user, then refresh session so line_user_id persists.
+   * Does not create a second Customer when firebase_uid stays the same.
+   */
+  function linkLineAndRefreshSession(options) {
+    options = options || {};
+    if (
+      !window.YuruiFirebase ||
+      typeof window.YuruiFirebase.linkWithProvider !== 'function'
+    ) {
+      return Promise.reject(new Error('Firebase LINE 綁定尚未就緒'));
+    }
+    try {
+      requireApiClient();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return window.YuruiFirebase.linkWithProvider('line')
+      .then(function (firebaseResult) {
+        return establishSessionWithIdToken(firebaseResult.idToken);
+      })
+      .then(function (user) {
+        persistUser(user);
+        emitAuthChanged('login', user);
+        if (options.showToast !== false && typeof window.showToast === 'function') {
+          window.showToast('已綁定 LINE，可開始聯繫客服', 'success');
+        }
+        return user;
+      })
+      .catch(function (error) {
+        if (error && error.code === 'LINE_USER_ID_CONFLICT') {
+          var conflict = new Error(sessionErrorMessage(error));
+          conflict.code = 'LINE_USER_ID_CONFLICT';
+          throw conflict;
+        }
+        if (error && error.code === 'auth/credential-already-in-use') {
+          var inUse = new Error('此 LINE 已綁定其他 Firebase 帳號，無法再連結到目前會員');
+          inUse.code = 'LINE_CREDENTIAL_IN_USE';
+          throw inUse;
+        }
+        throw error instanceof Error ? error : new Error(sessionErrorMessage(error));
       });
   }
 
@@ -317,6 +382,14 @@
     },
     verifySessionWithMe: verifySessionWithMe,
     loginWithProvider: loginWithProvider,
+    establishSessionWithIdToken: establishSessionWithIdToken,
+    linkLineAndRefreshSession: linkLineAndRefreshSession,
+    /** Persist mapped session user without login toast (CS bind refresh). */
+    persistSessionUser: function (user) {
+      if (!user) return;
+      persistUser(user);
+      emitAuthChanged('sync', user);
+    },
     logout: logout,
     sync: function () {
       emitAuthChanged('sync', getUser());

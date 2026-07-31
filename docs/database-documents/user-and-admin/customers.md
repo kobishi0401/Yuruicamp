@@ -71,6 +71,12 @@ customers.updated_at = now()
                         *uq_customers_firebase_uid*（NULLS DISTINCT）
                         不出現在 `active_customers` View。
 
+  line_user_id          LINE 平台 user id（U…），可空。
+                        僅從已驗證 Firebase ID Token 寫入（含 Account Linking）。
+                        *uq_customers_line_user_id*（NULLS DISTINCT）
+                        供客服／n8n 以 Messaging userId 對應同一 Customer。
+                        不加 Facebook／Google 原生 id 欄位。
+
 * created_at            建立時間，預設 now()。
 
 * updated_at            更新時間，預設 now()

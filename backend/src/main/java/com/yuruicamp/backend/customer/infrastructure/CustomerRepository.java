@@ -17,6 +17,8 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
 	Optional<Customer> findByEmailIgnoreCase(String email);
 
+	Optional<Customer> findByLineUserId(String lineUserId);
+
 	// 鎖定會員資料，避免同一會員同時重複建立訂單。
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select c from Customer c where c.id = :id")

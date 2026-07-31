@@ -32,6 +32,15 @@ window.AppConfig = {
     DEV_TOKEN: '',
   },
 
+  /**
+   * LINE 官方帳號聊天入口（聯繫客服）。
+   * 不要在 URL 後面加 customerId／訂單號／token。
+   * Override via frontend/.env.local → VITE_LINE_OA_CHAT_URL（見 contact-cs.js）。
+   */
+  LINE: {
+    OA_CHAT_URL: 'https://lin.ee/NkgGfc4',
+  },
+
   // 後台正式模式獨立開關；G-6 由 AdminRuntime 套用 readiness，不直接假設所有模組都有端點。
   ADMIN: {
     USE_BACKEND: true,

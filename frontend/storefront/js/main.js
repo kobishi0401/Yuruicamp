@@ -249,6 +249,7 @@ async function initGlobalLayout() {
     }
     // auth.js 已收斂到 AppAuth／ApiClient，不再載入過渡層 api-http.js
     await loadComponentScript('/storefront/js/components/auth.js');
+    await loadComponentScript('/storefront/js/components/contact-cs.js');
     await loadComponentScript('/storefront/js/components/modal.js');
     await loadComponentScript('/storefront/js/components/header.js');
   } catch (error) {
@@ -282,11 +283,10 @@ function initFloatingActions() {
 
     <a
       class="floatingLineBtn"
-      href="https://lin.ee/NkgGfc4"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="LINE 聯絡"
-      title="LINE 聯絡"
+      href="#"
+      role="button"
+      aria-label="聯繫客服（LINE）"
+      title="聯繫客服"
     >
       <span class="floatingLineLabel">LINE 客服</span>
 
@@ -297,6 +297,19 @@ function initFloatingActions() {
   `;
 
   document.body.appendChild(floatingActions);
+
+  const lineButton = floatingActions.querySelector('.floatingLineBtn');
+  if (window.YuruiContactCs && typeof window.YuruiContactCs.bindContactCsControl === 'function') {
+    window.YuruiContactCs.bindContactCsControl(lineButton);
+  } else if (lineButton) {
+    // contact-cs.js not loaded — do not open OA unbound; ask user to retry after scripts load
+    lineButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      if (typeof window.showToast === 'function') {
+        window.showToast('客服模組載入中，請稍候再試', 'error');
+      }
+    });
+  }
 
   const topButton = floatingActions.querySelector('.floatingTopBtn');
 

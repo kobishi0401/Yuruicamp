@@ -7,6 +7,7 @@ import java.util.Optional;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.OrderStatus;
 import com.yuruicamp.backend.order.domain.PaymentStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,16 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 	// 取得會員的所有訂單。
 	@Query("select distinct o from Order o left join fetch o.items where o.customerId=:customerId order by o.placedAt desc")
 	List<Order> findAllForCustomer(@Param("customerId") String customerId);
+
+	/** Recent shop orders for n8n CS (no item fetch — compact card only). */
+	@Query("select o from Order o where o.customerId=:customerId order by o.placedAt desc")
+	List<Order> findRecentForCustomer(@Param("customerId") String customerId, Pageable pageable);
+
+	/** Display-number lookup scoped to one Customer (no cross-customer leak). */
+	@Query("select o from Order o where o.customerId=:customerId and o.displayNo=:displayNo")
+	Optional<Order> findByCustomerIdAndDisplayNo(
+			@Param("customerId") String customerId,
+			@Param("displayNo") String displayNo);
 
 	// 取得會員自己的指定訂單。
 	@Query("select distinct o from Order o left join fetch o.items where o.id=:id and o.customerId=:customerId")

@@ -16,6 +16,7 @@ public class YuruicampProperties {
 	private final Firebase firebase = new Firebase();
 	private final Ecpay ecpay = new Ecpay();
 	private final EcpayLogistics ecpayLogistics = new EcpayLogistics();
+	private final N8n n8n = new N8n();
 
 	public Cors getCors() {
 		return cors;
@@ -31,6 +32,10 @@ public class YuruicampProperties {
 
 	public EcpayLogistics getEcpayLogistics() {
 		return ecpayLogistics;
+	}
+
+	public N8n getN8n() {
+		return n8n;
 	}
 
 	public static class Cors {
@@ -310,6 +315,21 @@ public class YuruicampProperties {
 
 		public void setGoodsName(String goodsName) {
 			this.goodsName = goodsName;
+		}
+	}
+
+	/**
+	 * n8n server-to-server CS integration (API Key). Empty key rejects all calls.
+	 */
+	public static class N8n {
+		private String apiKey = "";
+
+		public String getApiKey() {
+			return apiKey;
+		}
+
+		public void setApiKey(String apiKey) {
+			this.apiKey = apiKey;
 		}
 	}
 }
