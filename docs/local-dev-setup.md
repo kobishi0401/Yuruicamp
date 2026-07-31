@@ -134,6 +134,8 @@ $env:FIREBASE_PROJECT_ID = "yuruicamp-2026"   # 與 frontend/.env.local 的 PROJ
 
 # 可選：n8n 客服唯讀 API（/api/integrations/n8n/**）；空白則該路徑一律拒絕
 # $env:YURUICAMP_N8N_API_KEY = "本機自訂密鑰"
+# 契約／n8n 節點設定：docs/api/n8n-cs-api-contract.md
+# 整合指南：docs/backend-specs/integration/n8n-line-customer-service.md
 
 .\mvnw.cmd spring-boot:run
 ```
