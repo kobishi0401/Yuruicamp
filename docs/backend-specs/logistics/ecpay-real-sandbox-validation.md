@@ -279,6 +279,8 @@ FROM orders ORDER BY created_at DESC LIMIT 3;"
 - [x] `ecpay_logistics_id` 為綠界真實編號
 - [x] §5.6 物流 notify log 可追蹤（`AllPayLogisticsID` 與 DB 一致）
 
+> **Create 回應格式：** 幕後 `/Express/Create` 成功為 `1|MerchantID=…&AllPayLogisticsID=…&…`（兩段），**不是** `1|OK|fields`。解析錯會導致已建單卻沒寫入 `ecpay_logistics_id`、列印按鈕不出現。
+
 ---
 
 ## 7. 常見錯誤

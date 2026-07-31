@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 import com.yuruicamp.backend.config.YuruicampProperties;
 import com.yuruicamp.backend.logistics.domain.EcpayLogisticsCreateResult;
 import com.yuruicamp.backend.payment.infrastructure.EcpayCheckMacValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +27,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 
+	private static final Logger log = LoggerFactory.getLogger(EcpayLogisticsGatewayImpl.class);
+	private static final int RAW_BODY_LOG_MAX = 2000;
 	private static final Pattern ADMIN_CITY = Pattern.compile("^(.+?[市縣])");
 
 	private final YuruicampProperties.Ecpay ecpay;
@@ -197,16 +201,34 @@ public class EcpayLogisticsGatewayImpl implements EcpayLogisticsGateway {
 					.build();
 			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 			if (response.statusCode() < 200 || response.statusCode() >= 300) {
+				logWarnRawCreateBody(response.body(), "HTTP " + response.statusCode());
 				return EcpayLogisticsCreateResult.failed(
 						String.valueOf(response.statusCode()),
 						"HTTP " + response.statusCode());
 			}
-			return EcpayLogisticsResponseParser.parseCreateResponse(response.body());
+			EcpayLogisticsCreateResult parsed = EcpayLogisticsResponseParser.parseCreateResponse(response.body());
+			if (!parsed.success()
+					|| parsed.allPayLogisticsId() == null
+					|| parsed.allPayLogisticsId().isBlank()) {
+				logWarnRawCreateBody(response.body(),
+						parsed.success() ? "missing AllPayLogisticsID" : parsed.rtnCode() + " " + parsed.rtnMsg());
+			}
+			return parsed;
 		}
 		catch (IOException | InterruptedException ex) {
 			Thread.currentThread().interrupt();
 			return EcpayLogisticsCreateResult.failed("HTTP_ERROR", ex.getMessage());
 		}
+	}
+
+	private static void logWarnRawCreateBody(String body, String reason) {
+		String raw = body == null ? "" : body;
+		// Redact CheckMacValue so hash material is not written to logs (規格：勿打 hash 機密)
+		raw = raw.replaceAll("(?i)CheckMacValue=[^&\\s|]*", "CheckMacValue=***");
+		if (raw.length() > RAW_BODY_LOG_MAX) {
+			raw = raw.substring(0, RAW_BODY_LOG_MAX) + "…(truncated)";
+		}
+		log.warn("ECPay logistics Create response issue ({}): {}", reason, raw);
 	}
 
 	@Override
