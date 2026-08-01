@@ -21,12 +21,15 @@ import com.yuruicamp.backend.payment.application.PaymentRefundService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsCreateService;
 import com.yuruicamp.backend.logistics.application.EcpayLogisticsPrintService;
 import jakarta.persistence.EntityManager;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 後台訂單：查詢、出貨／完成、未出貨取消（W3-01）與同交易退款（W3-02）。
  * Admin orders: query, ship/complete, unshipped cancel + refund-in-same-tx.
+ * 狀態變更成功後發佈 {@link OrderStatusChangedEvent}；訂閱者（如 n8n 推播）在交易 commit 後才於背景執行緒觸發，
+ * 不佔用本次 DB 交易時間、失敗也不會 rollback，也不會讓本次 API 回應等 n8n（見 {@code N8nOrderNotifyListener} 的 {@code @Async}）。
  */
 @Service
 public class AdminOrderService {
@@ -43,6 +46,7 @@ public class AdminOrderService {
 	private final EcpayLogisticsCreateService logisticsCreateService;
 	private final EcpayLogisticsPrintService logisticsPrintService;
 	private final EntityManager entityManager;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public AdminOrderService(
 			AdminOrderReadRepository readRepository,
@@ -50,13 +54,15 @@ public class AdminOrderService {
 			PaymentRefundService paymentRefundService,
 			EcpayLogisticsCreateService logisticsCreateService,
 			EcpayLogisticsPrintService logisticsPrintService,
-			EntityManager entityManager) {
+			EntityManager entityManager,
+			ApplicationEventPublisher eventPublisher) {
 		this.readRepository = readRepository;
 		this.commandRepository = commandRepository;
 		this.paymentRefundService = paymentRefundService;
 		this.logisticsCreateService = logisticsCreateService;
 		this.logisticsPrintService = logisticsPrintService;
 		this.entityManager = entityManager;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional(readOnly = true)
@@ -120,7 +126,10 @@ public class AdminOrderService {
 		// JPA may have written ecpay_logistics_id; flush so JDBC Admin read model sees it in this response
 		entityManager.flush();
 
-		return get(id);
+		AdminOrderDetailResponse detail = get(id);
+		publishStatusChanged(id, detail, "shipped");
+
+		return detail;
 	}
 
 	@Transactional
@@ -145,7 +154,10 @@ public class AdminOrderService {
 		}
 		commandRepository.addHistory(id, "completed", now, actorId, cleanNote(note, "Order completed by admin"));
 
-		return get(id);
+		AdminOrderDetailResponse detail = get(id);
+		publishStatusChanged(id, detail, "completed");
+
+		return detail;
 	}
 
 	/**
@@ -190,7 +202,10 @@ public class AdminOrderService {
 			commandRepository.addHistory(id, "cancelled", now, actorId, historyNote);
 		}
 
-		return get(id);
+		AdminOrderDetailResponse detail = get(id);
+		publishStatusChanged(id, detail, "cancelled");
+
+		return detail;
 	}
 
 	/**
@@ -262,6 +277,20 @@ public class AdminOrderService {
 	private AdminOrderCommandRepository.OrderState lock(String id) {
 		return commandRepository.lockById(id)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Order not found"));
+	}
+
+	/**
+	 * 狀態已確定變更成功才呼叫；訂閱者（如 n8n 推播）只會在交易 commit 後才執行，不佔用本次交易時間。
+	 */
+	private void publishStatusChanged(String id, AdminOrderDetailResponse detail, String event) {
+		eventPublisher.publishEvent(new OrderStatusChangedEvent(
+				id,
+				detail.customer().id(),
+				detail.displayNo(),
+				detail.status(),
+				detail.paymentStatus(),
+				detail.shippingMethod(),
+				event));
 	}
 
 	private void ensureNoRefund(AdminOrderCommandRepository.OrderState order) {

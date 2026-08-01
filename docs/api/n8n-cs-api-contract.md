@@ -1,10 +1,10 @@
-# n8n LINE 客服 API Contract（v1.0）
+# n8n LINE 客服 API Contract（v1.1）
 
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Implemented |
-| **日期** | 2026-07-31 |
-| **版本** | 1.0 |
+| **日期** | 2026-08-01 |
+| **版本** | 1.1 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **整合指南** | [`../backend-specs/integration/n8n-line-customer-service.md`](../backend-specs/integration/n8n-line-customer-service.md) |
 | **產品 Spec** | [`.scratch/line-n8n-customer-service/spec.md`](../../.scratch/line-n8n-customer-service/spec.md) |
@@ -283,15 +283,102 @@ Body: { "idToken": "dev:uid-demo:demo@example.invalid:line:Demo:UlineDemo001" }
 
 ---
 
-## 8. v1.0 不做
+## 8. 推播 Webhook（後端 → n8n，本系統主動呼叫）
 
-| 項目 | 原因 |
-|------|------|
-| Booking／租借查詢 | 產品延後 |
-| n8n 直連 Postgres | 安全／契約外 |
-| 訂單事件推送到 n8n | 延後 |
-| HMAC／mTLS | v1 不要求 |
-| 瀏覽器呼叫本 API | 禁止暴露 Key |
+> **方向與本文件其餘章節相反**：§1～§7 是 n8n 呼叫本系統；本節是**本系統呼叫 n8n**。
+
+### 8.1 一句話
+
+後台人員在既有訂單管理畫面點擊「出貨」「完成訂單」「取消訂單」，訂單狀態變更**交易 commit 後**，若該訂單會員已綁定 LINE，後端會 POST 一筆事件到 n8n 設定的 Webhook URL；n8n 收到後自行呼叫 LINE Messaging API 的 Push Message 推播給該會員。本系統**不**呼叫 LINE Push Message API。
+
+訂單交易 commit 後，事件由 `@TransactionalEventListener(phase = AFTER_COMMIT)` 接收，並透過 `@Async` 專用 executor（`n8nNotifyExecutor`）在背景執行緒呼叫 n8n webhook；n8n 慢或失敗不會 rollback 訂單，也不會讓出貨／完成／取消的 API 回應等 n8n webhook timeout。本次**未做** outbox／重試，通知不保證一定送達，executor 佇列滿載時只記 warn log 並丟棄該次通知。
+
+### 8.2 觸發時機
+
+| 後台動作 | `event` 值 |
+|----------|-----------|
+| 出貨（`AdminOrderService.ship()`） | `shipped` |
+| 完成訂單（`AdminOrderService.complete()`） | `completed` |
+| 取消訂單（`AdminOrderService.cancel()`） | `cancelled` |
+
+訂單會員未綁定 LINE（`customers.line_user_id` 為空）或後端未設定 Webhook URL／密鑰時皆為 **no-op**，不發送、不報錯；冪等回放（例如重複點擊已出貨訂單）不會重複通知。
+
+### 8.3 Request（本系統 → n8n）
+
+| 項目 | 值 |
+|------|-----|
+| Method | `POST` |
+| URL | 後端設定 `yuruicamp.n8n.notify-webhook-url`（環境變數 `YURUICAMP_N8N_NOTIFY_WEBHOOK_URL`） |
+| Header | `X-Yuruicamp-Notify-Secret: <與後端 yuruicamp.n8n.notify-secret 相同>` |
+| Timeout | 連線／讀取各 3 秒 |
+
+Body：
+
+```json
+{
+  "lineUserId": "Uxxxxxxxx",
+  "orderId": "a1b2c3d4e5f6…",
+  "orderDisplayNo": "YC20260731001",
+  "status": "shipped",
+  "paymentStatus": "paid",
+  "shippingMethod": "cvs",
+  "event": "shipped",
+  "occurredAt": "2026-08-01T03:00:00Z"
+}
+```
+
+| JSON | 型別 | 說明 |
+|------|------|------|
+| `lineUserId` | string | 該訂單會員的 `customers.line_user_id` |
+| `orderId` | string | 內部訂單 id（僅供 log／追蹤，**不要**放進 LINE 聊天內容） |
+| `orderDisplayNo` | string | `orders.display_no`（給客人看的單號） |
+| `status` | string | 觸發當下的訂單狀態，與 `event` 同義（`shipped` \| `completed` \| `cancelled`） |
+| `paymentStatus` | string | `unpaid` \| `paid` \| `refunded` |
+| `shippingMethod` | string | `delivery` \| `pickup` \| `cvs` |
+| `event` | string | `shipped` \| `completed` \| `cancelled` |
+| `occurredAt` | string (ISO-8601) | 後端發送當下時間 |
+
+Payload 刻意保持精簡（不含地址、電話、金額明細），與 §4.3 客服卡的隱私原則一致；n8n 若需要更完整資訊（例如物流狀態說明 `logisticsRtnMsg`），可用 payload 內的 `lineUserId` + `orderDisplayNo` 呼叫既有 §1 的 `by-display-no` 端點補查。
+
+### 8.4 認證
+
+| Header | 說明 |
+|--------|------|
+| `X-Yuruicamp-Notify-Secret` | 固定字串比對（比照 `N8nApiKeyAuthenticationFilter` 的簡單模式，非 HMAC）；n8n 端需在 Webhook trigger 驗證此 Header |
+
+### 8.5 失敗行為（本系統側）
+
+推播是 **fire-and-forget** 且**背景非同步**執行：
+- HTTP 呼叫失敗（連線逾時、n8n 回非 2xx 等）只記一行 warn log，**不會**讓出貨／完成／取消動作失敗或 rollback，也不重試。
+- 專用 executor（`n8nNotifyExecutor`：core 2 / max 4 / queue 100）滿載時，該次通知直接丟棄並記 warn log，同樣不影響訂單操作。
+- 本次**未做** outbox 或任何持久化重試機制；若後端在通知送出前重啟，或 executor 佇列滿載丟棄，該筆通知即遺失，**不保證一定送達** n8n。
+
+### 8.6 設定
+
+| 項目 | Spring property | 環境變數 |
+|------|------------------|----------|
+| Webhook URL | `yuruicamp.n8n.notify-webhook-url` | `YURUICAMP_N8N_NOTIFY_WEBHOOK_URL` |
+| 密鑰 | `yuruicamp.n8n.notify-secret` | `YURUICAMP_N8N_NOTIFY_SECRET` |
+
+兩者預設空字串；**Webhook URL 與密鑰必須同時設定**才會送出推播，任一為空字串都視為停用（不影響訂單操作本身）。只設定 URL、未設定密鑰是常見的誤設定，此時也會停用（避免送出空密鑰 Header）。
+
+### 8.7 n8n 端要做的事
+
+1. 建一個 Webhook trigger，驗證 `X-Yuruicamp-Notify-Secret` Header 是否與約定密鑰相同
+2. 從 body 取出 `lineUserId`，用 LINE 官方帳號的 channel access token 呼叫 LINE Messaging API 的 Push Message
+3. 依 `event` 組不同話術（例如 `shipped` → 「您的訂單 {orderDisplayNo} 已出貨」）
+
+---
+
+## 9. v1.0 不做
+
+| 項目 | 原因 | 現況 |
+|------|------|------|
+| Booking／租借查詢 | 產品延後 | 仍未做 |
+| n8n 直連 Postgres | 安全／契約外 | 仍未做 |
+| ~~訂單事件推送到 n8n~~ | ~~延後~~ | **已於 v1.1 補上，見 §8** |
+| HMAC／mTLS | v1 不要求 | 仍未做（§8 推播用固定 Header 比對） |
+| 瀏覽器呼叫本 API | 禁止暴露 Key | 仍未做 |
 
 ---
 
@@ -300,3 +387,4 @@ Body: { "idToken": "dev:uid-demo:demo@example.invalid:line:Demo:UlineDemo001" }
 | 版本 | 日期 | 說明 |
 |------|------|------|
 | 1.0 | 2026-07-31 | 初版：授權、三端點、CS card 欄位、錯誤碼、curl／n8n 對齊 |
+| 1.1 | 2026-08-01 | 新增 §8 推播 Webhook（後端 → n8n）：訂單出貨／完成／取消事件通知（`@TransactionalEventListener(AFTER_COMMIT)` + `@Async` 專用 executor 背景送出，不保證送達、無 outbox／重試），補上 §8「v1.0 不做」的訂單事件推送缺口 |

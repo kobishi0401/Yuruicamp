@@ -172,4 +172,6 @@ curl.exe http://localhost:8080/api/products/P001
 - `YURUICAMP_CHECKOUT_EXPIRATION_ENABLED` 對應 `yuruicamp.checkout.expiration-enabled`（預設 `true`）
 - `YURUICAMP_BOOKING_EXPIRATION_SCAN_MS` 對應 `yuruicamp.booking.expiration-scan-ms`（預設 `60000` 毫秒）
 - `YURUICAMP_BOOKING_EXPIRATION_ENABLED` 對應 `yuruicamp.booking.expiration-enabled`（預設 `true`）
+- `YURUICAMP_N8N_API_KEY` 對應 `yuruicamp.n8n.api-key`（n8n 唯讀查詢，空白則 `/api/integrations/n8n/**` 全拒絕）
+- `YURUICAMP_N8N_NOTIFY_WEBHOOK_URL` / `YURUICAMP_N8N_NOTIFY_SECRET` 對應 `yuruicamp.n8n.notify-webhook-url` / `yuruicamp.n8n.notify-secret`（後端主動推播訂單事件給 n8n，兩者需同時設定，任一空白則停用；見 [`n8n-cs-api-contract.md`](../docs/api/n8n-cs-api-contract.md) §8）
 - `CORS_ALLOWED_ORIGINS`

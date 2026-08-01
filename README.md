@@ -91,6 +91,7 @@
 - 會員周邊 Seed 已獨立補入 `020-identity.sql`：18 個偏好選項、200 筆會員偏好、50 筆預設地址、3 個會員標籤與 56 筆標籤指派；逐筆對齊 `frontend/data/customers/*.json`，不影響訂單／預訂成立條件。
 - 完整 Seed 已於 2026-07-22 使用 PostgreSQL 16 全新獨立資料庫實灌，`latest_schema.sql` 與 `010`～`070` 一次成功 `COMMIT`；同一版本也已成功套用到目前 `yuruicamp`。可重做的流程與判定標準見 [`資料庫與完整 Seed 實際驗證`](./docs/backend-specs/test/database-seed-validation.md)。
 - **Commerce UX（2026-07-26 ✅）**：`orders`／`bookings` 人類可讀 `displayNo`（`ORD-xxxx`／`BK-xxxx`）；後台預約明細 lineTotal、contact 快照、中文狀態時間軸；Analytics `categoryBreakdown` 甜甜圈；會員 Profile API；靜態驗收入口 `frontend/tests/commerce-ux-browser.mjs`。規格見 [`.scratch/commerce-ux-display-checkout/spec.md`](./.scratch/commerce-ux-display-checkout/spec.md)。
+- **n8n × LINE 客服推播（2026-08-01 ✅）**：既有後台「出貨／完成訂單／取消訂單」動作交易 commit 後，由 `OrderStatusChangedEvent` + `@TransactionalEventListener(AFTER_COMMIT)` 接收事件，並透過 `@Async` 專用執行緒池（`n8nNotifyExecutor`）在背景呼叫 n8n webhook；n8n 慢或失敗不會 rollback 訂單，也不會讓出貨／完成／取消的 API 回應等 n8n timeout。若該訂單會員已綁定 LINE，後端會 POST 通知 n8n 推播 Webhook（`X-Yuruicamp-Notify-Secret`），由 n8n 呼叫 LINE Push Message API 推播給會員；未綁定或 Webhook URL／密鑰未同時設定皆為 no-op。本次未做 outbox／重試，不保證一定送達。契約見 [`docs/api/n8n-cs-api-contract.md`](./docs/api/n8n-cs-api-contract.md) §8，整合指南見 [`docs/backend-specs/integration/n8n-line-customer-service.md`](./docs/backend-specs/integration/n8n-line-customer-service.md)。
 
 ### 組員本機一鍵說明（推薦先看）
 

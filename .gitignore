@@ -5,6 +5,10 @@
 # Local ECPay skill (separate git repo — do not embed in main project)
 .ecpay-skill/
 
+# Claude Code 本機 skills／設定（.claude/skills/ecpay 內含自己的 .git，屬獨立 repo，勿嵌進主專案）
+# Claude Code local skills/config (.claude/skills/ecpay has its own .git — separate repo, do not embed)
+.claude/
+
 # Matt Pocock / skills.sh 本機 skills（勿 commit）
 # Keep project-owned skills tracked; ignore everything else under .agents/skills/
 .agents/skills/*/
