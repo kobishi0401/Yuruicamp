@@ -3,7 +3,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Implemented |
-| **日期** | 2026-08-01 |
+| **日期** | 2026-08-02 |
 | **API 契約** | [`docs/api/n8n-cs-api-contract.md`](../../api/n8n-cs-api-contract.md)（欄位／錯誤碼以契約為準） |
 | **產品 Spec** | [`.scratch/line-n8n-customer-service/spec.md`](../../../.scratch/line-n8n-customer-service/spec.md) |
 | **本機啟動** | [`docs/local-dev-setup.md`](../../local-dev-setup.md) |
@@ -56,6 +56,26 @@
   （Header：X-Yuruicamp-Notify-Secret）
        ↓
   n8n workflow 呼叫 LINE Push Message API 推播給該會員
+```
+
+第三方向：**會員中心主動觸發**（非狀態變更，同樣經 §8 同一個 Webhook，`event=cs_inquiry`）：
+
+```text
+[會員在會員中心訂單詳情]
+  點「使用 LINE 追蹤訂單」（POST /api/me/orders/{orderId}/line-cs-notify）
+       ↓
+  MemberOrderService.notifyLineCsInquiry()：驗證訂單屬於本人 + 驗證 line_user_id 已綁定
+       ↓
+  發佈 OrderNotificationRequestedEvent（獨立型別，不是 OrderStatusChangedEvent；僅資料，不直接依賴 n8n）
+       ↓
+  交易 commit
+       ↓（@TransactionalEventListener AFTER_COMMIT）
+  N8nOrderNotificationRequestedListener 接手（@Async("n8nNotifyExecutor") 背景執行緒，
+  沿用與 N8nOrderNotifyListener 相同的執行緒池，會員 API 不用等 n8n）
+       ↓
+  交給 N8nNotifyService（同一個 webhook URL／密鑰、同一段 HTTP 呼叫實作，只是 event="cs_inquiry"）
+       ↓
+  n8n workflow 對 event 欄位多加一個 cs_inquiry 分支即可，不需另建 workflow
 ```
 
 **為什麼要交易 commit 後、且用 `@Async` 背景執行**：`ship()/complete()/cancel()` 都是 `@Transactional`，且會先鎖定訂單列（`SELECT ... FOR UPDATE`）。這裡疊了兩層保護：
@@ -276,11 +296,14 @@ Session 成功回應含 `lineBound: true|false`（見 [`auth-api-contract.md`](.
 | `.../order/application/OrderStatusChangedEvent.java` | 訂單狀態變更事件（交易 commit 後才派發給訂閱者） |
 | `.../integration/n8n/application/N8nOrderNotifyListener.java` | `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("n8nNotifyExecutor")`，交易 commit 後在背景執行緒觸發推播 |
 | `.../config/AsyncConfig.java` | `@EnableAsync` + `n8nNotifyExecutor` 專用執行緒池（core 2／max 4／queue 100） |
-| `.../integration/n8n/application/N8nNotifyService.java` | 訂單事件推播 Webhook（後端 → n8n，fire-and-forget） |
+| `.../integration/n8n/application/N8nNotifyService.java` | 訂單事件推播 Webhook（後端 → n8n，fire-and-forget）；`notifyOrderEvent` 有 `OrderStatusChangedEvent`／`OrderNotificationRequestedEvent` 兩個 overload，共用同一段 HTTP 邏輯 |
 | `.../integration/n8n/security/N8nApiKeyAuthenticationFilter.java` | `X-Api-Key` |
 | `CustomerAuthService` | session 寫入 `line_user_id` |
 | `AdminOrderService.ship()/complete()/cancel()` | 狀態變更成功後發佈 `OrderStatusChangedEvent`（不直接依賴 n8n） |
-| `frontend/storefront/js/components/contact-cs.js` | 聯繫客服綁定流程 |
+| `.../order/application/OrderNotificationRequestedEvent.java` | 會員主動要求通知事件（非狀態變更），由 `MemberOrderService.notifyLineCsInquiry()` 發佈 |
+| `.../integration/n8n/application/N8nOrderNotificationRequestedListener.java` | `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("n8nNotifyExecutor")`，處理會員中心「使用 LINE 追蹤訂單」觸發的通知 |
+| `frontend/storefront/js/components/contact-cs.js` | 聯繫客服綁定流程（浮動按鈕） |
+| `frontend/storefront/js/components/member-center.js` | 會員中心訂單詳情「使用 LINE 追蹤訂單」按鈕，另外實作自己的 `ensureLineBound()`（不重用 `contact-cs.js`，避免其信任本地快取 `lineBound` 的既有行為） |
 
 ---
 
@@ -290,3 +313,4 @@ Session 成功回應含 `lineBound: true|false`（見 [`auth-api-contract.md`](.
 |------|------|------|
 | 1.0 | 2026-07-31 | 初版：資料流、授權、n8n 節點對照、工作流骨架、煙測 |
 | 1.1 | 2026-08-01 | 補上反方向資料流圖：後台出貨／完成／取消成功後，透過 `OrderStatusChangedEvent` + `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("n8nNotifyExecutor")` 在交易 commit 後於背景執行緒推播 n8n，訂單操作本身不受影響、API 回應也不用等 n8n；未做 outbox／重試，不保證送達；契約見 [`n8n-cs-api-contract.md`](../../api/n8n-cs-api-contract.md) §8 |
+| 1.2 | 2026-08-02 | 補上第三方向資料流圖：會員中心「使用 LINE 追蹤訂單」按鈕透過 `OrderNotificationRequestedEvent`（獨立型別，非狀態變更）+ 同一套 `AFTER_COMMIT`／`@Async` 機制觸發推播，`event=cs_inquiry`，沿用同一個 Webhook／密鑰；契約見 [`n8n-cs-api-contract.md`](../../api/n8n-cs-api-contract.md) §8.2 |

@@ -1505,6 +1505,16 @@ window.API = {
       return _mergeOrders(seed, _getStoredOrders()).map(_normalizeOrder);
     },
 
+    // 會員中心「使用 LINE 追蹤訂單」：驗證歸屬與 LINE 綁定後通知 n8n，不直接呼叫 LINE。
+    notifyLineCs: async (orderId) => {
+      if (_useMockApi()) return null; // Mock 模式不呼叫後端，視為成功
+
+      return window.ApiClient._restRequest(
+        `/me/orders/${encodeURIComponent(orderId)}/line-cs-notify`,
+        { method: 'POST', auth: 'required' }
+      );
+    },
+
     getByCustomerId: async (customerId, status = null) => {
       let orders = await window.API.orders.getAll();
 

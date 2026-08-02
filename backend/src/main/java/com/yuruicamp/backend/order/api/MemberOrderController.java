@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -47,5 +48,15 @@ public class MemberOrderController {
 			@AuthenticationPrincipal CustomerPrincipal principal,
 			@PathVariable String orderId) {
 		return ApiResponse.ok(service.get(principal.customerId(), orderId));
+	}
+
+	// 會員主動要求以 LINE 追蹤這張訂單；驗證歸屬與 LINE 綁定後發佈事件通知 n8n，不等待推播完成。
+	@PostMapping("/{orderId}/line-cs-notify")
+	@Operation(summary = "通知 n8n：會員主動要求以 LINE 追蹤這張訂單")
+	public ApiResponse<Void> notifyLineCs(
+			@AuthenticationPrincipal CustomerPrincipal principal,
+			@PathVariable String orderId) {
+		service.notifyLineCsInquiry(principal.customerId(), orderId);
+		return ApiResponse.ok(null);
 	}
 }

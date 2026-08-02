@@ -1,10 +1,10 @@
-# n8n LINE 客服 API Contract（v1.1）
+# n8n LINE 客服 API Contract（v1.2）
 
 | 欄位 | 內容 |
 |------|------|
 | **狀態** | Implemented |
-| **日期** | 2026-08-01 |
-| **版本** | 1.1 |
+| **日期** | 2026-08-02 |
+| **版本** | 1.2 |
 | **共用** | [`common-api-conventions.md`](./common-api-conventions.md) |
 | **整合指南** | [`../backend-specs/integration/n8n-line-customer-service.md`](../backend-specs/integration/n8n-line-customer-service.md) |
 | **產品 Spec** | [`.scratch/line-n8n-customer-service/spec.md`](../../.scratch/line-n8n-customer-service/spec.md) |
@@ -295,13 +295,16 @@ Body: { "idToken": "dev:uid-demo:demo@example.invalid:line:Demo:UlineDemo001" }
 
 ### 8.2 觸發時機
 
-| 後台動作 | `event` 值 |
-|----------|-----------|
-| 出貨（`AdminOrderService.ship()`） | `shipped` |
-| 完成訂單（`AdminOrderService.complete()`） | `completed` |
-| 取消訂單（`AdminOrderService.cancel()`） | `cancelled` |
+| 觸發來源 | `event` 值 | 說明 |
+|----------|-----------|------|
+| 出貨（`AdminOrderService.ship()`） | `shipped` | 訂單狀態變更 |
+| 完成訂單（`AdminOrderService.complete()`） | `completed` | 訂單狀態變更 |
+| 取消訂單（`AdminOrderService.cancel()`） | `cancelled` | 訂單狀態變更 |
+| 會員中心「使用 LINE 追蹤訂單」按鈕（`POST /api/me/orders/{orderId}/line-cs-notify`） | `cs_inquiry` | **非訂單狀態變更**——會員主動要求通知；`status`／`paymentStatus`／`shippingMethod` 是觸發當下的快照，不代表狀態剛剛改變 |
 
 訂單會員未綁定 LINE（`customers.line_user_id` 為空）或後端未設定 Webhook URL／密鑰時皆為 **no-op**，不發送、不報錯；冪等回放（例如重複點擊已出貨訂單）不會重複通知。
+
+`cs_inquiry` 由獨立的 `OrderNotificationRequestedEvent`（非 `OrderStatusChangedEvent`）發布，同樣經 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("n8nNotifyExecutor")`，最終呼叫同一個 `N8nNotifyService` Webhook（同一組 URL／密鑰），僅 `event` 值不同，n8n workflow 只需對 `event` 欄位多加一個分支，不需另建 workflow。
 
 ### 8.3 Request（本系統 → n8n）
 
@@ -332,10 +335,10 @@ Body：
 | `lineUserId` | string | 該訂單會員的 `customers.line_user_id` |
 | `orderId` | string | 內部訂單 id（僅供 log／追蹤，**不要**放進 LINE 聊天內容） |
 | `orderDisplayNo` | string | `orders.display_no`（給客人看的單號） |
-| `status` | string | 觸發當下的訂單狀態，與 `event` 同義（`shipped` \| `completed` \| `cancelled`） |
+| `status` | string | 觸發當下的訂單狀態快照（`unshipped` \| `shipped` \| `completed` \| `returned` \| `cancelled`）；`event=cs_inquiry` 時僅為快照，不代表狀態剛變更 |
 | `paymentStatus` | string | `unpaid` \| `paid` \| `refunded` |
 | `shippingMethod` | string | `delivery` \| `pickup` \| `cvs` |
-| `event` | string | `shipped` \| `completed` \| `cancelled` |
+| `event` | string | `shipped` \| `completed` \| `cancelled` \| `cs_inquiry` |
 | `occurredAt` | string (ISO-8601) | 後端發送當下時間 |
 
 Payload 刻意保持精簡（不含地址、電話、金額明細），與 §4.3 客服卡的隱私原則一致；n8n 若需要更完整資訊（例如物流狀態說明 `logisticsRtnMsg`），可用 payload 內的 `lineUserId` + `orderDisplayNo` 呼叫既有 §1 的 `by-display-no` 端點補查。
@@ -366,7 +369,7 @@ Payload 刻意保持精簡（不含地址、電話、金額明細），與 §4.3
 
 1. 建一個 Webhook trigger，驗證 `X-Yuruicamp-Notify-Secret` Header 是否與約定密鑰相同
 2. 從 body 取出 `lineUserId`，用 LINE 官方帳號的 channel access token 呼叫 LINE Messaging API 的 Push Message
-3. 依 `event` 組不同話術（例如 `shipped` → 「您的訂單 {orderDisplayNo} 已出貨」）
+3. 依 `event` 組不同話術（例如 `shipped` → 「您的訂單 {orderDisplayNo} 已出貨」；`cs_inquiry` → 依 `status` 現況組一句話，例如「您的訂單 {orderDisplayNo} 目前狀態是…」，不要說成「剛剛出貨／完成」）
 
 ---
 
@@ -388,3 +391,4 @@ Payload 刻意保持精簡（不含地址、電話、金額明細），與 §4.3
 |------|------|------|
 | 1.0 | 2026-07-31 | 初版：授權、三端點、CS card 欄位、錯誤碼、curl／n8n 對齊 |
 | 1.1 | 2026-08-01 | 新增 §8 推播 Webhook（後端 → n8n）：訂單出貨／完成／取消事件通知（`@TransactionalEventListener(AFTER_COMMIT)` + `@Async` 專用 executor 背景送出，不保證送達、無 outbox／重試），補上 §8「v1.0 不做」的訂單事件推送缺口 |
+| 1.2 | 2026-08-02 | §8.2 新增 `cs_inquiry` 觸發來源（會員中心「使用 LINE 追蹤訂單」按鈕，`POST /api/me/orders/{orderId}/line-cs-notify`）：非訂單狀態變更，由獨立的 `OrderNotificationRequestedEvent` 發布，沿用同一個推播 Webhook／密鑰，僅 `event` 值不同 |

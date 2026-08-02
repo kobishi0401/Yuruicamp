@@ -1015,12 +1015,17 @@
       infoRows.join('') +
       '</section>' +
       cancelBookingAction +
-      '<a class="memberDetailLineButton" href="https://line.me/R/ti/p/@yuruicamp" target="_blank" rel="noopener">' +
-      '<i class="bi bi-chat-dots" aria-hidden="true"></i>' +
-      '<span>使用 LINE 詢問' +
-      (type === 'rental' ? '預約' : '訂單') +
-      '</span>' +
-      '</a>' +
+      (type === 'purchase'
+        ? '<a class="memberDetailLineButton" href="#" data-line-track-order data-order-id="' +
+          html(order.id) +
+          '">' +
+          '<i class="bi bi-chat-dots" aria-hidden="true"></i>' +
+          '<span>使用 LINE 追蹤訂單</span>' +
+          '</a>'
+        : '<a class="memberDetailLineButton" href="https://line.me/R/ti/p/@yuruicamp" target="_blank" rel="noopener">' +
+          '<i class="bi bi-chat-dots" aria-hidden="true"></i>' +
+          '<span>使用 LINE 詢問預約</span>' +
+          '</a>') +
       cancelPurchaseAction
     );
   }
@@ -1045,6 +1050,167 @@
       document.body.classList.remove('memberModalOpen');
     if (state.lastFocus && typeof state.lastFocus.focus === 'function') state.lastFocus.focus();
   }
+  /**
+   * 確保目前會員已完成 LINE Account Linking（customers.line_user_id 有值）。
+   * 只認 Firebase 當下的 hasLineProvider() 狀態，不信任本地快取的 sessionUser.lineBound
+   * （contact-cs.js 的 ensureLineBoundAndOpenOa() 有這個陷阱：Google 登入時本地快取若殘留
+   * 舊的 lineBound=true 會直接跳過綁定，這裡刻意不重用那段邏輯）。
+   * @returns {Promise<object|null>} 綁定成功回傳 session user；失敗或取消回傳 null（已 toast 過）
+   */
+  function ensureLineBound() {
+    if (!window.YuruiFirebase || !window.YuruiFirebase.isReady || !window.YuruiFirebase.isReady()) {
+      toast('LINE 綁定服務尚未就緒，請稍後再試', 'error');
+      return Promise.resolve(null);
+    }
+    if (!window.YuruiAuth) {
+      toast('登入模組尚未載入，請重新整理頁面', 'error');
+      return Promise.resolve(null);
+    }
+
+    var waitForUser =
+      typeof window.YuruiFirebase.waitForAuthState === 'function'
+        ? window.YuruiFirebase.waitForAuthState()
+        : Promise.resolve(window.YuruiFirebase.auth ? window.YuruiFirebase.auth.currentUser : null);
+
+    return waitForUser
+      .then(function (firebaseUser) {
+        var hasLineProvider =
+          firebaseUser &&
+          typeof window.YuruiFirebase.hasLineProvider === 'function' &&
+          window.YuruiFirebase.hasLineProvider();
+
+        if (hasLineProvider) {
+          return window.AppAuth.getIdToken({ required: true, forceRefresh: true })
+            .then(function (idToken) {
+              return window.YuruiAuth.establishSessionWithIdToken(idToken);
+            })
+            .then(function (user) {
+              if (!user || user.lineBound !== true) {
+                toast('LINE 身分尚未寫入會員資料，請再試一次', 'error');
+                return null;
+              }
+              if (typeof window.YuruiAuth.persistSessionUser === 'function') {
+                window.YuruiAuth.persistSessionUser(user);
+              }
+              return user;
+            });
+        }
+
+        if (firebaseUser) {
+          return window.YuruiAuth.linkLineAndRefreshSession({ showToast: true }).then(function (user) {
+            if (!user || user.lineBound !== true) {
+              toast('LINE 綁定未完成，請再試一次', 'error');
+              return null;
+            }
+            return user;
+          });
+        }
+
+        return window.YuruiAuth
+          .loginWithProvider('line', { showToast: true, openSurvey: false })
+          .then(function (user) {
+            if (!user || user.lineBound !== true) {
+              toast('LINE 登入後尚未完成綁定，請再試一次', 'error');
+              return null;
+            }
+            return user;
+          });
+      })
+      .catch(function (error) {
+        if (error && error.code === 'LINE_USER_ID_CONFLICT') {
+          toast(error.message, 'error');
+          return null;
+        }
+        toast(error && error.message ? error.message : 'LINE 綁定失敗', 'error');
+        return null;
+      });
+  }
+
+  /**
+   * 開啟官方 LINE OA 聊天室。有 preOpened（已在 click 當下同步開好的空白視窗）就直接導頁；
+   * 否則嘗試直接開新視窗，若被瀏覽器擋下（回傳 null/undefined）就提示使用者再點一次。
+   * @param {Window|null} preOpened
+   */
+  function openOaChat(preOpened) {
+    if (!window.YuruiContactCs || typeof window.YuruiContactCs.getLineOaChatUrl !== 'function') {
+      toast('LINE 客服模組尚未載入，請重新整理頁面', 'error');
+      return;
+    }
+    var url = window.YuruiContactCs.getLineOaChatUrl();
+    if (preOpened) {
+      preOpened.location = url;
+      return;
+    }
+    var win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) {
+      toast('瀏覽器已阻擋開新視窗，請再次點擊「使用 LINE 追蹤訂單」開啟 LINE', 'error');
+    }
+  }
+
+  /**
+   * 確保綁定 → 通知 n8n（best-effort）→ 開 OA。
+   * @param {string} orderId
+   * @param {Window|null} preOpened
+   */
+  function handleLineTrackOrder(orderId, preOpened) {
+    return ensureLineBound()
+      .then(function (user) {
+        if (!user) {
+          if (preOpened) preOpened.close();
+          return;
+        }
+        return window.API.orders
+          .notifyLineCs(orderId)
+          .catch(function (error) {
+            if (error && error.code === 'LINE_NOT_LINKED') throw error;
+            console.warn('[LineTrackOrder] notify failed (best-effort):', error);
+          })
+          .then(function () {
+            openOaChat(preOpened);
+          });
+      })
+      .catch(function (error) {
+        if (preOpened) preOpened.close();
+        if (error && error.code === 'LINE_NOT_LINKED') {
+          toast('LINE 綁定狀態異常，請重新綁定 LINE', 'error');
+        }
+      });
+  }
+
+  /**
+   * 綁定訂單詳情彈窗裡的「使用 LINE 追蹤訂單」按鈕；每次開窗都整段重繪 innerHTML，
+   * 直接對新節點掛 listener 即可，不需要處理重複綁定。
+   * @param {Element} container
+   */
+  function bindLineTrackOrderButton(container) {
+    var btn = container.querySelector('[data-line-track-order]');
+    if (!btn) return;
+    btn.addEventListener('click', function (event) {
+      event.preventDefault();
+      if (btn.dataset.busy === '1') return;
+      btn.dataset.busy = '1';
+
+      // 只有在 Firebase 當下已確認有 LINE provider（完全不需要跳 OAuth popup）時，
+      // 才在點擊當下同步預開一個空白視窗，稍後直接導頁；避免跟 Firebase 的
+      // linkWithPopup/signInWithPopup 搶開 popup、被瀏覽器判定為第二個彈窗擋掉。
+      // click 當下 Firebase currentUser 可能還沒從 IndexedDB restore 完成，這種情況
+      // hasLineProvider() 會回傳 false（即使其實已經綁過 LINE）——這是可接受的保守判斷，
+      // 不是「已綁 LINE 就保證不被 popup blocker 擋」，真被擋時交給 openOaChat() 的 fallback toast。
+      var alreadyBound = Boolean(
+        window.YuruiFirebase &&
+          window.YuruiFirebase.isReady &&
+          window.YuruiFirebase.isReady() &&
+          typeof window.YuruiFirebase.hasLineProvider === 'function' &&
+          window.YuruiFirebase.hasLineProvider()
+      );
+      var orderId = btn.getAttribute('data-order-id');
+      var preOpened = alreadyBound ? window.open('', '_blank') : null;
+
+      handleLineTrackOrder(orderId, preOpened).finally(function () {
+        btn.dataset.busy = '0';
+      });
+    });
+  }
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
   window.openOrderDetail = function (id) {
     var o = state.orders.find(function (x) {
@@ -1053,7 +1219,10 @@
     if (!o) return;
     text('orderDetailTitle', '訂單詳情 ' + orderDisplayId(o));
     var b = document.getElementById('orderDetailBody');
-    if (b) b.innerHTML = detailRows(o, meta('purchase', o.status), 'purchase');
+    if (b) {
+      b.innerHTML = detailRows(o, meta('purchase', o.status), 'purchase');
+      bindLineTrackOrderButton(b);
+    }
     openModal('orderDetailOverlay');
   };
   // 用途：整理會員中心函式行為，僅說明用途不改變邏輯。
