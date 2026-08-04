@@ -1,0 +1,19 @@
+# Keep build context small and avoid baking local junk into the image.
+target/
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.git/
+.gitignore
+*.md
+.env
+.env.*
+data/
+uploads/
+**/application-local.*
+.DS_Store
+Thumbs.db

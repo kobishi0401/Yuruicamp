@@ -27,13 +27,13 @@ docker compose up -d
 ### 不砍 volume、只重跑「整包」seed
 
 ```powershell
-docker exec yuruicamp-db psql -U postgres -d yuruicamp -f /docker-entrypoint-initdb.d/002-dev-seed.sql
+docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/002-dev-seed.sql
 ```
 
 若整包因本機多出來的白名單 admin email 衝突而失敗，可只重跑 W1 固定單：
 
 ```powershell
-docker exec yuruicamp-db psql -U postgres -d yuruicamp -f /docker-entrypoint-initdb.d/dev/090-w1-manual-fixtures.sql
+docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/dev/090-w1-manual-fixtures.sql
 ```
 
 ### W1 專用固定 ID（搜尋用）

@@ -27,11 +27,13 @@ window.initApp = async () => {
 
   // Header partial 注入完成後才綁定共用互動，避免 product-detail 等頁面先初始化造成空 DOM 綁定。
   // Bind shared interactions only after partial markup exists, so page scripts cannot bind empty DOM.
+  // Use optional chaining: if Firebase/header scripts failed to load, still run initHomePage (products API).
+  // 中文：Firebase／header 載入失敗時不要整頁炸掉，仍嘗試載入商品。
   if (!window._appComponentsInitialized) {
-    window.initNavbar();
-    window.initModalListeners();
-    window.initCartListeners();
-    window.initPersonalizationModal();
+    window.initNavbar?.();
+    window.initModalListeners?.();
+    window.initCartListeners?.();
+    window.initPersonalizationModal?.();
     window._appComponentsInitialized = true;
   } else {
     // Header markup may be injected after a page script already ran init; these init functions are idempotent.

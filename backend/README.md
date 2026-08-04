@@ -45,6 +45,23 @@ cd backend
 - Health：`GET http://localhost:8080/api/health`
 - Swagger：`http://localhost:8080/swagger-ui.html`
 
+## Docker 映像（本機先驗證，之後推 Cloud Run）
+
+在 `backend/`：
+
+```powershell
+docker build -t yuruicamp-backend .
+
+# 連本機 compose Postgres（埠 5433）。先停掉本機 mvnw，避免搶 8080。
+docker run --rm -p 8080:8080 `
+  -e DB_URL=jdbc:postgresql://host.docker.internal:5433/yuruicamp `
+  -e DB_PASSWORD="與 .env 的 POSTGRES_PASSWORD 相同" `
+  -e FIREBASE_ENABLED=false `
+  yuruicamp-backend
+```
+
+容器啟動時會跑 **Flyway**（與 `mvnw spring-boot:run` 相同）。seed 仍用主機對 DB 執行 `/seed/002-dev-seed.sql`（見 [`docs/local-dev-setup.md`](../docs/local-dev-setup.md)）。
+
 ## Dev stub Token（`FIREBASE_ENABLED=false`，預設）
 
 格式：
@@ -142,15 +159,19 @@ G 線於 2026-07-22 同批執行 RBAC、Customers、Orders／Bookings、Products
 
 `DB_PASSWORD` 必須與 Docker `.env` 的 `POSTGRES_PASSWORD` 相同。若出現 `password authentication failed`，先修正連線密碼；不要修改 Entity，也不要將 `ddl-auto` 改成 `update`。
 
+### Schema（Flyway）
+
+空庫啟動後端時，Flyway 會套用 [`src/main/resources/db/migration/V1__baseline_schema.sql`](src/main/resources/db/migration/V1__baseline_schema.sql)。  
+人類可讀的完整快照仍在 [`docs/latest_schema.sql`](../docs/latest_schema.sql)（含破壞性 `DROP SCHEMA`，勿當日常 migration）。
+
 ### 開發用資料種子
 
-全新 Docker volume 會自動跑 [`docs/seed/002-dev-seed.sql`](../docs/seed/002-dev-seed.sql)，依序建立商品與 Booking E-1 參考資料，以及商城／租借開發庫存。結構與 AI／開發者維護規則見 [`docs/seed/README.md`](../docs/seed/README.md)。
-既有資料庫請手動灌一次：
+Compose **不再**於初創 volume 自動灌 seed。請在後端（Flyway）成功啟動後手動執行 [`docs/seed/002-dev-seed.sql`](../docs/seed/002-dev-seed.sql)。結構與維護規則見 [`docs/seed/README.md`](../docs/seed/README.md)。
 
 ```powershell
-# 先讓 compose 套用 runner 與 dev/ 的唯讀掛載，再執行唯一入口
 docker compose up -d
-docker exec yuruicamp-db psql -U postgres -d yuruicamp -f /docker-entrypoint-initdb.d/002-dev-seed.sql
+# 先啟動後端讓 Flyway 建表，再：
+docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/002-dev-seed.sql
 ```
 
 重跑會將 `main`、`branch-001`～`branch-003` 的 156 筆商城庫存與 435 筆訂單保留還原為固定 Seed 狀態，請先確認不需要保留同 ID 的手動測試資料。

@@ -2,7 +2,8 @@
 
 > 目標：約 **30 分鐘**跑起 **資料庫 + 後端 + 前端 + Firebase**，  
 > 並用本機 **金流／物流 stub**（假付款頁、假超商地圖）做結帳煙測。  
-> 真綠界沙箱（需 ngrok）見文末「路線 B」。
+> 真綠界沙箱（需 ngrok）見文末「路線 B」。  
+> **Staging／自訂網域／CI/CD**：見 [`deploy/staging/README.md`](../deploy/staging/README.md)。
 
 ---
 
@@ -24,8 +25,8 @@
 
 | 服務 | 在哪開 | Port | 做什麼 |
 |------|--------|------|--------|
-| PostgreSQL | repo 根：`docker compose up -d` | **5433** | 正式資料（schema + seed） |
-| 後端 Spring Boot | `backend/`：`mvnw spring-boot:run` | **8080** | API、驗證 Firebase、金流／物流 stub |
+| PostgreSQL | repo 根：`docker compose up -d` | **5433** | 空庫（Postgres 16）；**不**自動灌 schema／seed |
+| 後端 Spring Boot | `backend/`：`mvnw spring-boot:run` | **8080** | Flyway 建表、API、Firebase、金流／物流 stub |
 | 前端 Vite | `frontend/`：`npm run dev` | **5173** | 商城／預約／後台 |
 
 前端預設接真後端（`USE_MOCK_API: false`），**三個都要開**。
@@ -33,10 +34,13 @@
 啟動順序（路線 A）：
 
 ```text
-1. Docker 資料庫
-2. 後端（設 DB_PASSWORD + Firebase env 後再 run）
-3. 前端 npm run dev
+1. Docker 資料庫（空庫）
+2. 後端（Flyway 建表；設 DB_PASSWORD + Firebase env）
+3. （全新 volume 或 down -v 後）手動灌 seed + Admin 白名單
+4. 前端 npm run dev
 ```
+
+> **結構 vs 資料**：表結構由 Flyway（`backend/src/main/resources/db/migration/`）負責；展示資料仍用 `docs/seed/002-dev-seed.sql`，必須在後端成功啟動過一次之後再灌。
 
 ---
 
@@ -78,20 +82,39 @@ Copy-Item .env.example .env.local
 
 填入 Lead 提供的 `VITE_FIREBASE_API_KEY`、`VITE_FIREBASE_AUTH_DOMAIN`、`VITE_FIREBASE_PROJECT_ID` 等（見 `.env.example` 全欄位）。
 
+本機 API 位址預設是 `http://localhost:8080/api`（`config.js`）。通常**不必**設 `VITE_API_BASE_URL`；只有要指向別的後端（或 Staging Hosting build）才需要，例如：
+
+```env
+# 可選；本機開發可省略
+# VITE_API_BASE_URL=http://localhost:8080/api
+```
+
+`npm run dev`／`npm run build` 會先跑 `scripts/write-yurui-env.mjs`，把值寫進 `public/yurui-env.js`（`window.__YURUI_ENV__`），再由 `config.js` 覆寫 `AppConfig.API_BASE_URL`。  
+Staging 範例：設 `VITE_API_BASE_URL=https://你的-cloud-run.run.app/api` 後再 `npm run build`。
+
 ```powershell
 npm install
 ```
 
 > 改完 `.env.local` 後，之後每次改動都要 **重啟** `npm run dev`。
 
-### 3.3 後台 Google 白名單
+### 3.3 灌開發 Seed（全新 DB 必做）
 
-正式 seed 不含你的 Gmail。把下面 `your@gmail.com` 換成 **Firebase Google 登入會用到的 email**：
+Compose **不會**在初創 volume 時自動灌資料。請先完成「Terminal 2 後端已成功啟動（Flyway 建表）」，再執行：
 
 ```powershell
-# 先確保 DB 已啟動
-docker compose up -d
+# 在 repo 根目錄 Yuruicamp/
+docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/002-dev-seed.sql
+```
 
+成功時應看到交易 `COMMIT`、沒有 `ERROR`。細節見 [`docs/seed/README.md`](./seed/README.md)。
+
+### 3.4 後台 Google 白名單
+
+正式 seed 不含你的 Gmail。把下面 `your@gmail.com` 換成 **Firebase Google 登入會用到的 email**（需在 seed 之後執行，因為要寫入 `admin_users`）：
+
+```powershell
+# 先確保：DB 已啟動、後端 Flyway 已建表、§3.3 seed 已灌過
 docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -c "
 INSERT INTO public.admin_users (id, name, email, role, active)
 VALUES ('DEV-GOOGLE-ADMIN', 'Local Admin', 'your@gmail.com', 'admin', true)
@@ -180,7 +203,8 @@ npm run dev
 - [ ] `docker ps` 有容器 `yuruicamp-db`
 - [ ] `GET http://localhost:8080/api/health` → **UP**
 - [ ] 前端 DevTools Console 有 `✓ AppConfig 已初始化`，且有 `✓ AppAuth 已注入 Firebase Auth`（或 YuruiFirebase 已初始化）
-- [ ] Swagger `GET /api/products` 回有商品資料
+- [ ] 後端 log 曾出現 Flyway migrate 成功（或 `flyway_schema_history` 已有 V1）
+- [ ] 已執行 §3.3 seed 後，Swagger `GET /api/products` 回有商品資料
 - [ ] 商城用 **Google 登入** → Network 有 `POST /api/auth/firebase/session` 與 `GET /api/me` 且 **200**
 - [ ]（可選）結帳選宅配或超商 → 假付款頁可模擬付清
 - [ ]（可選）後台白名單 Gmail 可進 dashboard，訂單可「出貨」（stub 物流編號）
@@ -196,8 +220,10 @@ npm run dev
 | 頁面沒 CSS／JS | Vite 根目錄錯 | 一定要在 `frontend/` 執行 `npm run dev` |
 | 後端 `password authentication failed` | `DB_PASSWORD` 與 `.env` 不一致 | 對齊後 **重啟** 後端 |
 | Console 警告 Firebase 未設定 | 缺 `.env.local` 或未重啟 Vite | 複製 `.env.example` → `.env.local` 填值，重啟 dev |
-| 後台 Google 登入失敗 | email 不在白名單 | 重做 §3.3 的 SQL |
-| `docker compose down -v` 後資料不見 | `-v` 會刪 volume | 預期行為；重做白名單，會員需重新登入 |
+| 後台 Google 登入失敗 | email 不在白名單 | 重做 §3.4 的 SQL |
+| `docker compose down -v` 後資料不見 | `-v` 會刪 volume | 預期；重啟後端（Flyway）→ 重做 §3.3 seed → §3.4 白名單；會員需重新登入 |
+| 後端啟動抱怨表／type 已存在 | 舊 volume 有表但沒有 Flyway 歷史 | `docker compose down -v` 後依新流程重來（空庫 → 後端 → seed） |
+| seed 說 relation does not exist | 還沒跑過後端 Flyway 就灌 seed | 先成功啟動後端，再跑 §3.3 |
 | 想測真綠界卻還在假頁 | stub 仍為 `true` | 改走路線 B，設兩個 stub=`false` 並重啟後端 |
 | 真沙箱 Notify 不到 | 沒 ngrok／URL 錯／未重啟 | 見路線 B；`PUBLIC_API_BASE_URL` 須含 `/api` |
 
@@ -269,5 +295,5 @@ $env:YURUICAMP_FRONTEND_BASE_URL = "http://127.0.0.1:5173"
 ```powershell
 docker compose down -v
 docker compose up -d
-# 重做 §3.3 Admin 白名單
+# 啟動後端（Flyway 建表）→ §3.3 seed → §3.4 Admin 白名單
 ```

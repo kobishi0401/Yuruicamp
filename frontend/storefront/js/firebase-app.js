@@ -6,7 +6,10 @@
  *
  * LINE：Identity Platform OIDC，預設 providerId = oidc.line
  * （若 Console 開的名稱不同，設 VITE_FIREBASE_LINE_PROVIDER_ID）
+ *
+ * Also applies VITE_API_BASE_URL / VITE_LINE_OA_CHAT_URL → AppConfig（見 apply-vite-env.js）
  */
+import './apply-vite-env.js';
 import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
@@ -58,14 +61,6 @@ function lineProviderId() {
 
 var config = readFirebaseConfig();
 var missing = missingConfigKeys(config);
-
-// Optional OA chat URL from Vite env → AppConfig (聯繫客服；不含身分參數)
-(function applyLineOaChatUrlFromEnv() {
-  var oa = String(import.meta.env.VITE_LINE_OA_CHAT_URL || '').trim();
-  if (!oa || !window.AppConfig) return;
-  window.AppConfig.LINE = window.AppConfig.LINE || {};
-  window.AppConfig.LINE.OA_CHAT_URL = oa;
-})();
 
 var app = null;
 var auth = null;

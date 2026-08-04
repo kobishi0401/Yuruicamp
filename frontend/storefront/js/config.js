@@ -12,7 +12,12 @@ window.AppConfig = {
    */
   USE_MOCK_API: false,
 
-  // Spring Boot 預設埠；接後端時改這裡即可 / Default Spring port
+  /**
+   * Spring Boot API base (local default).
+   * Override at build/dev time via frontend/.env.local → VITE_API_BASE_URL
+   * (applied by storefront/js/apply-vite-env.js when firebase-app loads).
+   * Staging example: https://YOUR-SERVICE.run.app/api
+   */
   API_BASE_URL: 'http://localhost:8080/api',
 
   /**
@@ -85,5 +90,28 @@ window.AppConfig = {
     ADDRESS: '台北市信義區信義路五段 100 號',
   },
 };
+
+/**
+ * Apply build/dev overrides from /yurui-env.js (window.__YURUI_ENV__).
+ * English: Hosting serves classic JS; Vite env is baked into that file by write-yurui-env.mjs.
+ * 中文：正式站經典腳本讀這個覆寫；由 npm run dev／build 前的腳本產生。
+ */
+(function applyYuruiEnvOverrides() {
+  var env = window.__YURUI_ENV__;
+  if (!env || typeof env !== 'object') {
+    return;
+  }
+  var api = String(env.API_BASE_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (api) {
+    window.AppConfig.API_BASE_URL = api;
+  }
+  var oa = String(env.LINE_OA_CHAT_URL || '').trim();
+  if (oa) {
+    window.AppConfig.LINE = window.AppConfig.LINE || {};
+    window.AppConfig.LINE.OA_CHAT_URL = oa;
+  }
+})();
 
 console.log('✓ AppConfig 已初始化');

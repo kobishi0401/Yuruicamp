@@ -124,7 +124,9 @@ public class YuruicampProperties {
 		}
 
 		public void setMerchantId(String merchantId) {
-			this.merchantId = merchantId;
+			// Trim: Secret Manager / shell piping often appends CRLF and breaks CheckMacValue.
+			// 中文：去掉尾端換行，避免綠界 10200073 CheckMacValue Error。
+			this.merchantId = trimToNull(merchantId);
 		}
 
 		public String getHashKey() {
@@ -132,7 +134,7 @@ public class YuruicampProperties {
 		}
 
 		public void setHashKey(String hashKey) {
-			this.hashKey = hashKey;
+			this.hashKey = trimToNull(hashKey);
 		}
 
 		public String getHashIv() {
@@ -140,7 +142,7 @@ public class YuruicampProperties {
 		}
 
 		public void setHashIv(String hashIv) {
-			this.hashIv = hashIv;
+			this.hashIv = trimToNull(hashIv);
 		}
 
 		public String getPaymentUrl() {
@@ -234,7 +236,7 @@ public class YuruicampProperties {
 		}
 
 		public void setMerchantId(String merchantId) {
-			this.merchantId = merchantId;
+			this.merchantId = trimToNull(merchantId);
 		}
 
 		public String getHashKey() {
@@ -242,7 +244,7 @@ public class YuruicampProperties {
 		}
 
 		public void setHashKey(String hashKey) {
-			this.hashKey = hashKey;
+			this.hashKey = trimToNull(hashKey);
 		}
 
 		public String getHashIv() {
@@ -250,7 +252,7 @@ public class YuruicampProperties {
 		}
 
 		public void setHashIv(String hashIv) {
-			this.hashIv = hashIv;
+			this.hashIv = trimToNull(hashIv);
 		}
 
 		public String getApiBaseUrl() {
@@ -331,5 +333,10 @@ public class YuruicampProperties {
 		public void setApiKey(String apiKey) {
 			this.apiKey = apiKey;
 		}
+	}
+
+	/** Trim whitespace/CRLF from secret-backed strings; keep null as null. */
+	private static String trimToNull(String value) {
+		return value == null ? null : value.trim();
 	}
 }

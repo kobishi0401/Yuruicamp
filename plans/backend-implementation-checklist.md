@@ -237,7 +237,7 @@
 
 ## 線 J — GCP／工程收尾（P3）
 
-- [ ] J-1 部署草圖
-- [ ] J-2 Secret Manager、Cloud Storage
-- [ ] J-3 Flyway
+- [x] J-1 部署草圖（`deploy/staging/`：Cloud SQL + Secret Manager + Cloud Run，stub=false）
+- [x] J-2 Secret Manager（Staging）；Cloud Storage 仍延後
+- [x] J-3 Flyway（V1 baseline + compose 空庫；seed 改手動 `/seed/002-dev-seed.sql`）
 - [ ] J-4 ADR + 關鍵交易整合測試補齊

@@ -257,6 +257,7 @@ function loadBookingLayoutPartial(targetSelector, url, partSelector, callback) {
  */
 function loadBookingCoreScripts() {
   var scripts = [
+    ['/yurui-env.js', '__bookingCoreYuruiEnvLoaded'],
     ['/storefront/js/config.js', '__bookingCoreConfigLoaded'],
     ['/storefront/js/api-client.js', '__bookingCoreApiClientLoaded'],
     ['/storefront/js/formatters.js', '__bookingCoreFormattersLoaded'],

@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "dev": "node scripts/write-yurui-env.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/write-yurui-env.mjs && vite build && vite build --config vite.firebase-app.config.js",
+    "build:firebase-app": "vite build --config vite.firebase-app.config.js",
     "preview": "vite preview --host 127.0.0.1",
+    "write-env": "node scripts/write-yurui-env.mjs",
     "lint": "eslint \"storefront/js/**/*.js\" \"booking/js/**/*.js\" \"src/**/*.js\" \"tests/**/*.mjs\"",
     "format": "prettier --check --ignore-unknown \"booking/**/*.{html,scss,js,json}\" \"README.md\" \"docs/itcss-architecture.md\" \"plans/booking-itcss-scss-plan.md\" \"storefront/pages/member-center.html\" \"components/member-center.partial\" \"storefront/js/components/member-center.js\" \"storefront/js/components/header.js\"",
     "format:all": "prettier --check \"**/*.{html,css,scss,js,json,md}\"",
