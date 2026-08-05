@@ -154,43 +154,11 @@ jobs:
 
       - name: Assemble hosting-out
         shell: bash
+        env:
+          STAGING_API_BASE_URL: ${{ env.STAGING_API_BASE_URL }}
         run: |
-          set -euo pipefail
-          ROOT="$GITHUB_WORKSPACE"
-          FRONT="$ROOT/frontend"
-          DIST="$FRONT/dist"
-          OUT="$ROOT/deploy/staging/hosting-out"
-          FA="$FRONT/dist-firebase-app/firebase-app.js"
-          rm -rf "$OUT"
-          mkdir -p "$OUT"
-          cp -a "$DIST"/. "$OUT"/
-          mkdir -p "$OUT/storefront/js" "$OUT/storefront/css"
-          cp -a "$FRONT/storefront/js"/. "$OUT/storefront/js"/
-          cp -a "$FRONT/storefront/css"/. "$OUT/storefront/css"/
-          test -f "$FA"
-          cp -f "$FA" "$OUT/storefront/js/firebase-app.js"
-          if [[ -f "$FRONT/dist-firebase-app/firebase-app.js.map" ]]; then
-            cp -f "$FRONT/dist-firebase-app/firebase-app.js.map" "$OUT/storefront/js/firebase-app.js.map"
-          fi
-          # booking / admin / components / data / assets
-          cp -a "$FRONT/booking" "$OUT/booking"
-          if [[ -f "$DIST/booking/pages/booking-success.html" ]]; then
-            mkdir -p "$OUT/booking/pages"
-            cp -f "$DIST/booking/pages/booking-success.html" "$OUT/booking/pages/booking-success.html"
-          fi
-          cp -a "$FRONT/admin" "$OUT/admin"
-          cp -a "$FRONT/components" "$OUT/components"
-          cp -a "$FRONT/data" "$OUT/data"
-          if [[ -d "$FRONT/assets" ]]; then
-            cp -a "$FRONT/assets" "$OUT/assets"
-          fi
-          rm -rf "$OUT/admin/scripts" || true
-          # Sanity: no bare firebase imports
-          if grep -qE "from ['\"]firebase/" "$OUT/storefront/js/firebase-app.js"; then
-            echo "firebase-app.js still has bare firebase imports" >&2
-            exit 1
-          fi
-          grep -q "yuruicamp-api-staging" "$OUT/yurui-env.js"
+          chmod +x deploy/staging/assemble-hosting.sh
+          ./deploy/staging/assemble-hosting.sh
 
       - name: Install firebase-tools
         run: npm install -g firebase-tools

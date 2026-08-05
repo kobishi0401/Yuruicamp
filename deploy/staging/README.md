@@ -32,7 +32,8 @@
 | `02-deploy-api.ps1` | Docker build／push → Cloud Run（stub=false） |
 | `03-seed.ps1` | 灌 `docs/seed`（需 cloud-sql-proxy） |
 | `04-hosting.ps1` | Vite build + assemble + `firebase deploy --only hosting` |
-| `assemble-hosting.ps1` | 合併 `dist` + 經典 JS／booking／admin（**含打包 firebase-app**） |
+| `assemble-hosting.ps1` | 合併 `dist` + 經典 JS／booking／admin（**含打包 firebase-app**；Windows） |
+| `assemble-hosting.sh` | 同上（Linux／GitHub Actions；避免 `booking/booking` 巢狀） |
 | `05-smoke-af.ps1` | 自動化煙測（health／商品／CORS／Secret 長度…） |
 | `06-check-custom-domain.ps1` | 查 `yuruicamp.com`／`www` SSL／ownership |
 | 根目錄 `.firebaserc`、`firebase.json` | Hosting 指向 `deploy/staging/hosting-out` |
@@ -72,7 +73,10 @@ gcloud auth application-default login   # 一次
 ### Hosting 為什麼不能只丟 `frontend/dist`？
 
 Vite 只產出部分 HTML／CSS；頁面仍載入經典 `/storefront/js/**`、`/booking/**`、`/admin/**`。  
-`assemble-hosting.ps1` 會合併這些目錄，並用 **Vite 打包後的** `firebase-app.js` 覆蓋原始檔（瀏覽器無法解析 `import 'firebase/app'`）。
+`assemble-hosting.ps1`／`.sh` 會合併這些目錄，並用 **Vite 打包後的** `firebase-app.js` 覆蓋原始檔（瀏覽器無法解析 `import 'firebase/app'`）。
+
+**注意：** Hero 影片 `frontend/assets/videos/*.mp4` 被 gitignore（超過 GitHub 100MB）。  
+CI 部署**不會**帶影片；要含影片請在「有 mp4 的本機」跑 `04-hosting.ps1`，或改成 CDN 外連。
 
 ```powershell
 .\deploy\staging\04-hosting.ps1 -SkipDeploy   # 只組裝
