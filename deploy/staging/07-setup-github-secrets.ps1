@@ -33,8 +33,11 @@ function Assert-Command([string] $Name) {
 Assert-Command "gh"
 
 Write-Host "==> Checking gh auth"
-$auth = gh auth status 2>&1 | Out-String
-if ($auth -match "not logged into") {
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$authOut = & gh auth status 2>&1 | Out-String
+$ErrorActionPreference = $prevEap
+if ($LASTEXITCODE -ne 0 -or $authOut -match "not logged into") {
   throw "Not logged into GitHub CLI. Run: gh auth login  (then re-run this script)"
 }
 
