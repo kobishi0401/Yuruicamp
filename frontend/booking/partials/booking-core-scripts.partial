@@ -11,6 +11,8 @@
   新增／刪除共用腳本時：同時改本檔與 booking/js/booking-core-scripts.js 的清單。
 -->
 <div data-layout-part="booking-core-scripts">
+  <!-- 0. Build/dev API URL overrides（public/yurui-env.js） -->
+  <script src="/yurui-env.js" data-booking-core-script></script>
   <!-- 1. AppConfig（API_BASE_URL／USE_MOCK_API）— 登入 session／REST 必備 -->
   <script src="/storefront/js/config.js" data-booking-core-script></script>
   <!-- 2. AppAuth + ApiClient（真後端 REST 統一入口；須在 api-mock／booking-api 之前） -->

@@ -26,6 +26,7 @@
    * （api-mock／booking-api 依賴 window.ApiClient）
    */
   var BOOKING_CORE_SCRIPTS = [
+    { src: '/yurui-env.js', flag: '__bookingCoreYuruiEnvLoaded' },
     { src: '/storefront/js/config.js', flag: '__bookingCoreConfigLoaded' },
     { src: '/storefront/js/api-client.js', flag: '__bookingCoreApiClientLoaded' },
     { src: '/storefront/js/formatters.js', flag: '__bookingCoreFormattersLoaded' },

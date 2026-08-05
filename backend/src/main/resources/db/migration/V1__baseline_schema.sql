@@ -1,21 +1,10 @@
--- Yuruicamp latest operational schema (archive and reconciliation objects excluded).
--- DESTRUCTIVE: applying this file deletes every object and all data in the
--- public schema, then recreates the latest application schema.
+-- Flyway V1 baseline: application schema only (no seed data).
+-- Derived from docs/latest_schema.sql for empty Postgres 16.
+-- Do NOT include DROP SCHEMA CASCADE here - that belongs only in the
+-- destructive human snapshot script, not in versioned migrations.
 --
--- Runtime path (本機／Staging／Cloud Run):
---   Spring Boot Flyway → backend/src/main/resources/db/migration/V1__baseline_schema.sql
--- This file remains the human-readable full snapshot / emergency rebuild script.
--- After changing schema here, update the Flyway migration (or add V2+) to match.
--- Seed data is separate: docs/seed/002-dev-seed.sql (run after Flyway, not here).
-
---
--- PostgreSQL database dump
---
-
-\restrict hByqopxLyaSGhhtkX6cZdF3Rcf7Ez3ga7gOCchUwh1Y4BdXsQiWE7UbicEIFm6K
-
--- Dumped from database version 16.14 (Debian 16.14-1.pgdg13+1)
--- Dumped by pg_dump version 16.14 (Debian 16.14-1.pgdg13+1)
+-- English: Creates types/tables/views/indexes/FKs/triggers.
+-- zh-TW: schema only; run docs/seed/002-dev-seed.sql after app migrate.
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,13 +17,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
--- Rebuild application-owned schemas. PostgreSQL cannot drop the currently
--- connected database, but this removes all application tables and data within it.
--- Fresh Docker init already has an empty `public` schema, so DROP first.
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO public;
 
 
 --
@@ -4412,4 +4394,3 @@ ALTER TABLE ONLY public.store_inventory_movement_items
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hByqopxLyaSGhhtkX6cZdF3Rcf7Ez3ga7gOCchUwh1Y4BdXsQiWE7UbicEIFm6K

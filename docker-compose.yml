@@ -2,10 +2,18 @@
 # Yuruicamp — 本機開發用 PostgreSQL（Docker Compose）
 # English: Local Postgres only; Spring Boot still runs on the host IDE.
 #
+# Schema / 結構：由 Spring Boot 啟動時的 Flyway 建立（勿再放進 initdb）
+# Seed / 展示資料：App migrate 成功後，手動執行（見下方「灌 seed」）
+#
 # 使用方式 / How to use:
 #   1. Copy-Item .env.example .env   （並改密碼）
-#   2. docker compose up -d
-#   3. 本機連線：localhost:5433 / DB: yuruicamp
+#   2. docker compose up -d          → 空庫 Postgres 16
+#   3. 啟動 backend（Flyway 建表）
+#   4. 灌 seed（見 docs/local-dev-setup.md）
+#   5. 本機連線：localhost:5433 / DB: yuruicamp
+#
+# 灌 seed（結構已存在後；密碼與 .env 的 POSTGRES_PASSWORD 相同）：
+#   docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/002-dev-seed.sql
 # =============================================================================
 
 services:
@@ -28,12 +36,9 @@ services:
       - "${POSTGRES_PORT:-5433}:5432"
 
     volumes:
-      # Applies the current complete schema only when this named volume is first created.
-      # For a fresh local database: docker compose down -v; docker compose up -d
-      - ./docs/latest_schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
-      # Development seed runner and its ordered fragments (only on first volume create).
-      - ./docs/seed/002-dev-seed.sql:/docker-entrypoint-initdb.d/002-dev-seed.sql:ro
-      - ./docs/seed/dev:/docker-entrypoint-initdb.d/dev:ro
+      # Seed files for manual load AFTER Flyway (not auto-run on volume create).
+      # 掛載供 docker exec -f /seed/002-dev-seed.sql；不會在 initdb 自動執行。
+      - ./docs/seed:/seed:ro
       # 獨立資料卷：容器刪了，資料還在（除非 down -v）
       # Named volume: data survives container removal (unless down -v)
       - yuruicamp_data:/var/lib/postgresql/data

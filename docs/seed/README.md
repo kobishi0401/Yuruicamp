@@ -1,11 +1,12 @@
 # 開發 Seed 指南
 
-本目錄只放 PostgreSQL 的「本機開發展示資料」。資料表結構以 [`../latest_schema.sql`](../latest_schema.sql) 為唯一真相；測試案例應自行建立並清除測試資料，不依賴本目錄。
+本目錄只放 PostgreSQL 的「本機開發展示資料」。  
+**執行期結構**由 Spring Boot **Flyway**（`backend/src/main/resources/db/migration/`）建立；[`../latest_schema.sql`](../latest_schema.sql) 是人類可讀完整快照／緊急重建腳本。測試案例應自行建立並清除測試資料，不依賴本目錄。
 
 | 欄位 | 內容 |
 |------|------|
 | **目前定位** | PostgreSQL 本機開發展示資料的結構、載入與維護規格 |
-| **更新日期** | 2026-07-22 |
+| **更新日期** | 2026-08-03（Flyway 後改為手動灌 seed） |
 | **前端 Mock 規格** | [`../../plans/data-integration-spec.md`](../../plans/data-integration-spec.md) |
 | **固定 ID 對照** | [`../data/json-seed-id-mapping.md`](../data/json-seed-id-mapping.md) |
 
@@ -17,7 +18,7 @@
 
 | 要處理的事情 | 先讀哪裡 |
 |-------------|-----------|
-| 修改資料表、ENUM、FK、CHECK | [`../latest_schema.sql`](../latest_schema.sql) |
+| 修改資料表、ENUM、FK、CHECK | Flyway migration + 同步 [`../latest_schema.sql`](../latest_schema.sql) 快照 |
 | 確認 API Request／Response 欄位 | [`../api/README.md`](../api/README.md) 與對應 API Contract |
 | 修改前端 Mock JSON 或衍生資料 | [`data-integration-spec.md`](../../plans/data-integration-spec.md) |
 | 確認 JSON／Seed 固定 ID | [`json-seed-id-mapping.md`](../data/json-seed-id-mapping.md) |
@@ -58,7 +59,7 @@ docs/seed/
 正式 seed 只含 `booking-seed@example.test`（給 Swagger／Dev Token）。  
 真 Firebase Google 登入後台時，請依 [`dev/021-admin-google-whitelist.example.sql`](./dev/021-admin-google-whitelist.example.sql) **在本機**把你的 Google email 寫入 `admin_users`（不要把真實 email commit 進 git）。
 
-`docker compose down -v` 會清空 volume：白名單與既有 `customers` 都會消失，需重新執行白名單 SQL，並請會員重新登入（重建 Firebase session）。  
+`docker compose down -v` 會清空 volume：需依序 **重啟後端（Flyway）→ 重跑本目錄 seed → 白名單 SQL**；既有 `customers` 會消失，會員需重新登入（重建 Firebase session）。  
 後續業務診斷清單見 [`../../plans/post-firebase-roadmap-checklist.md`](../../plans/post-firebase-roadmap-checklist.md)。
 
 `002-dev-seed.sql` 依外鍵順序載入片段，並以單一交易包住整批資料。任何一個片段失敗時，PostgreSQL 會停止並回滾，不應直接把片段當作正式入口。
@@ -91,17 +92,20 @@ docs/seed/
 
 ### 執行方式
 
-全新 Docker volume 在第一次 `docker compose up -d` 時會依序執行 schema 與開發 seed。若 volume 已存在，PostgreSQL 不會再次執行初始化腳本；更新 compose 掛載後，可手動執行：
+1. `docker compose up -d` → **空庫**（不再於 initdb 自動灌 schema／seed）  
+2. 啟動後端 → **Flyway** 建立表結構  
+3. 再手動灌 seed（`docs/seed` 已掛載為容器內 `/seed`）：
 
 ```powershell
 docker compose up -d
-docker exec yuruicamp-db psql -U postgres -d yuruicamp -f /docker-entrypoint-initdb.d/002-dev-seed.sql
+# 後端已成功啟動（Flyway OK）之後：
+docker exec -i yuruicamp-db psql -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f /seed/002-dev-seed.sql
 ```
 
-也可從 repository 根目錄使用本機 `psql`：
+也可從 repository 根目錄使用本機 `psql`（需能連 `localhost:5433`）：
 
 ```powershell
-psql -U postgres -d yuruicamp -f docs/seed/002-dev-seed.sql
+psql -h localhost -p 5433 -U postgres -d yuruicamp -v ON_ERROR_STOP=1 -f docs/seed/002-dev-seed.sql
 ```
 
 入口已設定 `ON_ERROR_STOP`。若自訂了 `POSTGRES_USER` 或 `POSTGRES_DB`，請同步替換指令參數。
@@ -110,7 +114,7 @@ psql -U postgres -d yuruicamp -f docs/seed/002-dev-seed.sql
 
 ### 維護規則
 
-- `latest_schema.sql` 只放 DDL；展示資料只放在本目錄。
+- 執行期 DDL 走 Flyway；`latest_schema.sql` 為對齊用快照（含破壞性重建）；展示資料只放在本目錄。
 - Checkout 門市取貨使用既有 `branches` Seed；`orders.pickup_branch_id` 只保存外鍵，不新增另一份門市資料。
 - 片段不可包含 `BEGIN`、`COMMIT` 或 `\set ON_ERROR_STOP`，交易與錯誤處理由入口統一管理。
 - 檔名數字就是相依順序。新增片段後，必須明確加入 `002-dev-seed.sql`。
@@ -121,17 +125,17 @@ psql -U postgres -d yuruicamp -f docs/seed/002-dev-seed.sql
 - Mock JSON 與 SQL Seed 不會自動同步；Seed 值異動時必須同步 JSON，並逐筆驗證固定 ID、欄位投影與關聯。
 - 整合測試資料留在 `backend/src/test/**`，由測試自行建立與清理，避免測試互相污染。
 - 商品 ID、variant 與價格異動時，同步更新 [`../data/product-catalog-seed-manifest.md`](../data/product-catalog-seed-manifest.md)。
-- 完成修改後，至少驗證 compose 設定、入口引用檔案存在，並在可丟棄的空資料庫執行一次完整 schema + seed。
+- 完成修改後，至少驗證 compose 設定、入口引用檔案存在，並在可丟棄的空資料庫執行一次：後端 Flyway + 完整 seed。
 
 ## 給 AI／Codex
 
 修改本目錄前必須先閱讀本檔、[`../latest_schema.sql`](../latest_schema.sql) 與受影響領域的 API 契約。若需求來自前端 Mock，還必須閱讀 [`data-integration-spec.md`](../../plans/data-integration-spec.md)，先區分要同步的是業務案例還是 API 欄位。請遵守以下限制：
 
-1. 不可從前端 JSON 猜測資料庫欄位、ENUM 或外鍵；一律以 `latest_schema.sql` 為準。
-2. 不可把 seed 混入 schema，也不可把 dev seed 當成測試 fixture。
+1. 不可從前端 JSON 猜測資料庫欄位、ENUM 或外鍵；以 Flyway migration／`latest_schema.sql` 為準。
+2. 不可把 seed 混入 Flyway migration，也不可把 dev seed 當成測試 fixture。
 3. 保留 `002-dev-seed.sql` 作為唯一入口、唯一交易邊界；片段內不得自行開關交易。
 4. 新增領域片段前先確認已有實際資料需求與外鍵依賴；沒有資料就只保留編號說明，不建立空檔。
-5. 修改載入順序或新增片段時，同步更新入口、`docker-compose.yml`、本 README 及相關 manifest／後端文件。
+5. 修改載入順序或新增片段時，同步更新入口、本 README 及相關 manifest／後端文件（compose 只掛載 `/seed`，不自動執行）。
 6. 使用固定假資料，不得生成或提交真實憑證與個資；敏感值只能由環境變數提供。
 7. 不可為了讓 seed 通過而放寬 schema 約束、改動正式業務規則，或把 Hibernate `ddl-auto` 改成 `update`。
 8. 驗證時不得清除使用者既有資料卷。需要 fresh-init 測試時，使用獨立且可辨識的暫存資料庫／volume，並只清理該暫存資源。
