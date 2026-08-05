@@ -78,6 +78,9 @@ jobs:
           CORS_ALLOWED_ORIGINS: '${CORS_ALLOWED_ORIGINS}'
           YURUICAMP_ECPAY_PAYMENT_URL: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
           YURUICAMP_ECPAY_LOGISTICS_API_BASE_URL: 'https://logistics-stage.ecpay.com.tw'
+          # db-f1-micro has ~25 slots; keep pool tiny so deploy (old+new revision) does not exhaust SQL.
+          SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '3'
+          SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: '1'
           EOF
           # Strip accidental leading spaces from heredoc lines (YAML keys must start at column 0).
           sed -i 's/^[[:space:]]*//' /tmp/run-env.yaml
@@ -95,7 +98,7 @@ jobs:
             --cpu=1 \
             --memory=1Gi \
             --min-instances=0 \
-            --max-instances=3 \
+            --max-instances=2 \
             --timeout=300 \
             --add-cloudsql-instances="${{ steps.sql.outputs.connection_name }}" \
             --env-vars-file=/tmp/run-env.yaml \

@@ -224,7 +224,35 @@ curl.exe https://yuruicamp-api-staging-952948108890.asia-east1.run.app/api/healt
 
 ---
 
-## 8. 相關文件
+## 8. 常見問題：Cloud Run 部署失敗「PORT=8080」
+
+GitHub Actions 顯示：
+
+> container failed to start and listen on the port … PORT=8080
+
+**多半不是埠號設錯。** 請到 Cloud Console → Logging，搜尋該 revision，若看到：
+
+`remaining connection slots are reserved for … pg_use_reserved_connections`
+
+代表 **Cloud SQL（db-f1-micro）連線額度用完**。部署時舊 revision 還在、新 revision 又要開 Flyway／Hikari，兩邊搶連線就會啟動失敗。
+
+**處理：**
+
+1. 部署腳本／workflow 已把 Hikari 設成 `MAXIMUM_POOL_SIZE=3`、`max-instances=2`。  
+2. 若仍失敗：重啟 SQL 釋放連線後再部署一次：
+
+```powershell
+gcloud sql instances restart yuruicamp-pg-staging --project=yuruicamp-2026
+# 等 Instance 變 RUNNABLE（約數分鐘）後：
+.\deploy\staging\02-deploy-api.ps1
+# 或只重跑 Actions「Deploy Staging」且勾 deploy_api
+```
+
+3. 長期可升級 Cloud SQL tier，或把 `max_connections` 調高（需較大機型）。
+
+---
+
+## 9. 相關文件
 
 | 文件 | 用途 |
 |------|------|

@@ -30,7 +30,8 @@ if (-not $connectionName) {
 }
 
 $image = "$Region-docker.pkg.dev/$Project/$Repo/backend:$ImageTag"
-$dbUrl = "jdbc:postgresql:///$DbName?cloudSqlInstance=$connectionName&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
+# Use ${DbName} — bare $DbName?… is parsed as PowerShell null-conditional and breaks the JDBC URL.
+$dbUrl = "jdbc:postgresql:///${DbName}?cloudSqlInstance=${connectionName}&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
 
 Write-Host "==> Configure Docker auth for Artifact Registry"
 gcloud auth configure-docker "$Region-docker.pkg.dev" --quiet
@@ -67,7 +68,10 @@ $envLines = @(
   "YURUICAMP_FRONTEND_BASE_URL: '$FrontendBaseUrl'",
   "CORS_ALLOWED_ORIGINS: '$CorsOrigins'",
   "YURUICAMP_ECPAY_PAYMENT_URL: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'",
-  "YURUICAMP_ECPAY_LOGISTICS_API_BASE_URL: 'https://logistics-stage.ecpay.com.tw'"
+  "YURUICAMP_ECPAY_LOGISTICS_API_BASE_URL: 'https://logistics-stage.ecpay.com.tw'",
+  # db-f1-micro has ~25 connection slots; keep pool tiny during rolling deploy.
+  "SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '3'",
+  "SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: '1'"
 )
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllLines($envFile, $envLines, $utf8NoBom)
@@ -84,7 +88,7 @@ gcloud run deploy $Service `
   --cpu=1 `
   --memory=1Gi `
   --min-instances=0 `
-  --max-instances=3 `
+  --max-instances=2 `
   --timeout=300 `
   --add-cloudsql-instances=$connectionName `
   --env-vars-file=$envFile `
