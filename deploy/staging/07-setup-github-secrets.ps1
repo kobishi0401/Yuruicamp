@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   Prerequisites:
-  1) gcloud already created SA key (default path below) — see github-actions-secrets.md
+  1) gcloud already created SA key (default path below) — see README.md §6
   2) gh auth login  (one-time in your terminal)
   3) frontend/.env.local contains VITE_FIREBASE_* (same as local Vite)
 

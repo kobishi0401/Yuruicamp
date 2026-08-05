@@ -49,5 +49,5 @@ foreach ($d in $domains) {
   Write-Host ""
 }
 
-Write-Host "GoDaddy steps: deploy/staging/custom-domain-godaddy.md"
+Write-Host "Custom domain steps: deploy/staging/README.md §3"
 Write-Host "Auth domains: add yuruicamp.com + www.yuruicamp.com in Firebase Console."

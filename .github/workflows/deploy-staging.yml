@@ -1,5 +1,5 @@
 # Manual Staging deploy → GCP Cloud Run + Firebase Hosting.
-# 中文：在 GitHub Actions 手動觸發；需先設定 Secrets（見 deploy/staging/README.md §6）。
+# 中文：在 GitHub Actions 手動觸發；Secrets／部署說明見 deploy/staging/README.md（單一入口）。
 name: Deploy Staging
 
 on:
