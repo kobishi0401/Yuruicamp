@@ -168,32 +168,35 @@ curl.exe "https://yuruicamp-api-staging-952948108890.asia-east1.run.app/api/prod
 
 ### 6.1 一次設定（維運）
 
-1. GCP 建「部署用」Service Account（建議名稱 `github-deploy-staging`），至少角色：
-   - `roles/run.admin`
-   - `roles/artifactregistry.writer`
-   - `roles/iam.serviceAccountUser`
-   - `roles/secretmanager.secretAccessor`
-   - `roles/cloudsql.client`
-   - Firebase：**Firebase Hosting Admin**（或 Editor）
-2. 下載 JSON 金鑰（勿進 git）
-3. GitHub repo → **Settings → Secrets and variables → Actions** 新增：
+**詳細圖文步驟**（含 Agent 已建好的 SA／你要跑的指令）：  
+→ [`github-actions-secrets.md`](./github-actions-secrets.md)
+
+最短路徑：
+
+```powershell
+# 1) 一次：登入 GitHub CLI（瀏覽器授權）
+gh auth login
+
+# 2) 確認 frontend/.env.local 已有 VITE_FIREBASE_*（本機開發那份即可）
+
+# 3) 上傳 Secrets（讀本機 SA JSON + .env.local，不會印出內容）
+.\deploy\staging\07-setup-github-secrets.ps1
+```
+
+GCP 部署 SA 與金鑰（已建立、勿 commit）：
+
+- SA：`github-deploy-staging@yuruicamp-2026.iam.gserviceaccount.com`
+- 金鑰：`C:\Users\Amy\Desktop\java_bootcamp\yurui-secret\github-deploy-staging.json`
 
 | Secret | 內容 |
 |--------|------|
 | `GCP_SA_KEY` | 上述 JSON 整份 |
-| `VITE_FIREBASE_API_KEY` | Firebase Web config |
-| `VITE_FIREBASE_AUTH_DOMAIN` | 通常 `yuruicamp-2026.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | `yuruicamp-2026` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Console 值 |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Console 值 |
-| `VITE_FIREBASE_APP_ID` | Console 值 |
+| `VITE_FIREBASE_*`（六個） | 與 `frontend/.env.local` 相同 |
 
-（可選）Repository **Variable**：`STAGING_API_BASE_URL`＝`https://yuruicamp-api-staging-952948108890.asia-east1.run.app/api`  
-未設時 workflow 有相同預設值。
+（可選）Variable：`STAGING_API_BASE_URL`＝Cloud Run `/api`（workflow 已有預設）。
 
-4. GitHub → **Actions** → **Deploy Staging** → **Run workflow**  
-   - 勾 `deploy_api`／`deploy_hosting`  
-   - Demo 當天可另在 Console 把 Cloud Run `min-instances` 調成 1
+然後：GitHub → **Actions** → **Deploy Staging** → **Run workflow**  
+（第一次可先只勾 `deploy_hosting`。）
 
 ### 6.2 安全注意
 
