@@ -8,11 +8,14 @@ import java.util.List;
 import com.yuruicamp.backend.common.api.PageMeta;
 import com.yuruicamp.backend.common.exception.BusinessException;
 import com.yuruicamp.backend.common.exception.ErrorCode;
+import com.yuruicamp.backend.customer.domain.Customer;
+import com.yuruicamp.backend.customer.infrastructure.CustomerRepository;
 import com.yuruicamp.backend.order.api.MemberOrderResponse;
 import com.yuruicamp.backend.order.domain.Order;
 import com.yuruicamp.backend.order.domain.OrderItem;
 import com.yuruicamp.backend.order.infrastructure.OrderRepository;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +24,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberOrderService {
 
 	private final OrderRepository orders;
+	private final CustomerRepository customerRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
-	public MemberOrderService(OrderRepository orders) {
+	public MemberOrderService(
+			OrderRepository orders,
+			CustomerRepository customerRepository,
+			ApplicationEventPublisher eventPublisher) {
 		this.orders = orders;
+		this.customerRepository = customerRepository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional(readOnly = true)
@@ -51,6 +61,32 @@ public class MemberOrderService {
 				.orElseThrow(this::notFound);
 
 		return toResponse(order);
+	}
+
+	// 會員主動要求以 LINE 追蹤這張訂單：驗證歸屬與 LINE 綁定後發佈事件，不直接呼叫 n8n（見 OrderNotificationRequestedEvent 的訂閱者）。
+	@Transactional(readOnly = true)
+	public void notifyLineCsInquiry(String customerId, String orderId) {
+		validateCustomer(customerId);
+		if (orderId == null || orderId.isBlank()) {
+			throw notFound();
+		}
+
+		Order order = orders.findForCustomer(orderId.trim(), customerId)
+				.orElseThrow(this::notFound);
+		Customer customer = customerRepository.findById(customerId)
+				.orElseThrow(this::notFound);
+		if (customer.getLineUserId() == null || customer.getLineUserId().isBlank()) {
+			throw new BusinessException(ErrorCode.LINE_NOT_LINKED, "LINE account is not linked");
+		}
+
+		eventPublisher.publishEvent(new OrderNotificationRequestedEvent(
+				order.getId(),
+				customerId,
+				order.getDisplayNo(),
+				order.getStatus() != null ? order.getStatus().name() : null,
+				order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null,
+				order.getShippingMethod() != null ? order.getShippingMethod().name() : null,
+				"cs_inquiry"));
 	}
 
 	private void validateCustomer(String customerId) {

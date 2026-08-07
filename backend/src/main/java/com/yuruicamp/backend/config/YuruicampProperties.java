@@ -322,9 +322,12 @@ public class YuruicampProperties {
 
 	/**
 	 * n8n server-to-server CS integration (API Key). Empty key rejects all calls.
+	 * notifyWebhookUrl／notifySecret 供本後端主動推播訂單事件給 n8n；兩者需同時設定，任一空字串代表停用。
 	 */
 	public static class N8n {
 		private String apiKey = "";
+		private String notifyWebhookUrl = "";
+		private String notifySecret = "";
 
 		public String getApiKey() {
 			return apiKey;
@@ -332,6 +335,22 @@ public class YuruicampProperties {
 
 		public void setApiKey(String apiKey) {
 			this.apiKey = apiKey;
+		}
+
+		public String getNotifyWebhookUrl() {
+			return notifyWebhookUrl;
+		}
+
+		public void setNotifyWebhookUrl(String notifyWebhookUrl) {
+			this.notifyWebhookUrl = notifyWebhookUrl;
+		}
+
+		public String getNotifySecret() {
+			return notifySecret;
+		}
+
+		public void setNotifySecret(String notifySecret) {
+			this.notifySecret = notifySecret;
 		}
 	}
 

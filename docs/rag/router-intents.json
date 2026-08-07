@@ -1,0 +1,193 @@
+{
+  "version": "2026-08-02",
+  "purpose": "Yuruicamp LINE/MBA/n8n router rules for domain and intent routing before RAG or API calls.",
+  "domainRouter": {
+    "domains": [
+      {
+        "domain": "storefront",
+        "description": "商城、商品購買、商城訂單、配送、門市取貨、超商取貨、發票、退換貨、商品保固、商城付款。",
+        "keywords": ["商城", "購物", "商品", "出貨", "配送", "宅配", "超商取貨", "門市取貨", "發票", "退貨", "換貨", "保固", "訂單", "貨到付款", "配送地址", "收件人", "收件電話"],
+        "defaultAnswerMode": "rag"
+      },
+      {
+        "domain": "booking",
+        "description": "營地預約、營位、入住、退房、租借裝備、營地取消退款、可用性查詢、露營行程規劃。",
+        "keywords": ["營地", "營區", "營位", "露營區", "預約", "入住", "退房", "租借裝備", "租帳篷", "租睡袋", "草皮區", "棧板區", "雨棚區", "Glamping", "行程規劃", "入住日期", "入住人數"],
+        "defaultAnswerMode": "rag"
+      },
+      {
+        "domain": "ambiguous",
+        "description": "使用者只問付款、取消、退款、修改等跨 domain 問題，未說明商城或預約。",
+        "clarifyQuestion": "你想問的是商城購物，還是營地預約？",
+        "defaultAnswerMode": "clarify"
+      },
+      {
+        "domain": "chat",
+        "description": "寒暄、感謝、道別、自我介紹，沒有客服查詢需求。",
+        "defaultAnswerMode": "chat"
+      }
+    ],
+    "rules": [
+      {
+        "if": "message asks payment methods, cancellation, refund, change order, or status without enough storefront/booking context",
+        "then": {"domain": "ambiguous", "answerMode": "clarify"}
+      },
+      {
+        "if": "message asks whether cancellation or modification is generally possible, but does not mention my order, my booking, a specific order, or a specific booking",
+        "then": {"domain": "ambiguous", "answerMode": "clarify", "intent": "modify_request"}
+      },
+      {
+        "if": "message asks to modify shipping address, pickup branch, recipient name, phone, payment method, item quantity, item spec, or cancel my storefront order",
+        "then": {"domain": "storefront", "answerMode": "api", "intent": "modify_request"}
+      },
+      {
+        "if": "message asks to modify booking date, zone, rental equipment, guest count, contact information, or cancel my booking",
+        "then": {"domain": "booking", "answerMode": "api", "intent": "modify_request"}
+      },
+      {
+        "if": "message contains my order, my payment, shipped, logistics, invoice of my order",
+        "then": {"domain": "storefront", "answerMode": "api", "intent": "order_status"}
+      },
+      {
+        "if": "message contains my booking, my camp reservation, my camping trip, my check-in",
+        "then": {"domain": "booking", "answerMode": "api", "intent": "booking_status"}
+      },
+      {
+        "if": "message asks exact date availability, remaining sites, remaining rental stock",
+        "then": {"domain": "booking", "answerMode": "api", "intent": "availability"}
+      },
+      {
+        "if": "message asks planning or recommendation using people count, date, region, equipment needs",
+        "then": {"domain": "booking", "answerMode": "planner", "intent": "trip_planning"}
+      }
+    ]
+  },
+  "intents": [
+    {
+      "intent": "payment_methods",
+      "domainWhenClear": ["storefront", "booking"],
+      "whenDomainUnknown": {"domain": "ambiguous", "answerMode": "clarify", "message": "你想問的是商城購物，還是營地預約的付款方式？"},
+      "storefront": {"answerMode": "rag", "knowledgeBase": "storefront-kb", "expectedItemIds": ["storefront.payment.methods"]},
+      "booking": {"answerMode": "rag", "knowledgeBase": "booking-kb", "expectedItemIds": ["booking.payment.methods"]}
+    },
+    {
+      "intent": "order_status",
+      "domainWhenClear": ["storefront"],
+      "answerMode": "api",
+      "requiredApi": "GET /api/me/orders or GET /api/integrations/n8n/customers/by-line-user-id/{lineUserId}/orders",
+      "ragPolicy": "Do not answer personal order state from RAG."
+    },
+    {
+      "intent": "booking_status",
+      "domainWhenClear": ["booking"],
+      "answerMode": "api",
+      "requiredApi": "GET /api/booking/bookings or GET /api/booking/bookings/{id}",
+      "ragPolicy": "Do not answer personal booking state from RAG."
+    },
+    {
+      "intent": "product_info",
+      "domainWhenClear": ["storefront"],
+      "answerMode": "rag",
+      "knowledgeBase": "storefront-kb",
+      "examples": ["有哪些帳篷？", "Coleman 六人帳篷有哪些規格？", "背包有哪些？"]
+    },
+    {
+      "intent": "campground_info",
+      "domainWhenClear": ["booking"],
+      "answerMode": "rag",
+      "knowledgeBase": "booking-kb",
+      "examples": ["有哪些營地？", "雲海仙境有哪些營位？", "哪些營地寵物友善？"]
+    },
+    {
+      "intent": "rental_equipment",
+      "domainWhenClear": ["booking"],
+      "answerMode": "rag",
+      "knowledgeBase": "booking-kb",
+      "examples": ["哪個營地可以租 Coleman 六人帳篷？", "哪些營地可以租睡袋？"]
+    },
+    {
+      "intent": "availability",
+      "domainWhenClear": ["booking"],
+      "answerMode": "api",
+      "requiredApi": "POST /api/booking/check-availability",
+      "ragPolicy": "RAG may explain rules, but exact availability must call API."
+    },
+    {
+      "intent": "modify_request",
+      "domainWhenClear": ["storefront", "booking"],
+      "whenDomainUnknown": {"domain": "ambiguous", "answerMode": "clarify", "message": "你想修改的是商城訂單，還是營地預約？"},
+      "answerMode": "api",
+      "storefront": {
+        "fixedPolicyItemIds": ["storefront.modify.policy", "storefront.checkout.editable-fields", "storefront.cancel-refund.general"],
+        "requiredLookup": "GET /api/me/orders/{orderId} or n8n order lookup by lineUserId before deciding",
+        "classifierSchema": {
+          "modifyTarget": ["cancel", "shipping_address", "pickup_branch", "recipient", "phone", "payment_method", "item_quantity", "item_spec"],
+          "requiresOrderLookup": true
+        },
+        "policy": "Unpaid editable checkout may PATCH shipping/payment/coupon fields. Item quantity/spec cannot be PATCHed and usually requires cancel + recreate. Paid, shipped, or specific order requests require order lookup and possibly human support."
+      },
+      "booking": {
+        "fixedPolicyItemIds": ["booking.modify.policy", "booking.cancel-refund.general"],
+        "requiredLookup": "GET /api/booking/bookings/{id} plus POST /api/booking/check-availability when date, zone, guest count, or rental changes are requested",
+        "classifierSchema": {
+          "modifyTarget": ["cancel", "booking_date", "booking_zone", "booking_rental", "guest_count", "contact"],
+          "requiresOrderLookup": true
+        },
+        "policy": "Booking date, zone, rental equipment, and guest-count changes require booking state lookup and availability checks before confirming whether the change is possible."
+      },
+      "ragPolicy": "RAG may explain general modification rules only. Any user-specific order or booking modification must use API lookup before answering."
+    },
+    {
+      "intent": "trip_planning",
+      "domainWhenClear": ["booking"],
+      "answerMode": "planner",
+      "requiredInputs": ["date or date preference", "nights", "guest count", "region preference", "equipment ownership or rental preference"],
+      "nextWorkflow": "booking_trip_planner",
+      "ragPolicy": "Use RAG for static campground/equipment knowledge; use API for availability before final recommendation."
+    },
+    {
+      "intent": "shipping_return",
+      "domainWhenClear": ["storefront"],
+      "answerMode": "rag",
+      "knowledgeBase": "storefront-kb",
+      "apiEscalation": "If user asks their shipment or return status, route to order_status API."
+    },
+    {
+      "intent": "invoice",
+      "domainWhenClear": ["storefront"],
+      "answerMode": "rag",
+      "knowledgeBase": "storefront-kb",
+      "apiEscalation": "If user asks invoice for a specific order, route to order_status/API or human."
+    },
+    {
+      "intent": "damage_missing",
+      "domainWhenClear": ["storefront", "booking"],
+      "answerMode": "human",
+      "reason": "Damage, missing parts, mismatched items, duplicate payment, or failed payment with charged amount should be handled by API lookup and/or human support."
+    },
+    {
+      "intent": "general_faq",
+      "domainWhenClear": ["storefront", "booking"],
+      "answerMode": "rag",
+      "knowledgeBaseByDomain": {"storefront": "storefront-kb", "booking": "booking-kb"}
+    }
+  ],
+  "testCases": [
+    {"message": "支援哪些付款方式？", "expected": {"domain": "ambiguous", "answerMode": "clarify"}},
+    {"message": "商城支援哪些付款方式？", "expected": {"domain": "storefront", "intent": "payment_methods", "answerMode": "rag"}},
+    {"message": "營地預約可以貨到付款嗎？", "expected": {"domain": "booking", "intent": "payment_methods", "answerMode": "rag"}},
+    {"message": "有哪些帳篷？", "expected": {"domain": "storefront", "intent": "product_info", "answerMode": "rag"}},
+    {"message": "雲海仙境有哪些營位？", "expected": {"domain": "booking", "intent": "campground_info", "answerMode": "rag"}},
+    {"message": "哪個營地可以租 Coleman 六人帳篷？", "expected": {"domain": "booking", "intent": "rental_equipment", "answerMode": "rag"}},
+    {"message": "我的訂單出貨了嗎？", "expected": {"domain": "storefront", "intent": "order_status", "answerMode": "api"}},
+    {"message": "下個月星期六 10 大 3 小有推薦嗎？", "expected": {"domain": "booking", "intent": "trip_planning", "answerMode": "planner"}},
+    {"message": "可以修改配送地址嗎？", "expected": {"domain": "storefront", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "可以改門市取貨的門市嗎？", "expected": {"domain": "storefront", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "我想改收件人電話", "expected": {"domain": "storefront", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "我想改商品規格或數量", "expected": {"domain": "storefront", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "可以取消訂單嗎？", "expected": {"domain": "ambiguous", "intent": "modify_request", "answerMode": "clarify"}},
+    {"message": "我的訂單可以取消嗎？", "expected": {"domain": "storefront", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "可以修改租借日期嗎？", "expected": {"domain": "booking", "intent": "modify_request", "answerMode": "api"}},
+    {"message": "我想多租一個睡袋", "expected": {"domain": "booking", "intent": "modify_request", "answerMode": "api"}}
+  ]
+}

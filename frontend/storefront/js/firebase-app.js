@@ -59,6 +59,12 @@ function lineProviderId() {
   ).trim();
 }
 
+/** LINE 登入時是否／如何提示加官方帳號好友；預設 aggressive，可用 VITE_LINE_BOT_PROMPT 覆寫或清空停用 */
+function lineBotPrompt() {
+  var value = import.meta.env.VITE_LINE_BOT_PROMPT;
+  return value === undefined ? 'aggressive' : String(value).trim();
+}
+
 var config = readFirebaseConfig();
 var missing = missingConfigKeys(config);
 
@@ -145,6 +151,11 @@ function buildAuthProvider(providerKey) {
     line.addScope('openid');
     line.addScope('profile');
     line.addScope('email')
+    // Login Channel 已連結官方帳號時，讓登入畫面順便提示加好友（見 VITE_LINE_BOT_PROMPT）
+    var botPrompt = lineBotPrompt();
+    if (botPrompt) {
+      line.setCustomParameters({ bot_prompt: botPrompt });
+    }
     return line;
   }
   return new GoogleAuthProvider();
